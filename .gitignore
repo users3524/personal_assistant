@@ -25,3 +25,6 @@ reasonix.toml
 .reasonix/
 *.log
 *.bak
+
+# Android
+android/local.properties

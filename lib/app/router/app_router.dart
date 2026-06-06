@@ -20,44 +20,7 @@ import '../features/ai_assistant/presentation/pages/daily_review_detail_page.dar
 import '../features/ai_assistant/presentation/pages/weekly_report_page.dart';
 import '../features/resume/presentation/pages/resume_home_page.dart';
 import '../features/resume/presentation/pages/resume_preview_page.dart';
-
-/// 页面占位（待后续替换）
-class _PlaceholderPage extends StatelessWidget {
-  final String title;
-  final IconData icon;
-
-  const _PlaceholderPage({
-    required this.title,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 80, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '即将上线',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+import '../features/settings/presentation/pages/settings_page.dart';
 
 /// 主壳 - 底部导航
 class MainShell extends StatelessWidget {
@@ -245,10 +208,7 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: RouteNames.settings,
-                builder: (context, state) => const _PlaceholderPage(
-                  title: '设置',
-                  icon: Icons.settings_outlined,
-                ),
+                builder: (context, state) => const SettingsPage(),
               ),
             ],
           ),

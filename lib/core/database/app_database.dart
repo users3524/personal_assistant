@@ -10,6 +10,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/todo/data/datasources/todos_table.dart';
+import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
+import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
 import 'tables/user_preferences_table.dart';
 
 part 'app_database.g.dart';
@@ -29,8 +31,8 @@ part 'app_database.g.dart';
     PattingLogs,
 
     // Feature: AI Assistant
-    // DailyReviews,   // TODO: Phase 4
-    // WeeklyReports,
+    DailyReviews,
+    WeeklyReports,
 
     // Feature: Resume
     // ResumeProfile,          // TODO: Phase 5

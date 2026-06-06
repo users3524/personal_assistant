@@ -4,8 +4,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../app/theme/app_theme.dart';
-import '../../app/app.dart';
+import '../../../app/theme/app_theme.dart';
+import '../../../app/app.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -13,6 +14,8 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
+    final loc = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -44,6 +47,30 @@ class SettingsPage extends ConsumerWidget {
                   groupValue: themeMode,
                   onChanged: (v) =>
                       ref.read(themeModeProvider.notifier).state = v,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ---- 语言 ----
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                RadioListTile<Locale>(
+                  title: const Text('中文'),
+                  value: const Locale('zh', 'CN'),
+                  groupValue: locale,
+                  onChanged: (v) =>
+                      ref.read(localeProvider.notifier).state = v!,
+                ),
+                RadioListTile<Locale>(
+                  title: const Text('English'),
+                  value: const Locale('en', 'US'),
+                  groupValue: locale,
+                  onChanged: (v) =>
+                      ref.read(localeProvider.notifier).state = v!,
                 ),
               ],
             ),

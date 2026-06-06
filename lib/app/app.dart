@@ -6,11 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/database/app_database_provider.dart';
+import '../l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 
 /// 主题模式 Provider
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+
+/// 语言 Provider
+final localeProvider = StateProvider<Locale>((ref) => const Locale('zh', 'CN'));
 
 /// 应用是否已初始化
 final appInitializedProvider = FutureProvider<bool>((ref) async {
@@ -30,8 +34,10 @@ class PersonalAssistantApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ref.watch(themeModeProvider),
+      locale: ref.watch(localeProvider),
       routerConfig: createRouter(),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -39,6 +45,8 @@ class PersonalAssistantApp extends ConsumerWidget {
       supportedLocales: const [
         Locale('zh', 'CN'),
         Locale('en', 'US'),
+        Locale('zh'),
+        Locale('en'),
       ],
       localeResolutionCallback: (locale, supportedLocales) {
         for (final supported in supportedLocales) {

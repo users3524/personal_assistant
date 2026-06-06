@@ -274,10 +274,10 @@ class _TodoListPageState extends State<TodoListPage> {
         done ? Icons.check_circle : Icons.radio_button_unchecked,
         color: done ? c : Colors.grey.shade400,
       ),
-      title: Text(t['title'] as String),
-          style: TextStyle(
-              decoration: done ? TextDecoration.lineThrough : null,
-              color: done ? Colors.grey : null)),
+      title: Text(t['title'] as String, style: TextStyle(
+        decoration: done ? TextDecoration.lineThrough : null,
+        color: done ? Colors.grey : null,
+      )),
       subtitle: Row(
         children: [
           Container(
@@ -895,6 +895,8 @@ class ResumeHomePage extends StatelessWidget {
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
+  static void _ignoreSwitch(bool v) {}
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -930,14 +932,14 @@ class SettingsPage extends StatelessWidget {
             title: Text('每日复盘提醒'),
             subtitle: Text('默认 21:00'),
             value: true,
-            onChanged: null,
+            onChanged: _ignoreSwitch,
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           const SwitchListTile(
             title: Text('每周周报提醒'),
             subtitle: Text('每周日 20:00'),
             value: true,
-            onChanged: null,
+            onChanged: _ignoreSwitch,
           ),
         ]),
         _section('数据', [

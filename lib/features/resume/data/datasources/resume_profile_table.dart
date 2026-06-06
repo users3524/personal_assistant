@@ -16,5 +16,5 @@ class ResumeProfile extends Table {
   TextColumn get website => text().nullable()();
   TextColumn get location => text().nullable()();
   TextColumn get jobTitle => text().nullable()();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
 }

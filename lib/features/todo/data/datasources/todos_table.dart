@@ -25,6 +25,6 @@ class Todos extends Table {
   IntColumn get actualMinutes => integer().nullable()();
   IntColumn get delayCount => integer().withDefault(const Constant(0))();
 
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
 }

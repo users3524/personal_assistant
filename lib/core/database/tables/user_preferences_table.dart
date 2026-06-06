@@ -49,8 +49,8 @@ class UserPreferences extends Table {
       integer().withDefault(const Constant(0))();
 
   DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime())();
+      dateTime().withDefault(currentDateAndTime());
 
   DateTimeColumn get updatedAt =>
-      dateTime().withDefault(currentDateAndTime())();
+      dateTime().withDefault(currentDateAndTime());
 }

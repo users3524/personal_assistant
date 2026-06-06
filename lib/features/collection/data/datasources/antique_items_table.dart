@@ -21,6 +21,6 @@ class AntiqueItems extends Table {
   TextColumn get imagePaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
   TextColumn get fingerprints => text().nullable()();
   TextColumn get notes => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
 }

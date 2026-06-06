@@ -4,8 +4,8 @@ library;
 import 'package:riverpod/riverpod.dart';
 
 import '../../../../core/database/app_database_provider.dart';
-import '../../../domain/entities/antique_entity.dart';
-import '../../../domain/repositories/antique_repository.dart';
+import '../../domain/entities/antique_entity.dart';
+import '../../domain/repositories/antique_repository.dart';
 import '../datasources/antique_dao.dart';
 
 class AntiqueRepositoryImpl implements AntiqueRepository {

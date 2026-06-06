@@ -27,6 +27,6 @@ class DailyReviews extends Table {
   TextColumn get aiSuggestion => text().nullable()();
   BoolColumn get isAiGenerated => boolean().withDefault(const Constant(false))();
   BoolColumn get isManuallyEdited => boolean().withDefault(const Constant(false))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
 }

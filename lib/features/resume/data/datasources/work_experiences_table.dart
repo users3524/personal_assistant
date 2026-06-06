@@ -19,6 +19,6 @@ class WorkExperiences extends Table {
       .withDefault(const Constant('[]'))();
   BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
 }

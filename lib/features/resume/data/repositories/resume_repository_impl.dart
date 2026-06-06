@@ -4,8 +4,8 @@ library;
 import 'package:riverpod/riverpod.dart';
 
 import '../../../../core/database/app_database_provider.dart';
-import '../../../domain/entities/resume_entity.dart';
-import '../../../domain/repositories/resume_repository.dart';
+import '../../domain/entities/resume_entity.dart';
+import '../../domain/repositories/resume_repository.dart';
 import '../datasources/resume_dao.dart';
 
 class ResumeRepositoryImpl implements ResumeRepository {

@@ -4,8 +4,8 @@ library;
 import 'package:riverpod/riverpod.dart';
 
 import '../../../../core/database/app_database_provider.dart';
-import '../../../domain/entities/todo_entity.dart';
-import '../../../domain/repositories/todo_repository.dart';
+import '../../domain/entities/todo_entity.dart';
+import '../../domain/repositories/todo_repository.dart';
 import '../datasources/todo_dao.dart';
 
 class TodoRepositoryImpl implements TodoRepository {

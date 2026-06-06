@@ -16,5 +16,5 @@ class ValuationRecords extends Table {
   DateTimeColumn get date => dateTime()();
   RealColumn get amount => real()();
   TextColumn get remark => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
 }

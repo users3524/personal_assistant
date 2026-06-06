@@ -18,5 +18,5 @@ class PattingLogs extends Table {
   TextColumn get method => text()();                          // bare_hand | glove
   TextColumn get note => text().nullable()();
   TextColumn get photoPaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
 }

@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/resume_repository_impl.dart';
 import '../../domain/entities/resume_entity.dart';
-import '../../domain/repositories/resume_repository.dart';
 
 /// 简历数据（自动刷新）
 final resumeDataProvider = FutureProvider<ResumeData>((ref) {

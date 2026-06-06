@@ -141,8 +141,9 @@ class OpenAIService implements AIService {
             .replaceAll(RegExp(r'^[0-9.\s情绪标签：]*'), '')
             .trim();
         // 标准化标签
-        if (sentimentTag.contains('高效')) sentimentTag = '高效';
-        else if (sentimentTag.contains('焦虑')) sentimentTag = '焦虑';
+        if (sentimentTag.contains('高效')) {
+          sentimentTag = '高效';
+        } else if (sentimentTag.contains('焦虑')) sentimentTag = '焦虑';
         else if (sentimentTag.contains('疲惫')) sentimentTag = '疲惫';
         else sentimentTag = '平稳';
       }
@@ -182,16 +183,16 @@ class OpenAIService implements AIService {
 
       switch (currentSection) {
         case 'overview':
-          overview += trimmed + '\n';
+          overview += '$trimmed\n';
           break;
         case 'highlights':
-          highlights += trimmed + '\n';
+          highlights += '$trimmed\n';
           break;
         case 'improvements':
-          improvements += trimmed + '\n';
+          improvements += '$trimmed\n';
           break;
         case 'plan':
-          nextWeekPlan += trimmed + '\n';
+          nextWeekPlan += '$trimmed\n';
           break;
       }
     }

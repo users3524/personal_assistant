@@ -328,7 +328,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade300),
         ),

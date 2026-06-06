@@ -363,7 +363,7 @@ class _EducationTab extends ConsumerWidget {
                   controller: majorCtrl,
                   decoration: const InputDecoration(labelText: '专业')),
               DropdownButtonFormField<String>(
-                value: degree,
+                initialValue: degree,
                 items: ['博士', '硕士', '本科', '大专']
                     .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                     .toList(),
@@ -412,7 +412,7 @@ class _SkillTab extends ConsumerWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -460,7 +460,7 @@ class _SkillTab extends ConsumerWidget {
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: '技能名称')),
               DropdownButtonFormField<String>(
-                value: category,
+                initialValue: category,
                 items: ['language', 'framework', 'tool', 'soft']
                     .map((c) => DropdownMenuItem(
                         value: c,

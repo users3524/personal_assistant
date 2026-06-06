@@ -396,8 +396,8 @@ class _DailyReviewFormPageState extends ConsumerState<DailyReviewFormPage> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: selected
-                      ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.08),
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: selected
                       ? Border.all(

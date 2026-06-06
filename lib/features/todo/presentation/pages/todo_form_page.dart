@@ -262,7 +262,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+          color: isSelected ? color.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: isSelected
               ? Border.all(color: color, width: 2)

@@ -9,7 +9,10 @@ class DailyReviews extends Table {
   String get tableName => 'daily_reviews';
 
   IntColumn get id => integer().autoIncrement()();
-  DateTimeColumn get date => dateTime().uniqueKey()();       // 每天一条，按日期唯一
+  DateTimeColumn get date => dateTime()();       // 每天一条，按日期唯一
+
+  @override
+  Set<Column> get uniqueKey => {date};
   TextColumn get summary => text()();
   TextColumn get highlights => text().nullable()();
   TextColumn get improvements => text().nullable()();

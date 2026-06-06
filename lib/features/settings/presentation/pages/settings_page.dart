@@ -167,10 +167,10 @@ class SettingsPage extends ConsumerWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('版本'),
-                  subtitle: const Text('v1.0.0'),
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('版本'),
+                  subtitle: Text('v1.0.0'),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 ListTile(

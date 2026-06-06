@@ -89,12 +89,12 @@ class TodoPage extends StatefulWidget {
 class _TodoPageState extends State<TodoPage> {
   bool _life = true;
   final _data = [
-    _T('买水果', true, true, 2),
-    _T('健身打卡', false, true, 4),
-    _T('周报', false, false, 5),
-    _T('审查代码', false, false, 3),
-    _T('读书', true, true, 2),
-    _T('开会', false, false, 4),
+    const _T('买水果', true, true, 2),
+    const _T('健身打卡', false, true, 4),
+    const _T('周报', false, false, 5),
+    const _T('审查代码', false, false, 3),
+    const _T('读书', true, true, 2),
+    const _T('开会', false, false, 4),
   ];
 
   @override
@@ -160,7 +160,7 @@ class _TodoPageState extends State<TodoPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: sel ? c.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+            color: sel ? c.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
             border: sel ? Border.all(color: c) : null,
           ),
@@ -188,7 +188,7 @@ class _TodoPageState extends State<TodoPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                  color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                  color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
               child: Text(t.life ? '生活' : '工作',
                   style: TextStyle(fontSize: 10, color: c)),
             ),
@@ -227,9 +227,9 @@ class CollectionPage extends StatelessWidget {
           child: Column(children: [
             Expanded(
               child: Container(
-                color: e.color.withOpacity(0.1),
+                color: e.color.withValues(alpha: 0.1),
                 child: Center(
-                    child: Icon(Icons.diamond, size: 48, color: e.color.withOpacity(0.3))),
+                    child: Icon(Icons.diamond, size: 48, color: e.color.withValues(alpha: 0.3))),
               ),
             ),
             Padding(
@@ -240,7 +240,7 @@ class CollectionPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                        color: Colors.deepPurple.withOpacity(0.1),
+                        color: Colors.deepPurple.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4)),
                     child: Text(e.cat,
                         style: const TextStyle(fontSize: 10, color: Colors.deepPurple)),
@@ -293,7 +293,7 @@ class ReviewPage extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.1),
+                  color: Colors.deepPurple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12)),
               child: Center(
                   child: Text('${n.month}/${n.day}',
@@ -347,8 +347,8 @@ class _Sheet extends StatefulWidget {
 }
 
 class _SheetState extends State<_Sheet> {
-  int _m = 3;
-  int _e = 3;
+  final int _m = 3;
+  final int _e = 3;
   bool _ai = false;
 
   @override
@@ -358,8 +358,8 @@ class _SheetState extends State<_Sheet> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Text('每日复盘', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(
+        const TextField(
+          decoration: InputDecoration(
               hintText: '今天做了什么？', border: OutlineInputBorder()),
           maxLines: 2,
         ),
@@ -374,7 +374,7 @@ class _SheetState extends State<_Sheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.06),
+                color: Colors.deepPurple.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8)),
             child: const Text('平稳度过的一天，继续保持。'),
           ),

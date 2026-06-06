@@ -29,7 +29,7 @@ class TodoListView extends StatelessWidget {
           children: [
             Icon(Icons.task_alt,
                 size: 80,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
               '暂无待办',
@@ -41,7 +41,7 @@ class TodoListView extends StatelessWidget {
             Text(
               '点击右下角 + 新建待办',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
             ),
           ],
@@ -160,7 +160,7 @@ class _TodoListTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(

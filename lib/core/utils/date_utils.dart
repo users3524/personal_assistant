@@ -1,4 +1,5 @@
 /// 日期工具类
+library;
 import 'package:intl/intl.dart';
 
 class DateUtils {

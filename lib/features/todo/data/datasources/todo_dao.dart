@@ -6,7 +6,7 @@ library;
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
-import '../../../domain/entities/todo_entity.dart';
+import '../../domain/entities/todo_entity.dart';
 
 /// 待办数据访问对象
 class TodoDao {

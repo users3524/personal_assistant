@@ -127,7 +127,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                     ),
                   ),
                   if (todo.isOverdue)
-                    Text(
+                    const Text(
                       '已过期',
                       style: TextStyle(
                         color: Colors.red,

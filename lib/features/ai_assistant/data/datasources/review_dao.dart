@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 import 'dart:convert';
 
 import '../../../../core/database/app_database.dart';
-import '../../../domain/entities/review_entity.dart';
+import '../../domain/entities/review_entity.dart';
 
 class ReviewDao {
   final AppDatabase _db;

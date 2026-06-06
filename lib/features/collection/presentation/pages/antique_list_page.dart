@@ -85,7 +85,7 @@ class AntiqueListPage extends ConsumerWidget {
         children: [
           Icon(Icons.diamond_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text('还没有藏品',
               style: Theme.of(context).textTheme.titleLarge),

@@ -23,7 +23,7 @@ class AIPrompts {
     buffer.writeln('- 能量水平：$energyLevel/5');
     buffer.writeln('- 情绪水平：$moodLevel/5');
     buffer.writeln('- 完成任务：${completedTitles.isEmpty ? "无" : completedTitles.join("、")}');
-    buffer.writeln('- 盘玩放松：${pattingMinutes}分钟');
+    buffer.writeln('- 盘玩放松：$pattingMinutes分钟');
     buffer.writeln('');
     buffer.writeln('请生成以下内容（用纯文本，不要使用 Markdown）：');
     buffer.writeln('1. 评语（50-100字，温暖鼓励的语气）');

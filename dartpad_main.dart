@@ -274,7 +274,7 @@ class _TodoListPageState extends State<TodoListPage> {
         done ? Icons.check_circle : Icons.radio_button_unchecked,
         color: done ? c : Colors.grey.shade400,
       ),
-      title: Text(t['title'],
+      title: Text(t['title'] as String),
           style: TextStyle(
               decoration: done ? TextDecoration.lineThrough : null,
               color: done ? Colors.grey : null)),
@@ -817,7 +817,7 @@ class ResumeHomePage extends StatelessWidget {
                   ),
                   child: const Icon(Icons.business, color: AppTheme.primary),
                 ),
-                title: Text(w['company']!),
+                title: Text(w['company'] as String),
                 subtitle: Text('${w['position']} · ${w['year']}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -868,8 +868,8 @@ class ResumeHomePage extends StatelessWidget {
                             color: AppTheme.primary)),
                   ),
                 ),
-                title: Text(s['name']!),
-                subtitle: Text(s['cat']!),
+                title: Text(s['name'] as String),
+                subtitle: Text(s['cat'] as String),
                 trailing: IconButton(
                     icon: const Icon(Icons.delete, size: 18),
                     onPressed: () {}),

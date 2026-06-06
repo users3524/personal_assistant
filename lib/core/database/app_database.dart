@@ -12,6 +12,11 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/todo/data/datasources/todos_table.dart';
 import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
 import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
+import '../../features/resume/data/datasources/resume_profile_table.dart';
+import '../../features/resume/data/datasources/work_experiences_table.dart';
+import '../../features/resume/data/datasources/educations_table.dart';
+import '../../features/resume/data/datasources/skill_items_table.dart';
+import '../../features/resume/data/datasources/project_experiences_table.dart';
 import 'tables/user_preferences_table.dart';
 
 part 'app_database.g.dart';
@@ -35,11 +40,11 @@ part 'app_database.g.dart';
     WeeklyReports,
 
     // Feature: Resume
-    // ResumeProfile,          // TODO: Phase 5
-    // WorkExperiences,
-    // Educations,
-    // SkillItems,
-    // ProjectExperiences,
+    ResumeProfile,
+    WorkExperiences,
+    Educations,
+    SkillItems,
+    ProjectExperiences,
   ],
 )
 class AppDatabase extends _$AppDatabase {

@@ -1,0 +1,266 @@
+/// 应用路由配置。
+///
+/// 使用 go_router 的 StatefulShellRoute 实现底部导航，
+/// 每个 Tab 拥有独立的 Navigator 栈，切换 Tab 时保持状态。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'route_names.dart';
+import '../features/todo/presentation/pages/todo_list_page.dart';
+import '../features/todo/presentation/pages/todo_form_page.dart';
+import '../features/todo/presentation/pages/todo_detail_page.dart';
+
+/// 页面占位（待后续替换）
+class _PlaceholderPage extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _PlaceholderPage({
+    required this.title,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 80, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '即将上线',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 主壳 - 底部导航
+class MainShell extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
+
+  const MainShell({
+    super.key,
+    required this.navigationShell,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.check_circle_outline),
+            selectedIcon: Icon(Icons.check_circle),
+            label: '待办',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.diamond_outlined),
+            selectedIcon: Icon(Icons.diamond),
+            label: '文玩',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: '复盘',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description),
+            label: '简历',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: '设置',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 创建路由配置
+GoRouter createRouter() {
+  return GoRouter(
+    initialLocation: RouteNames.todoList,
+    routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainShell(
+            key: state.pageKey,
+            navigationShell: navigationShell,
+          );
+        },
+        branches: [
+          // Tab 0: 待办
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.todoList,
+                builder: (context, state) => const TodoListPage(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const TodoFormPage(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = int.parse(state.pathParameters['id']!);
+                      return TodoDetailPage(todoId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = int.parse(state.pathParameters['id']!);
+                          return TodoFormPage(editId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 1: 文玩
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.collectionList,
+                builder: (context, state) => const _PlaceholderPage(
+                  title: '文玩记录',
+                  icon: Icons.diamond_outlined,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '新增藏品',
+                      icon: Icons.add,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '藏品详情',
+                      icon: Icons.visibility,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) => const _PlaceholderPage(
+                          title: '编辑藏品',
+                          icon: Icons.edit,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 2: 复盘
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.reviewHome,
+                builder: (context, state) => const _PlaceholderPage(
+                  title: 'AI 复盘',
+                  icon: Icons.auto_awesome_outlined,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'daily/new',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '每日复盘',
+                      icon: Icons.rate_review,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'daily/:date',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '日报详情',
+                      icon: Icons.calendar_view_day,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'weekly/:id',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '周报详情',
+                      icon: Icons.calendar_view_week,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 3: 简历
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.resumeHome,
+                builder: (context, state) => const _PlaceholderPage(
+                  title: '简历管理',
+                  icon: Icons.description_outlined,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'preview',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '简历预览',
+                      icon: Icons.preview,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'templates',
+                    builder: (context, state) => const _PlaceholderPage(
+                      title: '简历模板',
+                      icon: Icons.design_services,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 4: 设置
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.settings,
+                builder: (context, state) => const _PlaceholderPage(
+                  title: '设置',
+                  icon: Icons.settings_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+}

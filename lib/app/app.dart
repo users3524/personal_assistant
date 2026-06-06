@@ -1,0 +1,113 @@
+/// 应用根组件。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/database/app_database_provider.dart';
+import 'theme/app_theme.dart';
+import 'router/app_router.dart';
+
+/// 主题模式 Provider
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+
+/// 应用是否已初始化
+final appInitializedProvider = FutureProvider<bool>((ref) async {
+  // 触发数据库初始化
+  await ref.watch(appDatabaseProvider.future);
+  return true;
+});
+
+class PersonalAssistantApp extends ConsumerWidget {
+  const PersonalAssistantApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
+      title: '个人全能助手',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
+      routerConfig: createRouter(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
+      ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        for (final supported in supportedLocales) {
+          if (supported.languageCode == locale?.languageCode) {
+            return supported;
+          }
+        }
+        return supportedLocales.first;
+      },
+    );
+  }
+}
+
+/// 启动页 — 等待数据库初始化
+class AppBootstrap extends ConsumerWidget {
+  const AppBootstrap({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final initState = ref.watch(appInitializedProvider);
+
+    return initState.when(
+      data: (_) => const PersonalAssistantApp(),
+      loading: () => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '个人全能助手',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 32),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('正在初始化...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      error: (err, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('初始化失败: $err'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(appInitializedProvider),
+                  child: const Text('重试'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

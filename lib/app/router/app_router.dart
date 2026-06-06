@@ -11,6 +11,9 @@ import 'route_names.dart';
 import '../features/todo/presentation/pages/todo_list_page.dart';
 import '../features/todo/presentation/pages/todo_form_page.dart';
 import '../features/todo/presentation/pages/todo_detail_page.dart';
+import '../features/collection/presentation/pages/antique_list_page.dart';
+import '../features/collection/presentation/pages/antique_form_page.dart';
+import '../features/collection/presentation/pages/antique_detail_page.dart';
 
 /// 页面占位（待后续替换）
 class _PlaceholderPage extends StatelessWidget {
@@ -152,31 +155,25 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: RouteNames.collectionList,
-                builder: (context, state) => const _PlaceholderPage(
-                  title: '文玩记录',
-                  icon: Icons.diamond_outlined,
-                ),
+                builder: (context, state) => const AntiqueListPage(),
                 routes: [
                   GoRoute(
                     path: 'new',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '新增藏品',
-                      icon: Icons.add,
-                    ),
+                    builder: (context, state) => const AntiqueFormPage(),
                   ),
                   GoRoute(
                     path: ':id',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '藏品详情',
-                      icon: Icons.visibility,
-                    ),
+                    builder: (context, state) {
+                      final id = int.parse(state.pathParameters['id']!);
+                      return AntiqueDetailPage(itemId: id);
+                    },
                     routes: [
                       GoRoute(
                         path: 'edit',
-                        builder: (context, state) => const _PlaceholderPage(
-                          title: '编辑藏品',
-                          icon: Icons.edit,
-                        ),
+                        builder: (context, state) {
+                          final id = int.parse(state.pathParameters['id']!);
+                          return AntiqueFormPage(editId: id);
+                        },
                       ),
                     ],
                   ),

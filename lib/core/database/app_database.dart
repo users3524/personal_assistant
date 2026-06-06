@@ -24,9 +24,9 @@ part 'app_database.g.dart';
     Todos,
 
     // Feature: Collection
-    // AntiqueItems,   // TODO: Phase 3
-    // ValuationRecords,
-    // PattingLogs,
+    AntiqueItems,
+    ValuationRecords,
+    PattingLogs,
 
     // Feature: AI Assistant
     // DailyReviews,   // TODO: Phase 4

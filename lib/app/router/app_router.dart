@@ -8,19 +8,19 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'route_names.dart';
-import '../features/todo/presentation/pages/todo_list_page.dart';
-import '../features/todo/presentation/pages/todo_form_page.dart';
-import '../features/todo/presentation/pages/todo_detail_page.dart';
-import '../features/collection/presentation/pages/antique_list_page.dart';
-import '../features/collection/presentation/pages/antique_form_page.dart';
-import '../features/collection/presentation/pages/antique_detail_page.dart';
-import '../features/ai_assistant/presentation/pages/review_home_page.dart';
-import '../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
-import '../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
-import '../features/ai_assistant/presentation/pages/weekly_report_page.dart';
-import '../features/resume/presentation/pages/resume_home_page.dart';
-import '../features/resume/presentation/pages/resume_preview_page.dart';
-import '../features/settings/presentation/pages/settings_page.dart';
+import '../../features/todo/presentation/pages/todo_list_page.dart';
+import '../../features/todo/presentation/pages/todo_form_page.dart';
+import '../../features/todo/presentation/pages/todo_detail_page.dart';
+import '../../features/collection/presentation/pages/antique_list_page.dart';
+import '../../features/collection/presentation/pages/antique_form_page.dart';
+import '../../features/collection/presentation/pages/antique_detail_page.dart';
+import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
+import '../../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
+import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
+import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
+import '../../features/resume/presentation/pages/resume_home_page.dart';
+import '../../features/resume/presentation/pages/resume_preview_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 
 /// 主壳 - 底部导航
 class MainShell extends StatelessWidget {

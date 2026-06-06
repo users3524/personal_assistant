@@ -22,6 +22,7 @@ import '../../features/resume/data/datasources/work_experiences_table.dart';
 import '../../features/resume/data/datasources/educations_table.dart';
 import '../../features/resume/data/datasources/skill_items_table.dart';
 import '../../features/resume/data/datasources/project_experiences_table.dart';
+import 'converters/string_list_converter.dart';
 import 'tables/user_preferences_table.dart';
 
 part 'app_database.g.dart';

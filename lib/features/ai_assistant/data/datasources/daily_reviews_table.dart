@@ -11,7 +11,6 @@ class DailyReviews extends Table {
   IntColumn get id => integer().autoIncrement()();
   DateTimeColumn get date => dateTime()();       // 每天一条，按日期唯一
 
-  @override
   Set<Column> get uniqueKey => {date};
   TextColumn get summary => text()();
   TextColumn get highlights => text().nullable()();

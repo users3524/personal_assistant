@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
-import '../../../domain/entities/resume_entity.dart';
+import '../../domain/entities/resume_entity.dart';
 
 class ResumeDao {
   final AppDatabase _db;

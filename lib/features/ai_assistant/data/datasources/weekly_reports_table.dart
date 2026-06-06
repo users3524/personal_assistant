@@ -19,6 +19,5 @@ class WeeklyReports extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
 
-  @override
   Set<Column> get uniqueKey => {weekNumber, year};
 }

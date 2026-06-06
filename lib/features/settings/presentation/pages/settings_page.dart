@@ -31,22 +31,25 @@ class SettingsPage extends ConsumerWidget {
                   title: const Text('跟随系统'),
                   value: ThemeMode.system,
                   groupValue: themeMode,
-                  onChanged: (v) =>
-                      ref.read(themeModeProvider.notifier).state = v,
+                  onChanged: (v) {
+                    if (v != null) ref.read(themeModeProvider.notifier).state = v;
+                  },
                 ),
                 RadioListTile<ThemeMode>(
                   title: const Text('浅色模式'),
                   value: ThemeMode.light,
                   groupValue: themeMode,
-                  onChanged: (v) =>
-                      ref.read(themeModeProvider.notifier).state = v,
+                  onChanged: (v) {
+                    if (v != null) ref.read(themeModeProvider.notifier).state = v;
+                  },
                 ),
                 RadioListTile<ThemeMode>(
                   title: const Text('深色模式'),
                   value: ThemeMode.dark,
                   groupValue: themeMode,
-                  onChanged: (v) =>
-                      ref.read(themeModeProvider.notifier).state = v,
+                  onChanged: (v) {
+                    if (v != null) ref.read(themeModeProvider.notifier).state = v;
+                  },
                 ),
               ],
             ),

@@ -1,9 +1,8 @@
-/// 应用根组件。
+/// App root widget.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/database/app_database_provider.dart';

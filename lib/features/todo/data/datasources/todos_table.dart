@@ -1,5 +1,4 @@
-/// 待办事项表定义。
-library;
+/// Todo items table definition.
 
 import 'package:drift/drift.dart';
 import '../../../../core/database/converters/string_list_converter.dart';
@@ -18,13 +17,13 @@ class Todos extends Table {
   TextColumn get tags => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
   BoolColumn get isStarred => boolean().withDefault(const Constant(false))();
 
-  // 生命周期追踪
+  // Lifecycle tracking
   DateTimeColumn get startedAt => dateTime().nullable()();
   DateTimeColumn get completedAt => dateTime().nullable()();
   DateTimeColumn get cancelledAt => dateTime().nullable()();
   IntColumn get actualMinutes => integer().nullable()();
   IntColumn get delayCount => integer().withDefault(const Constant(0))();
 
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

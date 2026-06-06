@@ -1,16 +1,14 @@
-/// 教育经历表定义。
-library;
+/// Education experiences table.
 
 import 'package:drift/drift.dart';
 
 class Educations extends Table {
-  @override
-  String get tableName => 'educations';
+  @override String get tableName => 'educations';
 
   IntColumn get id => integer().autoIncrement()();
   TextColumn get school => text()();
   TextColumn get major => text()();
-  TextColumn get degree => text()();                       // 博士 / 硕士 / 本科 / 大专
+  TextColumn get degree => text()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get endDate => dateTime().nullable()();
   TextColumn get description => text().nullable()();

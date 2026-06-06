@@ -1,5 +1,4 @@
-/// 技能表定义。
-library;
+/// Skill items table.
 
 import 'package:drift/drift.dart';
 

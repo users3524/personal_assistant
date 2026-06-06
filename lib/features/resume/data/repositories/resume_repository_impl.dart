@@ -99,7 +99,7 @@ class ResumeRepositoryImpl implements ResumeRepository {
     final profile = await getProfile();
     return ResumeData(
       profile: profile ??
-          const ResumeProfileEntity(
+          ResumeProfileEntity(
             fullName: '',
             updatedAt: DateTime(2000),
           ),

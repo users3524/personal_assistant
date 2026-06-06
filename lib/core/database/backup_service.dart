@@ -7,6 +7,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
@@ -172,6 +173,6 @@ class BackupService {
   encrypt.Key _deriveKey(String password) {
     // 使用 SHA-256 派生 32 字节密钥
     final bytes = sha256.convert(utf8.encode(password)).bytes;
-    return encrypt.Key(bytes);
+    return encrypt.Key(Uint8List.fromList(bytes));
   }
 }

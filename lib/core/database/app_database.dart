@@ -1,8 +1,7 @@
-/// 应用数据库定义。
+/// App database definition.
 ///
-/// 使用 drift 框架生成类型安全的 SQLite 数据库访问层。
-/// 通过 `drift_dev` 的 build_runner 自动生成 `app_database.g.dart`。
-library;
+/// Uses drift framework for type-safe SQLite database access.
+library app_database;
 
 import 'dart:io';
 
@@ -27,25 +26,15 @@ import 'tables/user_preferences_table.dart';
 
 part 'app_database.g.dart';
 
-/// 所有数据库表的集合
 @DriftDatabase(
   tables: [
-    // Core
     UserPreferences,
-
-    // Feature: Todo
     Todos,
-
-    // Feature: Collection
     AntiqueItems,
     ValuationRecords,
     PattingLogs,
-
-    // Feature: AI Assistant
     DailyReviews,
     WeeklyReports,
-
-    // Feature: Resume
     ResumeProfile,
     WorkExperiences,
     Educations,
@@ -59,14 +48,12 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 1;
 
-  /// 创建数据库实例（使用默认文件路径）
   static Future<AppDatabase> create() async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File(p.join(dir.path, 'personal_assistant.db'));
     return AppDatabase(NativeDatabase(file));
   }
 
-  /// 创建内存数据库（用于测试）
   static AppDatabase createInMemory() {
     return AppDatabase(NativeDatabase.memory());
   }

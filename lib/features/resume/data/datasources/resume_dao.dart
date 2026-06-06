@@ -70,21 +70,21 @@ class ResumeDao {
         startDate: row.startDate,
         endDate: row.endDate,
         description: row.description,
-        techStack: _decodeList(row.techStack),
+        techStack: row.techStack,
         isVisible: row.isVisible,
         sortOrder: row.sortOrder,
       );
 
   WorkExperiencesCompanion _workToCompanion(WorkExperienceEntity e) =>
       WorkExperiencesCompanion(
-        company: Value(e.company),
-        position: Value(e.position),
-        startDate: Value(e.startDate),
-        endDate: Value(e.endDate),
-        description: Value(e.description),
-        techStack: Value(_encodeList(e.techStack)),
-        isVisible: Value(e.isVisible),
-        sortOrder: Value(e.sortOrder),
+        company: Value<String>(e.company),
+        position: Value<String>(e.position),
+        startDate: Value<DateTime>(e.startDate),
+        endDate: Value<DateTime?>(e.endDate),
+        description: Value<String>(e.description ?? ''),
+        techStack: Value<List<String>>(e.techStack.toList()),
+        isVisible: Value<bool>(e.isVisible),
+        sortOrder: Value<int>(e.sortOrder),
       );
 
   Future<List<WorkExperienceEntity>> getWorkExperiences() async {
@@ -237,7 +237,7 @@ class ResumeDao {
         name: row.name,
         role: row.role,
         description: row.description,
-        techStack: _decodeList(row.techStack),
+        techStack: row.techStack,
         link: row.link,
         startDate: row.startDate,
         endDate: row.endDate,
@@ -249,13 +249,13 @@ class ResumeDao {
     ProjectExperienceEntity e,
   ) =>
       ProjectExperiencesCompanion(
-        name: Value(e.name),
-        role: Value(e.role),
-        description: Value(e.description),
-        techStack: Value(_encodeList(e.techStack)),
-        link: Value(e.link),
-        startDate: Value(e.startDate),
-        endDate: Value(e.endDate),
+        name: Value<String>(e.name),
+        role: Value<String>(e.role ?? ''),
+        description: Value<String>(e.description ?? ''),
+        techStack: Value<List<String>>(e.techStack.toList()),
+        link: Value<String?>(e.link ?? ''),
+        startDate: Value<DateTime>(e.startDate),
+        endDate: Value<DateTime?>(e.endDate),
         isVisible: Value(e.isVisible),
         sortOrder: Value(e.sortOrder),
       );

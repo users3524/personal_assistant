@@ -1,5 +1,4 @@
-/// 项目经历表定义。
-library;
+/// Project experiences table.
 
 import 'package:drift/drift.dart';
 import '../../../../core/database/converters/string_list_converter.dart';

@@ -4,7 +4,7 @@
 /// 下游 provider 通过 ref.watch 获取数据库实例。
 library;
 
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_database.dart';
 

@@ -1,5 +1,4 @@
-/// 日报表定义。
-library;
+/// Daily reviews table.
 
 import 'package:drift/drift.dart';
 import '../../../../core/database/converters/string_list_converter.dart';
@@ -9,7 +8,7 @@ class DailyReviews extends Table {
   String get tableName => 'daily_reviews';
 
   IntColumn get id => integer().autoIncrement()();
-  DateTimeColumn get date => dateTime()();       // 每天一条，按日期唯一
+  DateTimeColumn get date => dateTime()();       // One per day, unique by date
 
   Set<Column> get uniqueKey => {date};
   TextColumn get summary => text()();
@@ -26,6 +25,6 @@ class DailyReviews extends Table {
   TextColumn get aiSuggestion => text().nullable()();
   BoolColumn get isAiGenerated => boolean().withDefault(const Constant(false))();
   BoolColumn get isManuallyEdited => boolean().withDefault(const Constant(false))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

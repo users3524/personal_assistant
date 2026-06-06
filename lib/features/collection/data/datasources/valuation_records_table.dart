@@ -1,7 +1,5 @@
-/// 估值记录表定义。
-///
-/// 与 AntiqueItems 建立外键关联，级联删除。
-library;
+/// Valuation records table.
+/// Foreign key to AntiqueItems, cascade delete.
 
 import 'package:drift/drift.dart';
 
@@ -16,5 +14,5 @@ class ValuationRecords extends Table {
   DateTimeColumn get date => dateTime()();
   RealColumn get amount => real()();
   TextColumn get remark => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }

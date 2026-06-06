@@ -1,5 +1,4 @@
-/// 工作经历表定义。
-library;
+/// Work experiences table.
 
 import 'package:drift/drift.dart';
 import '../../../../core/database/converters/string_list_converter.dart';
@@ -12,13 +11,13 @@ class WorkExperiences extends Table {
   TextColumn get company => text()();
   TextColumn get position => text()();
   DateTimeColumn get startDate => dateTime()();
-  DateTimeColumn get endDate => dateTime().nullable()();    // null = 至今
+  DateTimeColumn get endDate => dateTime().nullable()();    // null = present
   TextColumn get description => text().nullable()();
   TextColumn get techStack => text()
       .map(const StringListConverter())
       .withDefault(const Constant('[]'))();
   BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime());
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime());
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

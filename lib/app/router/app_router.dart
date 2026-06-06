@@ -14,6 +14,10 @@ import '../features/todo/presentation/pages/todo_detail_page.dart';
 import '../features/collection/presentation/pages/antique_list_page.dart';
 import '../features/collection/presentation/pages/antique_form_page.dart';
 import '../features/collection/presentation/pages/antique_detail_page.dart';
+import '../features/ai_assistant/presentation/pages/review_home_page.dart';
+import '../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
+import '../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
+import '../features/ai_assistant/presentation/pages/weekly_report_page.dart';
 
 /// 页面占位（待后续替换）
 class _PlaceholderPage extends StatelessWidget {
@@ -186,31 +190,28 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: RouteNames.reviewHome,
-                builder: (context, state) => const _PlaceholderPage(
-                  title: 'AI 复盘',
-                  icon: Icons.auto_awesome_outlined,
-                ),
+                builder: (context, state) => const ReviewHomePage(),
                 routes: [
                   GoRoute(
                     path: 'daily/new',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '每日复盘',
-                      icon: Icons.rate_review,
-                    ),
+                    builder: (context, state) =>
+                        const DailyReviewFormPage(),
                   ),
                   GoRoute(
                     path: 'daily/:date',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '日报详情',
-                      icon: Icons.calendar_view_day,
-                    ),
+                    builder: (context, state) {
+                      final date =
+                          state.pathParameters['date']!;
+                      return DailyReviewDetailPage(dateStr: date);
+                    },
                   ),
                   GoRoute(
                     path: 'weekly/:id',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '周报详情',
-                      icon: Icons.calendar_view_week,
-                    ),
+                    builder: (context, state) {
+                      final id = int.parse(
+                          state.pathParameters['id']!);
+                      return WeeklyReportPage(weekNumber: id);
+                    },
                   ),
                 ],
               ),

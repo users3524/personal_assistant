@@ -349,8 +349,10 @@ class _ModernTemplate extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (data.workExperiences.isNotEmpty) ...[
-                    _card('工作经历', ...data.workExperiences.map((e) =>
-                      Padding(
+                    _card('工作经历', Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: data.workExperiences.map((e) =>
+                        Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +366,7 @@ class _ModernTemplate extends StatelessWidget {
                           ],
                         ),
                       ),
-                    )),
+                    ).toList(),
                   ],
                 ],
               ),

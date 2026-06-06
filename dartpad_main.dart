@@ -1,97 +1,43 @@
-// DartPad 兼容版 — 个人全能助手 UI 原型
-// 零外部依赖，仅使用 flutter/material.dart
-// 复制全部代码到 https://dartpad.dev 即可预览
+// 个人全能助手 — DartPad 兼容版
+// 复制全部代码到 https://dartpad.dev 运行
 
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const PersonalAssistantApp());
-}
+void main() => runApp(const MyApp());
 
-// ============================================================
-// 1. 主题
-// ============================================================
-
-class AppTheme {
-  static const Color primary = Color(0xFF6750A4);
-  static const Color lifeColor = Colors.green;
-  static const Color workColor = Colors.blue;
-
-  static ThemeData get light => ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: primary,
-        brightness: Brightness.light,
-      );
-
-  static ThemeData get dark => ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: primary,
-        brightness: Brightness.dark,
-      );
-}
-
-// ============================================================
-// 2. 入口
-// ============================================================
-
-class PersonalAssistantApp extends StatefulWidget {
-  const PersonalAssistantApp({super.key});
-
-  @override
-  State<PersonalAssistantApp> createState() => _PersonalAssistantAppState();
-}
-
-class _PersonalAssistantAppState extends State<PersonalAssistantApp> {
-  bool _isDark = false;
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '个人全能助手',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
-      home: MainShell(
-        onToggleTheme: () => setState(() => _isDark = !_isDark),
-        isDark: _isDark,
+      theme: ThemeData(
+        primarySwatch: Colors.deepPurple,
+        useMaterial3: true,
       ),
+      home: const MainScreen(),
     );
   }
 }
 
 // ============================================================
-// 3. 主壳 — 底部导航
+// 主屏幕 — 底部导航 5 Tab
 // ============================================================
 
-class MainShell extends StatefulWidget {
-  final VoidCallback onToggleTheme;
-  final bool isDark;
-
-  const MainShell({
-    super.key,
-    required this.onToggleTheme,
-    required this.isDark,
-  });
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+class _MainScreenState extends State<MainScreen> {
+  int _tab = 0;
 
-  final _pages = <Widget>[
-    const TodoListPage(),
-    const CollectionListPage(),
-    const ReviewHomePage(),
-    const ResumeHomePage(),
-    const SettingsPage(),
-  ];
-
-  final _titles = ['待办', '文玩', '复盘', '简历', '设置'];
-
-  final _icons = [
+  static const _titles = ['待办清单', '文玩记录', 'AI 复盘', '简历管理', '设置'];
+  static const _icons = [
     Icons.check_circle_outline,
     Icons.diamond_outlined,
     Icons.auto_awesome_outlined,
@@ -103,230 +49,236 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        title: Text(_titles[_tab]),
         centerTitle: true,
-        actions: [
-          if (_currentIndex == 4)
-            IconButton(
-              icon: Icon(widget.isDark ? Icons.light_mode : Icons.dark_mode),
-              tooltip: '切换主题',
-              onPressed: widget.onToggleTheme,
-            ),
+      ),
+      body: IndexedStack(
+        index: _tab,
+        children: const [
+          TodoPage(),
+          CollectionPage(),
+          ReviewPage(),
+          ResumePage(),
+          SettingsPage(),
         ],
       ),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: List.generate(5, (i) {
-          return NavigationDestination(
-            icon: Icon(_icons[i]),
-            selectedIcon: Icon(_icons[i], color: AppTheme.primary),
-            label: _titles[i],
-          );
-        }),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _tab,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.deepPurple,
+        onTap: (i) => setState(() => _tab = i),
+        items: List.generate(5, (i) => BottomNavigationBarItem(
+          icon: Icon(_icons[i]),
+          activeIcon: Icon(_icons[i], color: Colors.deepPurple),
+          label: _titles[i],
+        )),
       ),
     );
   }
 }
 
 // ============================================================
-// 4. 待办模块
+// 1. 待办清单模块
 // ============================================================
 
-class TodoListPage extends StatefulWidget {
-  const TodoListPage({super.key});
+class TodoPage extends StatefulWidget {
+  const TodoPage({super.key});
 
   @override
-  State<TodoListPage> createState() => _TodoListPageState();
+  State<TodoPage> createState() => _TodoPageState();
 }
 
-class _TodoListPageState extends State<TodoListPage> {
-  bool _showLife = true; // true=生活, false=工作
-  final _todos = <Map<String, dynamic>>[
-    {'title': '买水果', 'done': true, 'life': true, 'priority': 2},
-    {'title': '健身打卡', 'done': false, 'life': true, 'priority': 4},
-    {'title': '周报提交', 'done': false, 'life': false, 'priority': 5},
-    {'title': '代码审查', 'done': false, 'life': false, 'priority': 3},
-    {'title': '读书30分钟', 'done': true, 'life': true, 'priority': 2},
-    {'title': '项目会议', 'done': false, 'life': false, 'priority': 4},
+class _TodoPageState extends State<TodoPage> {
+  bool _isLife = true;
+
+  final _allTodos = [
+    _Todo('买水果', true, true, 2),
+    _Todo('健身打卡', false, true, 4),
+    _Todo('周报提交', false, false, 5),
+    _Todo('代码审查', false, false, 3),
+    _Todo('读书30分钟', true, true, 2),
+    _Todo('项目会议', false, false, 4),
+    _Todo('洗衣服', false, true, 1),
   ];
 
-  List<Map<String, dynamic>> get _filtered =>
-      _todos.where((t) => t['life'] == _showLife && t['done'] == false).toList();
-
-  List<Map<String, dynamic>> get _done =>
-      _todos.where((t) => t['life'] == _showLife && t['done'] == true).toList();
+  List<_Todo> get _current => _allTodos
+      .where((t) => t.isLife == _isLife && !t.done)
+      .toList();
+  List<_Todo> get _done => _allTodos
+      .where((t) => t.isLife == _isLife && t.done)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final color = _isLife ? Colors.green : Colors.blue;
+    final total = _allTodos.where((t) => t.isLife == _isLife).length;
+    final doneCount = _done.length;
+    final rate = total > 0 ? (doneCount / total * 100).round() : 0;
+
     return Column(
       children: [
-        // 统计卡片
-        _buildStatsCard(),
+        // 统计卡
+        Card(
+          margin: const EdgeInsets.all(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _stat(Icons.today, '今日', '$doneCount/$total', Colors.blue),
+                _stat(Icons.trending_up, '完成率', '$rate%', Colors.green),
+                _stat(Icons.star, '最高优先级',
+                    '${_allTodos.where((t) => t.priority >= 4 && t.isLife == _isLife).length}',
+                    Colors.orange),
+              ],
+            ),
+          ),
+        ),
+
         // 分类切换
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _buildCategoryChip('生活', Icons.home, Colors.green, _showLife,
-                  () => setState(() => _showLife = true)),
+              _chip('生活', Icons.home, Colors.green, _isLife, () => setState(() => _isLife = true)),
               const SizedBox(width: 12),
-              _buildCategoryChip('工作', Icons.work, Colors.blue, !_showLife,
-                  () => setState(() => _showLife = false)),
+              _chip('工作', Icons.work, Colors.blue, !_isLife, () => setState(() => _isLife = false)),
               const Spacer(),
-              Text('完成 ${_done.length}',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+              Text('$doneCount/$total', style: TextStyle(color: Colors.grey[600])),
             ],
           ),
         ),
+        const SizedBox(height: 8),
+
         // 列表
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async => setState(() {}),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 80),
-              children: [
-                ..._filtered.map((t) => _buildTodoTile(t, false)),
-                if (_done.isNotEmpty && _filtered.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                    child: Text('已完成',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 13)),
-                  ),
-                ..._done.map((t) => _buildTodoTile(t, true)),
-              ],
-            ),
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 16),
+            children: [
+              ..._current.map((t) => _todoItem(t, false)),
+              if (_done.isNotEmpty && _current.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text('已完成  $doneCount',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                ),
+              ..._done.map((t) => _todoItem(t, true)),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatsCard() {
-    final total = _todos.where((t) => t['life'] == _showLife).length;
-    final done = _done.length;
-    final rate = total > 0 ? (done / total * 100).toInt() : 0;
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _statItem(Icons.today, '今日', '$done/$total', Colors.blue),
-            _divider(),
-            _statItem(Icons.receipt_long, '完成率', '$rate%', Colors.green),
-            _divider(),
-            _statItem(Icons.star, '优先级', '${_showLife ? 4 : 5}', Colors.orange),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statItem(IconData icon, String label, String value, Color c) {
+  Widget _stat(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
-        Icon(icon, color: c, size: 20),
+        Icon(icon, color: color, size: 22),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: c, fontSize: 16)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 16)),
         Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
     );
   }
 
-  Widget _divider() => Container(width: 1, height: 36, color: Colors.grey.shade300);
-
-  Widget _buildCategoryChip(
-      String label, IconData icon, Color c, bool selected, VoidCallback onTap) {
+  Widget _chip(String label, IconData icon, Color color, bool sel, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? c.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+          color: sel ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
-          border: selected ? Border.all(color: c, width: 1.5) : null,
+          border: sel ? Border.all(color: color, width: 1.5) : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: selected ? c : Colors.grey),
-            const SizedBox(width: 6),
+            Icon(icon, size: 16, color: sel ? color : Colors.grey),
+            const SizedBox(width: 4),
             Text(label,
                 style: TextStyle(
-                    color: selected ? c : Colors.grey,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
+                    color: sel ? color : Colors.grey,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTodoTile(Map<String, dynamic> t, bool done) {
-    final c = t['life'] as bool ? Colors.green : Colors.blue;
-    return ListTile(
-      leading: Icon(
-        done ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: done ? c : Colors.grey.shade400,
-      ),
-      title: Text(t['title'] as String, style: TextStyle(
-        decoration: done ? TextDecoration.lineThrough : null,
-        color: done ? Colors.grey : null,
-      )),
-      subtitle: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: c.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4)),
-            child: Text(t['life'] as bool ? '生活' : '工作',
-                style: TextStyle(fontSize: 10, color: c)),
-          ),
-          const SizedBox(width: 8),
-          ...List.generate(
-              t['priority'] as int,
-              (i) => const Icon(Icons.star, size: 12, color: Colors.orange)),
-        ],
+  Widget _todoItem(_Todo t, bool done) {
+    final color = t.isLife ? Colors.green : Colors.blue;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: ListTile(
+        leading: Icon(
+          done ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: done ? color : Colors.grey,
+        ),
+        title: Text(t.title,
+            style: TextStyle(
+                decoration: done ? TextDecoration.lineThrough : null,
+                color: done ? Colors.grey : null)),
+        subtitle: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(t.isLife ? '生活' : '工作',
+                  style: TextStyle(fontSize: 10, color: color)),
+            ),
+            const SizedBox(width: 8),
+            ...List.generate(t.priority, (i) => const Icon(Icons.star, size: 12, color: Colors.orange)),
+          ],
+        ),
       ),
     );
   }
 }
 
+class _Todo {
+  final String title;
+  final bool done;
+  final bool isLife;
+  final int priority;
+  const _Todo(this.title, this.done, this.isLife, this.priority);
+}
+
 // ============================================================
-// 5. 文玩模块
+// 2. 文玩记录模块
 // ============================================================
 
-class CollectionListPage extends StatelessWidget {
-  const CollectionListPage({super.key});
+class CollectionPage extends StatelessWidget {
+  const CollectionPage({super.key});
 
   final _items = const [
-    {'name': '绿松石手串', 'category': '松石', 'price': 2800, 'color': Color(0xFF4CAF50)},
-    {'name': '南红玛瑙', 'category': '南红', 'price': 3600, 'color': Color(0xFFE53935)},
-    {'name': '金刚菩提', 'category': '菩提', 'price': 1200, 'color': Color(0xFF795548)},
-    {'name': '和田玉吊坠', 'category': '和田玉', 'price': 5800, 'color': Color(0xFF9E9E9E)},
+    _Item('绿松石手串', '松石', 2800, Colors.teal),
+    _Item('南红玛瑙', '南红', 3600, Colors.red),
+    _Item('金刚菩提', '菩提', 1200, Colors.brown),
+    _Item('和田玉吊坠', '和田玉', 5800, Colors.blueGrey),
+    _Item('紫砂壶', '紫砂', 4200, Colors.deepOrange),
+    _Item('小叶紫檀', '杂项', 1800, Colors.purple),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final total = _items.fold(0, (s, i) => s + i.price);
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Row(
             children: [
               const Icon(Icons.diamond, size: 16, color: Colors.grey),
               const SizedBox(width: 6),
-              Text('共 ${_items.length} 件藏品',
+              Text('${_items.length} 件藏品',
                   style: const TextStyle(color: Colors.grey, fontSize: 13)),
               const Spacer(),
-              const Text('4 个分类',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
+              Text('估值 ¥$total',
+                  style: const TextStyle(color: Colors.green, fontSize: 13)),
             ],
           ),
         ),
@@ -334,13 +286,11 @@ class CollectionListPage extends StatelessWidget {
           child: GridView.builder(
             padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.78,
+              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12,
+              childAspectRatio: 0.8,
             ),
             itemCount: _items.length,
-            itemBuilder: (context, i) {
+            itemBuilder: (_, i) {
               final item = _items[i];
               return Card(
                 clipBehavior: Clip.antiAlias,
@@ -349,11 +299,9 @@ class CollectionListPage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Container(
-                        color: (item['color'] as Color).withOpacity(0.15),
+                        color: item.color.withOpacity(0.12),
                         child: Center(
-                          child: Icon(Icons.diamond,
-                              size: 48,
-                              color: (item['color'] as Color).withOpacity(0.5)),
+                          child: Icon(Icons.diamond, size: 48, color: item.color.withOpacity(0.4)),
                         ),
                       ),
                     ),
@@ -362,31 +310,24 @@ class CollectionListPage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item['name'] as String,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 14),
+                          Text(item.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
                               maxLines: 1, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 4),
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withOpacity(0.1),
+                                  color: Colors.deepPurple.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text(item['category'] as String,
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: AppTheme.primary)),
+                                child: Text(item.category,
+                                    style: const TextStyle(fontSize: 10, color: Colors.deepPurple)),
                               ),
                               const Spacer(),
-                              Text('¥${item['price']}',
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.green)),
+                              Text('¥${item.price}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green)),
                             ],
                           ),
                         ],
@@ -403,39 +344,42 @@ class CollectionListPage extends StatelessWidget {
   }
 }
 
+class _Item {
+  final String name;
+  final String category;
+  final int price;
+  final Color color;
+  const _Item(this.name, this.category, this.price, this.color);
+}
+
 // ============================================================
-// 6. AI 复盘模块
+// 3. AI 复盘模块
 // ============================================================
 
-class ReviewHomePage extends StatelessWidget {
-  const ReviewHomePage({super.key});
+class ReviewPage extends StatelessWidget {
+  const ReviewPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 今日状态
+        // 日期卡片
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 56, height: 56,
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
+                    color: Colors.deepPurple.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
-                    child: Text(
-                      '${DateTime.now().month}/${DateTime.now().day}',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary),
-                    ),
+                    child: Text('${now.month}/${now.day}',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -443,21 +387,19 @@ class ReviewHomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日',
-                        style: Theme.of(context).textTheme.titleMedium),
+                      Text('${now.year}年${now.month}月${now.day}日',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
-                      const Text('今日尚未复盘',
-                          style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      const Text('今日尚未复盘', style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ),
-                Icon(Icons.check_circle, color: Colors.grey.shade300, size: 32),
+                Icon(Icons.check_circle, color: Colors.grey[300], size: 32),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // AI 复盘入口
         Card(
@@ -466,12 +408,11 @@ class ReviewHomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   children: [
-                    Icon(Icons.auto_awesome, color: AppTheme.primary),
-                    const SizedBox(width: 8),
-                    Text('AI 每日复盘',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Icon(Icons.auto_awesome, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text('AI 每日复盘', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -480,8 +421,8 @@ class ReviewHomePage extends StatelessWidget {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => _showReviewDialog(context),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showReview(context),
                     icon: const Icon(Icons.edit),
                     label: const Text('开始今日复盘'),
                   ),
@@ -490,7 +431,7 @@ class ReviewHomePage extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // 本周周报
         Card(
@@ -501,14 +442,14 @@ class ReviewHomePage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.calendar_view_week, color: AppTheme.primary),
+                    const Icon(Icons.calendar_view_week, color: Colors.deepPurple),
                     const SizedBox(width: 8),
-                    Text('第 ${_getWeekNumber(DateTime.now())} 周周报',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text('第 ${now.weekday} 周周报',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Chip(
-                      label: const Text('未生成',
-                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      label: const Text('未生成', style: TextStyle(fontSize: 12)),
+                      backgroundColor: Colors.grey[100],
                     ),
                   ],
                 ),
@@ -525,9 +466,9 @@ class ReviewHomePage extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
-        // 历史记录
+        // 历史
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -536,17 +477,18 @@ class ReviewHomePage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.history, color: AppTheme.primary),
+                    const Icon(Icons.history, color: Colors.deepPurple),
                     const SizedBox(width: 8),
-                    Text('${DateTime.now().month}月复盘记录',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text('${now.month}月复盘记录',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('本月暂无复盘记录',
-                      style: TextStyle(color: Colors.grey)),
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('本月暂无复盘记录', style: TextStyle(color: Colors.grey)),
+                  ),
                 ),
               ],
             ),
@@ -556,65 +498,52 @@ class ReviewHomePage extends StatelessWidget {
     );
   }
 
-  int _getWeekNumber(DateTime date) {
-    final firstDay = DateTime(date.year, 1, 1);
-    final diff = date.difference(firstDay).inDays;
-    return ((diff + firstDay.weekday - 1) / 7).ceil();
-  }
-
-  void _showReviewDialog(BuildContext context) {
+  void _showReview(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _DailyReviewSheet(),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _ReviewSheet(),
     );
   }
 }
 
-class _DailyReviewSheet extends StatefulWidget {
-  const _DailyReviewSheet();
+class _ReviewSheet extends StatefulWidget {
+  const _ReviewSheet();
 
   @override
-  State<_DailyReviewSheet> createState() => _DailyReviewSheetState();
+  State<_ReviewSheet> createState() => _ReviewSheetState();
 }
 
-class _DailyReviewSheetState extends State<_DailyReviewSheet> {
+class _ReviewSheetState extends State<_ReviewSheet> {
   int _mood = 3;
   int _energy = 3;
-  String _summary = '';
-  bool _showAI = false;
+  bool _showAi = false;
+
+  static const _moods = ['😞', '😐', '🙂', '😊', '😄'];
+  static const _energies = ['🪫', '🔋', '⚡', '⚡', '⚡'];
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        24,
-        24,
-        24 + MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Text('每日复盘',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('每日复盘', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const Spacer(),
-                IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context)),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
               ],
             ),
             const SizedBox(height: 16),
-            const Text('今日总结'),
-            const SizedBox(height: 8),
             TextField(
-              onChanged: (v) => _summary = v,
               decoration: const InputDecoration(
+                labelText: '今日总结',
                 hintText: '今天做了什么？有什么收获？',
                 border: OutlineInputBorder(),
               ),
@@ -623,61 +552,57 @@ class _DailyReviewSheetState extends State<_DailyReviewSheet> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: _emojiPicker('情绪',
-                    ['😞', '😐', '🙂', '😊', '😄'], _mood, (v) => setState(() => _mood = v))),
+                Expanded(child: _picker('情绪', _moods, _mood, (v) => setState(() => _mood = v))),
                 const SizedBox(width: 16),
-                Expanded(child: _emojiPicker('能量',
-                    ['🪫', '🔋', '⚡', '⚡⚡', '⚡⚡⚡'], _energy, (v) => setState(() => _energy = v))),
+                Expanded(child: _picker('能量', _energies, _energy, (v) => setState(() => _energy = v))),
               ],
             ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => setState(() => _showAI = true),
+              child: ElevatedButton.icon(
+                onPressed: () => setState(() => _showAi = true),
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text('AI 生成复盘评语'),
               ),
             ),
-            if (_showAI) ...[
+            if (_showAi) ...[
               const SizedBox(height: 16),
-              Card(
-                color: AppTheme.primary.withOpacity(0.08),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.auto_awesome, size: 18),
-                          const SizedBox(width: 8),
-                          const Text('AI 评语',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          const Spacer(),
-                          const Chip(
-                              label: Text('平稳',
-                                  style: TextStyle(fontSize: 11))),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('平稳度过的一天，完成了日常任务，保持了良好的节奏。'
-                          '建议明天可以尝试挑战一个更有难度的任务。'),
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 4),
-                      const Text('💡 建议'),
-                      const SizedBox(height: 4),
-                      const Text('尝试每天留出 15 分钟给自己，放松心情。'),
-                    ],
-                  ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.auto_awesome, size: 18, color: Colors.deepPurple),
+                        SizedBox(width: 8),
+                        Text('AI 评语', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Spacer(),
+                        Text('平稳', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text('平稳度过的一天，完成了日常任务，保持了良好的节奏。'),
+                    SizedBox(height: 12),
+                    Divider(),
+                    SizedBox(height: 4),
+                    Text('💡 建议', style: TextStyle(fontWeight: FontWeight.w600)),
+                    SizedBox(height: 4),
+                    Text('尝试每天留出 15 分钟给自己，放松心情。'),
+                  ],
                 ),
               ),
             ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
+              child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('保存'),
               ),
@@ -688,8 +613,7 @@ class _DailyReviewSheetState extends State<_DailyReviewSheet> {
     );
   }
 
-  Widget _emojiPicker(String label, List<String> emojis, int selected,
-      ValueChanged<int> onChanged) {
+  Widget _picker(String label, List<String> items, int sel, ValueChanged<int> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -697,24 +621,18 @@ class _DailyReviewSheetState extends State<_DailyReviewSheet> {
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(emojis.length, (i) {
-            final sel = i + 1 == selected;
+          children: List.generate(items.length, (i) {
+            final selected = i + 1 == sel;
             return GestureDetector(
               onTap: () => onChanged(i + 1),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 40,
-                height: 40,
+              child: Container(
+                width: 38, height: 38,
                 decoration: BoxDecoration(
-                  color: sel
-                      ? AppTheme.primary.withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: sel
-                      ? Border.all(color: AppTheme.primary, width: 2)
-                      : null,
+                  color: selected ? Colors.deepPurple.withOpacity(0.15) : Colors.grey.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: selected ? Border.all(color: Colors.deepPurple, width: 2) : null,
                 ),
-                child: Center(child: Text(emojis[i], style: const TextStyle(fontSize: 18))),
+                child: Center(child: Text(items[i], style: const TextStyle(fontSize: 18))),
               ),
             );
           }),
@@ -725,70 +643,85 @@ class _DailyReviewSheetState extends State<_DailyReviewSheet> {
 }
 
 // ============================================================
-// 7. 简历模块
+// 4. 简历模块
 // ============================================================
 
-class ResumeHomePage extends StatelessWidget {
-  const ResumeHomePage({super.key});
+class ResumePage extends StatefulWidget {
+  const ResumePage({super.key});
+
+  @override
+  State<ResumePage> createState() => _ResumePageState();
+}
+
+class _ResumePageState extends State<ResumePage> with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              Tab(text: '个人信息'),
-              Tab(text: '工作经历'),
-              Tab(text: '技能'),
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabCtrl,
+          tabs: const [
+            Tab(text: '个人信息'),
+            Tab(text: '工作经历'),
+            Tab(text: '技能'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabCtrl,
+            children: [
+              _profileTab(),
+              _workTab(),
+              _skillTab(),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildProfileTab(context),
-                _buildWorkTab(),
-                _buildSkillTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildProfileTab(BuildContext context) {
+  Widget _profileTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         TextField(
-          decoration: const InputDecoration(labelText: '姓名'),
+          decoration: const InputDecoration(labelText: '姓名', prefixIcon: Icon(Icons.person)),
           controller: TextEditingController(text: '张三'),
         ),
         const SizedBox(height: 12),
         TextField(
-          decoration: const InputDecoration(labelText: '职位头衔'),
+          decoration: const InputDecoration(labelText: '职位头衔', prefixIcon: Icon(Icons.work)),
           controller: TextEditingController(text: 'Flutter 开发工程师'),
         ),
         const SizedBox(height: 12),
         TextField(
-          decoration: const InputDecoration(labelText: '邮箱'),
+          decoration: const InputDecoration(labelText: '邮箱', prefixIcon: Icon(Icons.email)),
           controller: TextEditingController(text: 'zhangsan@example.com'),
         ),
         const SizedBox(height: 12),
         TextField(
           decoration: const InputDecoration(labelText: '个人简介'),
           maxLines: 3,
-          controller: TextEditingController(
-              text: '5年移动端开发经验，专注于 Flutter 跨平台开发。'),
+          controller: TextEditingController(text: '5年移动端开发经验，专注于 Flutter 跨平台开发。'),
         ),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
+          child: ElevatedButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.save),
             label: const Text('保存信息'),
@@ -798,42 +731,33 @@ class ResumeHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkTab() {
+  Widget _workTab() {
     final works = [
-      {'company': '字节跳动', 'position': 'Flutter 高级工程师', 'year': '2022-至今'},
-      {'company': '阿里巴巴', 'position': '移动端开发工程师', 'year': '2019-2022'},
+      ['字节跳动', 'Flutter 高级工程师', '2022-至今'],
+      ['阿里巴巴', '移动端开发工程师', '2019-2022'],
     ];
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
         ...works.map((w) => Card(
-              child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.business, color: AppTheme.primary),
-                ),
-                title: Text(w['company'] as String),
-                subtitle: Text('${w['position']} · ${w['year']}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Switch(value: true, onChanged: (_) {}),
-                    IconButton(
-                        icon: const Icon(Icons.delete, size: 18),
-                        onPressed: () {}),
-                  ],
-                ),
+          child: ListTile(
+            leading: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-            )),
+              child: const Icon(Icons.business, color: Colors.deepPurple),
+            ),
+            title: Text(w[0]),
+            subtitle: Text('${w[1]} · ${w[2]}'),
+            trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () {}),
+          ),
+        )),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: OutlinedButton.icon(
-            onPressed: () => {},
+            onPressed: () {},
             icon: const Icon(Icons.add),
             label: const Text('添加工作经历'),
           ),
@@ -842,41 +766,36 @@ class ResumeHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSkillTab() {
+  Widget _skillTab() {
     final skills = [
-      {'name': 'Flutter', 'level': 5, 'cat': '框架'},
-      {'name': 'Dart', 'level': 4, 'cat': '语言'},
-      {'name': 'Swift', 'level': 3, 'cat': '语言'},
-      {'name': 'Riverpod', 'level': 4, 'cat': '框架'},
+      ['Flutter', '框架', '5'],
+      ['Dart', '语言', '4'],
+      ['Swift', '语言', '3'],
+      ['Riverpod', '框架', '4'],
+      ['Git', '工具', '4'],
     ];
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
         ...skills.map((s) => Card(
-              child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text('${s['level']}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary)),
-                  ),
-                ),
-                title: Text(s['name'] as String),
-                subtitle: Text(s['cat'] as String),
-                trailing: IconButton(
-                    icon: const Icon(Icons.delete, size: 18),
-                    onPressed: () {}),
+          child: ListTile(
+            leading: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-            )),
+              child: Center(
+                child: Text(s[2], style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+              ),
+            ),
+            title: Text(s[0]),
+            subtitle: Text(s[1]),
+            trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () {}),
+          ),
+        )),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: OutlinedButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.add),
@@ -889,36 +808,43 @@ class ResumeHomePage extends StatelessWidget {
 }
 
 // ============================================================
-// 8. 设置页
+// 5. 设置页
 // ============================================================
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
-  static void _ignoreSwitch(bool v) {}
-
   @override
   Widget build(BuildContext context) {
     return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        _section('外观', [
+        _group('外观', [
           ListTile(
             leading: const Icon(Icons.palette),
             title: const Text('主题模式'),
-            subtitle: const Text('浅色'),
+            subtitle: const Text('浅色模式'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('语言'),
+            subtitle: const Text('中文'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
         ]),
-        _section('AI 配置', [
+        const SizedBox(height: 8),
+        _group('AI 配置', [
           ListTile(
             leading: const Icon(Icons.key),
             title: const Text('API Key'),
-            subtitle: const Text('已配置'),
+            subtitle: const Text('sk-xxxxxxxxxxxx'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
+          const Divider(height: 1, indent: 16),
           ListTile(
             leading: const Icon(Icons.dns),
             title: const Text('API 地址'),
@@ -926,23 +852,33 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
-        ]),
-        _section('通知', [
-          const SwitchListTile(
-            title: Text('每日复盘提醒'),
-            subtitle: Text('默认 21:00'),
-            value: true,
-            onChanged: _ignoreSwitch,
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          const SwitchListTile(
-            title: Text('每周周报提醒'),
-            subtitle: Text('每周日 20:00'),
-            value: true,
-            onChanged: _ignoreSwitch,
+          const Divider(height: 1, indent: 16),
+          ListTile(
+            leading: const Icon(Icons.model_training),
+            title: const Text('模型'),
+            subtitle: const Text('gpt-3.5-turbo'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {},
           ),
         ]),
-        _section('数据', [
+        const SizedBox(height: 8),
+        _group('通知', [
+          SwitchListTile(
+            title: const Text('每日复盘提醒'),
+            subtitle: const Text('默认 21:00'),
+            value: true,
+            onChanged: (_) {},
+          ),
+          const Divider(height: 1, indent: 16),
+          SwitchListTile(
+            title: const Text('每周周报提醒'),
+            subtitle: const Text('每周日 20:00'),
+            value: true,
+            onChanged: (_) {},
+          ),
+        ]),
+        const SizedBox(height: 8),
+        _group('数据', [
           ListTile(
             leading: const Icon(Icons.upload_file),
             title: const Text('导出备份'),
@@ -950,7 +886,7 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
+          const Divider(height: 1, indent: 16),
           ListTile(
             leading: const Icon(Icons.download),
             title: const Text('导入备份'),
@@ -959,7 +895,8 @@ class SettingsPage extends StatelessWidget {
             onTap: () {},
           ),
         ]),
-        _section('关于', [
+        const SizedBox(height: 8),
+        _group('关于', [
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('版本'),
@@ -971,21 +908,20 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _section(String title, List<Widget> children) {
+  Widget _group(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primary,
-              )),
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
+          child: Text(title, style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.deepPurple[400],
+          )),
         ),
         Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
+          margin: EdgeInsets.zero,
           child: Column(children: children),
         ),
       ],

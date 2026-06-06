@@ -18,6 +18,8 @@ import '../features/ai_assistant/presentation/pages/review_home_page.dart';
 import '../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
 import '../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../features/ai_assistant/presentation/pages/weekly_report_page.dart';
+import '../features/resume/presentation/pages/resume_home_page.dart';
+import '../features/resume/presentation/pages/resume_preview_page.dart';
 
 /// 页面占位（待后续替换）
 class _PlaceholderPage extends StatelessWidget {
@@ -222,24 +224,17 @@ GoRouter createRouter() {
             routes: [
               GoRoute(
                 path: RouteNames.resumeHome,
-                builder: (context, state) => const _PlaceholderPage(
-                  title: '简历管理',
-                  icon: Icons.description_outlined,
-                ),
+                builder: (context, state) => const ResumeHomePage(),
                 routes: [
                   GoRoute(
                     path: 'preview',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '简历预览',
-                      icon: Icons.preview,
-                    ),
+                    builder: (context, state) =>
+                        const ResumePreviewPage(),
                   ),
                   GoRoute(
                     path: 'templates',
-                    builder: (context, state) => const _PlaceholderPage(
-                      title: '简历模板',
-                      icon: Icons.design_services,
-                    ),
+                    builder: (context, state) =>
+                        const ResumePreviewPage(),
                   ),
                 ],
               ),

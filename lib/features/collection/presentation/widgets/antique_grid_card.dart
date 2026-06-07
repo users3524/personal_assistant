@@ -77,39 +77,37 @@ class AntiqueGridCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                      Flexible(
                         child: Text(
                           item.category,
                           style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.primary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (item.subtype != null && item.subtype!.isNotEmpty) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                        const SizedBox(width: 3),
+                        Flexible(
                           child: Text(
                             item.subtype!,
                             style: const TextStyle(fontSize: 10, color: Colors.orange),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                      const SizedBox(width: 6),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
                       Text('${DateTime.now().difference(item.acquiredDate).inDays}天',
                         style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                       const Spacer(),
                       if (item.currentValuation != null)
                         Text(
                           '¥${item.currentValuation!.toStringAsFixed(0)}',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade700),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green.shade700),
                         ),
                     ],
                   ),

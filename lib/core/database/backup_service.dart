@@ -244,7 +244,13 @@ class BackupService {
 
   dynamic _toRaw(dynamic v) {
     if (v == null) return null;
-    if (v is int) return v;
+    if (v is int) {
+      // 毫秒时间戳（> 9 亿 = 2001年以后）→ 转 DateTime 对象，drift 自动编码
+      if (v > 900000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(v);
+      }
+      return v;
+    }
     if (v is double) return v;
     if (v is bool) return v ? 1 : 0;
     if (v is List) return jsonEncode(v);

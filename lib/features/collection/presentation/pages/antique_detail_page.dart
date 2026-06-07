@@ -27,11 +27,17 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   final _pageController = PageController();
   final _currentPage = ValueNotifier<int>(0);
 
+  // 缓存的打卡记录 — banner 从中取最新照片
+  List<PattingLogEntity>? _cachedLogs;
+
   @override
   void initState() {
     super.initState();
     _itemFuture = _loadItem();
-    _logsFuture = _loadLogs();
+    _logsFuture = _loadLogs().then((logs) {
+      _cachedLogs = logs;
+      return logs;
+    });
   }
 
   @override
@@ -57,8 +63,24 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     if (!mounted) return;
     setState(() {
       _itemFuture = _loadItem();
-      _logsFuture = _loadLogs();
+      _logsFuture = _loadLogs().then((logs) {
+        _cachedLogs = logs;
+        return logs;
+      });
     });
+  }
+
+  /// 获取 Banner 要展示的图片列表
+  /// 优先取最新一条有照片的打卡记录，没有则用藏品自己的图片
+  List<String> _getBannerImages(AntiqueEntity item) {
+    if (_cachedLogs != null) {
+      final sorted = List<PattingLogEntity>.from(_cachedLogs!)
+        ..sort((a, b) => b.date.compareTo(a.date));
+      for (final log in sorted) {
+        if (log.photoPaths.isNotEmpty) return log.photoPaths;
+      }
+    }
+    return item.imagePaths;
   }
 
   @override
@@ -97,8 +119,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 图片轮播
-                _buildImageCarousel(item),
+                // 图片轮播（最新打卡照片优先）
+                _buildImageCarousel(item, _getBannerImages(item)),
                 // 基本信息 + 情感卡片
                 _buildInfoCard(item),
                 // 盘玩打卡时间线
@@ -122,8 +144,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  Widget _buildImageCarousel(AntiqueEntity item) {
-    if (item.imagePaths.isEmpty) {
+  Widget _buildImageCarousel(AntiqueEntity item, List<String> images) {
+    if (images.isEmpty) {
       return Container(
         height: 260,
         color: Colors.grey.shade200,
@@ -133,17 +155,26 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       );
     }
 
-    if (item.imagePaths.length == 1) {
+    if (images.length == 1) {
       return SizedBox(
         height: 260,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.file(File(item.imagePaths[0]), fit: BoxFit.cover, width: double.infinity,
+            Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
               errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
             ),
             Positioned(bottom: 8, right: 8,
-              child: _fullscreenButton(context, item.imagePaths[0]),
+              child: _fullscreenButton(context, images[0]),
+            ),
+            // 显示照片来源标签
+            Positioned(top: 8, left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
+                child: Text(_cachedLogs != null && _cachedLogs!.any((l) => l.photoPaths.contains(images[0]))
+                    ? '最新打卡' : '藏品照片', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+              ),
             ),
           ],
         ),
@@ -157,17 +188,25 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           height: 240,
           child: PageView.builder(
             controller: _pageController,
-            itemCount: item.imagePaths.length,
+            itemCount: images.length,
             onPageChanged: (i) => _currentPage.value = i,
             itemBuilder: (context, index) {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.file(File(item.imagePaths[index]), fit: BoxFit.cover, width: double.infinity,
+                  Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
                     errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
                   ),
                   Positioned(bottom: 8, right: 8,
-                    child: _fullscreenButton(context, item.imagePaths[index]),
+                    child: _fullscreenButton(context, images[index]),
+                  ),
+                  Positioned(top: 8, left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
+                      child: Text(_cachedLogs != null && _cachedLogs!.any((l) => l.photoPaths.contains(images[index]))
+                          ? '最新打卡' : '藏品照片', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    ),
                   ),
                 ],
               );
@@ -179,7 +218,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           valueListenable: _currentPage,
           builder: (_, page, __) => Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(item.imagePaths.length, (i) => Container(
+            children: List.generate(images.length, (i) => Container(
               width: i == page ? 8 : 6,
               height: i == page ? 8 : 6,
               margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -193,7 +232,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         const SizedBox(height: 4),
         ValueListenableBuilder<int>(
           valueListenable: _currentPage,
-          builder: (_, page, __) => Text('${page + 1} / ${item.imagePaths.length}',
+          builder: (_, page, __) => Text('${page + 1} / ${images.length}',
             style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ),
       ],

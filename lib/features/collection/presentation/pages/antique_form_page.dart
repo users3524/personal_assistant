@@ -171,12 +171,27 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         updatedAt: now,
       );
 
-      final notifier = ref.read(antiqueListProvider.notifier);
+      final repo = await ref.read(antiqueRepositoryProvider.future);
+
       if (_isEditing) {
-        await notifier.updateItem(item);
+        await repo.update(item);
       } else {
-        await notifier.addItem(item);
+        final created = await repo.create(item);
+        // 新建时自动创建首条打卡记录（入手当天）
+        await repo.addPattingLog(PattingLogEntity(
+          itemId: created.id!,
+          date: _acquiredDate,
+          durationMinutes: 0,
+          method: 'bare_hand',
+          note: '入手',
+          photoPaths: [],
+        ));
       }
+
+      // 刷新列表
+      ref.invalidate(antiqueListProvider);
+      ref.invalidate(categoryCountProvider);
+      ref.invalidate(totalValuationProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

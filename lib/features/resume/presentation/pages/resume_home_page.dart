@@ -139,6 +139,7 @@ class _ProfileTabState extends ConsumerState<_ProfileTab> {
           _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
       updatedAt: DateTime.now(),
     ));
+    ref.read(resumeRefreshProvider.notifier).state++;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('个人信息已保存')),

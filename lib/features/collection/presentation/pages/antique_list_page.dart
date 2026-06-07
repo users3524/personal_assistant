@@ -21,9 +21,25 @@ class AntiqueListPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('我的盘串'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterSheet(context, ref),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort),
+            tooltip: '排序',
+            initialValue: ref.watch(antiqueSortModeProvider),
+            onSelected: (mode) {
+              ref.read(antiqueSortModeProvider.notifier).state = mode;
+              ref.read(antiqueListProvider.notifier).sortBySortMode(mode);
+            },
+            itemBuilder: (context) {
+              final cur = ref.watch(antiqueSortModeProvider);
+              return [
+                CheckedPopupMenuItem(value: '', checked: cur == '', child: const Text('默认排序')),
+                CheckedPopupMenuItem(value: 'acquired_desc', checked: cur == 'acquired_desc', child: const Text('入手时间 ↓')),
+                CheckedPopupMenuItem(value: 'acquired_asc', checked: cur == 'acquired_asc', child: const Text('入手时间 ↑')),
+                CheckedPopupMenuItem(value: 'price_desc', checked: cur == 'price_desc', child: const Text('入手价格 ↓')),
+                CheckedPopupMenuItem(value: 'price_asc', checked: cur == 'price_asc', child: const Text('入手价格 ↑')),
+                CheckedPopupMenuItem(value: 'patting', checked: cur == 'patting', child: const Text('最近盘玩')),
+              ];
+            },
           ),
           IconButton(
             icon: const Icon(Icons.search),
@@ -123,13 +139,6 @@ class AntiqueListPage extends ConsumerWidget {
     );
   }
 
-  void _showFilterSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => _FilterSheet(ref: ref),
-    );
-  }
-
   void _showSearch(BuildContext context, WidgetRef ref) {
     showSearch(
       context: context,
@@ -138,39 +147,6 @@ class AntiqueListPage extends ConsumerWidget {
   }
 }
 
-// ===== 筛选面板 =====
-
-class _FilterSheet extends ConsumerWidget {
-  final WidgetRef ref;
-
-  const _FilterSheet({required this.ref});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('筛选', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          const Text('分类（待实现）'),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('应用'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===== 搜索委托 =====
 
 class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {
   final WidgetRef ref;

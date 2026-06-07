@@ -198,15 +198,43 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
-                      children: kPresetCategories.map((cat) {
-                        final selected = _category == cat;
-                        return ChoiceChip(
-                          label: Text(cat),
-                          selected: selected,
-                          onSelected: (sel) =>
-                              setState(() => _category = cat),
-                        );
-                      }).toList(),
+                      children: [
+                        ...kPresetCategories.map((cat) {
+                          final selected = _category == cat;
+                          return ChoiceChip(
+                            label: Text(cat),
+                            selected: selected,
+                            onSelected: (sel) =>
+                                setState(() => _category = cat),
+                          );
+                        }).toList(),
+                        if (!kPresetCategories.contains(_category))
+                          ChoiceChip(
+                            label: Text(_category),
+                            selected: true,
+                            onSelected: null,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              hintText: '自定义分类',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            onChanged: (v) {
+                              if (v.trim().isNotEmpty) {
+                                setState(() => _category = v.trim());
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
 

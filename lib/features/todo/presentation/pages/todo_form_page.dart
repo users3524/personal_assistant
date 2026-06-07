@@ -184,6 +184,28 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                         )).toList(),
                       ),
                     ),
+                    if (!defaultCategories.contains(_category))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Chip(
+                          label: Text(_category),
+                          avatar: const Icon(Icons.category, size: 16),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: '自定义分类（输入新名称）',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onChanged: (v) {
+                        if (v.trim().isNotEmpty) {
+                          setState(() => _category = v.trim());
+                        }
+                      },
+                    ),
                     const SizedBox(height: 24),
 
                     // 优先级

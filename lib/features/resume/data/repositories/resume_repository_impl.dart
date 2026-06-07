@@ -10,15 +10,20 @@ import '../datasources/resume_dao.dart';
 
 class ResumeRepositoryImpl implements ResumeRepository {
   final ResumeDao _dao;
+  final void Function()? _onChanged;
 
-  ResumeRepositoryImpl(this._dao);
+  ResumeRepositoryImpl(this._dao, [this._onChanged]);
+
+  void _notify() => _onChanged?.call();
 
   @override
   Future<ResumeProfileEntity?> getProfile() => _dao.getProfile();
 
   @override
-  Future<void> saveProfile(ResumeProfileEntity profile) =>
-      _dao.saveProfile(profile);
+  Future<void> saveProfile(ResumeProfileEntity profile) async {
+    await _dao.saveProfile(profile);
+    _notify();
+  }
 
   @override
   Future<List<WorkExperienceEntity>> getWorkExperiences() =>
@@ -29,14 +34,17 @@ class ResumeRepositoryImpl implements ResumeRepository {
       _dao.getVisibleWorkExperiences();
 
   @override
-  Future<WorkExperienceEntity> saveWorkExperience(
-    WorkExperienceEntity exp,
-  ) =>
-      _dao.saveWorkExperience(exp);
+  Future<WorkExperienceEntity> saveWorkExperience(WorkExperienceEntity exp) async {
+    final result = await _dao.saveWorkExperience(exp);
+    _notify();
+    return result;
+  }
 
   @override
-  Future<void> deleteWorkExperience(int id) =>
-      _dao.deleteWorkExperience(id);
+  Future<void> deleteWorkExperience(int id) async {
+    await _dao.deleteWorkExperience(id);
+    _notify();
+  }
 
   @override
   Future<void> reorderWorkExperiences(List<int> ids) async {
@@ -47,6 +55,7 @@ class ResumeRepositoryImpl implements ResumeRepository {
         await _dao.saveWorkExperience(target.copyWith(sortOrder: i));
       }
     }
+    _notify();
   }
 
   @override
@@ -57,11 +66,17 @@ class ResumeRepositoryImpl implements ResumeRepository {
       _dao.getVisibleEducations();
 
   @override
-  Future<EducationEntity> saveEducation(EducationEntity edu) =>
-      _dao.saveEducation(edu);
+  Future<EducationEntity> saveEducation(EducationEntity edu) async {
+    final result = await _dao.saveEducation(edu);
+    _notify();
+    return result;
+  }
 
   @override
-  Future<void> deleteEducation(int id) => _dao.deleteEducation(id);
+  Future<void> deleteEducation(int id) async {
+    await _dao.deleteEducation(id);
+    _notify();
+  }
 
   @override
   Future<List<SkillItemEntity>> getSkills() => _dao.getSkills();
@@ -71,11 +86,17 @@ class ResumeRepositoryImpl implements ResumeRepository {
       _dao.getVisibleSkills();
 
   @override
-  Future<SkillItemEntity> saveSkill(SkillItemEntity skill) =>
-      _dao.saveSkill(skill);
+  Future<SkillItemEntity> saveSkill(SkillItemEntity skill) async {
+    final result = await _dao.saveSkill(skill);
+    _notify();
+    return result;
+  }
 
   @override
-  Future<void> deleteSkill(int id) => _dao.deleteSkill(id);
+  Future<void> deleteSkill(int id) async {
+    await _dao.deleteSkill(id);
+    _notify();
+  }
 
   @override
   Future<List<ProjectExperienceEntity>> getProjects() =>
@@ -86,13 +107,17 @@ class ResumeRepositoryImpl implements ResumeRepository {
       _dao.getVisibleProjects();
 
   @override
-  Future<ProjectExperienceEntity> saveProject(
-    ProjectExperienceEntity proj,
-  ) =>
-      _dao.saveProject(proj);
+  Future<ProjectExperienceEntity> saveProject(ProjectExperienceEntity proj) async {
+    final result = await _dao.saveProject(proj);
+    _notify();
+    return result;
+  }
 
   @override
-  Future<void> deleteProject(int id) => _dao.deleteProject(id);
+  Future<void> deleteProject(int id) async {
+    await _dao.deleteProject(id);
+    _notify();
+  }
 
   @override
   Future<ResumeData> buildResumeData() async {
@@ -121,7 +146,10 @@ final resumeDaoProvider = FutureProvider<ResumeDao>((ref) async {
 final resumeRepositoryProvider =
     FutureProvider<ResumeRepository>((ref) async {
   final dao = await ref.watch(resumeDaoProvider.future);
-  return ResumeRepositoryImpl(dao);
+  // 每次写操作后自动触发刷新
+  return ResumeRepositoryImpl(dao, () {
+    ref.read(resumeRefreshProvider.notifier).state++;
+  });
 });
 
 /// 简历数据刷新通知（自增计数器，每次保存后触发）

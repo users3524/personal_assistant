@@ -40,15 +40,49 @@ flutter run
 ## 📁 项目结构
 
 ```
-lib/
-├── app/           # 全局配置、主题、路由
-├── core/          # 基础设施（数据库、AI、网络、通用组件）
-└── features/      # 业务模块（Feature-First + Clean Architecture）
-    ├── todo/          # 待办模块
-    ├── collection/    # 文玩模块
-    ├── ai_assistant/  # AI 复盘模块
-    └── resume/        # 简历模块
+personal_assistant/
+├── lib/                    # Dart 源码
+│   ├── app/                # 全局配置、主题、路由
+│   ├── core/               # 基础设施（数据库、AI、备份）
+│   │   ├── ai/             # AI 服务抽象+OpenAI实现+Provider
+│   │   └── database/       # drift 数据库+备份服务+偏好DAO
+│   ├── features/           # 业务模块（Feature-First + Clean Architecture）
+│   │   ├── collection/     # 文玩模块（藏品/打卡/对比）
+│   │   ├── todo/           # 待办模块
+│   │   ├── ai_assistant/   # AI 复盘模块（对话式日报+周报）
+│   │   ├── resume/         # 简历模块（编辑+预览+PDF导出）
+│   │   └── settings/       # 设置页（主题/AI/备份/通知）
+│   └── l10n/               # 国际化
+├── android/                # Android 平台 (API 36)
+├── windows/                # Windows 桌面端
+├── web/                    # Web 端
+├── test/                   # 单元测试
+├── docs/                   # 设计文档
+├── assets/                 # 静态资源（图片目录）
+├── build_and_run.bat       # 一键构建+安装 APK 脚本
+├── pubspec.yaml            # 依赖配置
+├── analysis_options.yaml   # Dart Lint 规则
+├── CHANGELOG.md            # 变更日志
+└── README.md               # 本文件
 ```
+
+### 根目录文件说明
+
+| 文件 | 作用 | Git |
+|------|------|-----|
+| `build_and_run.bat` | 双击构建 APK + adb 安装到手机 | ✅ |
+| `pubspec.yaml` | Flutter 依赖声明 | ✅ |
+| `pubspec.lock` | 锁定依赖版本（保证可重现构建） | ✅ |
+| `analysis_options.yaml` | Dart 静态分析规则 | ✅ |
+| `CHANGELOG.md` | 版本变更日志 | ✅ |
+| `README.md` | 项目说明 | ✅ |
+| `.gitignore` | Git 忽略规则 | ✅ |
+| `.metadata` | Flutter 项目元数据（自动生成） | ✅ |
+| `.flutter-plugins-dependencies` | 插件依赖缓存（自动生成） | ❌ gitignore |
+| `.idea/` `*.iml` | IDE 配置 | ❌ gitignore |
+| `.dart_tool/` | Dart 工具缓存 | ❌ gitignore |
+| `build/` | 构建产物 | ❌ gitignore |
+| `.reasonix/` | AI 辅助工具缓存 | ❌ gitignore |
 
 ## 📄 文档
 

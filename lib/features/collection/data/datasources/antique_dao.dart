@@ -1,6 +1,8 @@
 /// 文玩模块 DAO — drift 数据库操作。
 library;
 
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -13,7 +15,7 @@ class AntiqueDao {
 
   // ===== 转换器 =====
 
-  AntiqueEntity _toEntity(AntiqueItemRow row) {
+  AntiqueEntity _toEntity(AntiqueItem row) {
     return AntiqueEntity(
       id: row.id,
       name: row.name,
@@ -26,6 +28,7 @@ class AntiqueDao {
       condition: _conditionFromString(row.condition),
       currentValuation: row.currentValuation,
       imagePaths: row.imagePaths,
+      categoryMetadata: _parseMetadata(row.categoryMetadata),
       fingerprints: row.fingerprints,
       notes: row.notes,
       createdAt: row.createdAt,
@@ -45,9 +48,21 @@ class AntiqueDao {
       condition: Value(_conditionToString(entity.condition)),
       currentValuation: Value(entity.currentValuation),
       imagePaths: Value(entity.imagePaths),
+      categoryMetadata: Value(entity.categoryMetadata != null
+          ? jsonEncode(entity.categoryMetadata) : null),
       fingerprints: Value(entity.fingerprints),
       notes: Value(entity.notes),
     );
+  }
+
+  Map<String, String>? _parseMetadata(String? json) {
+    if (json == null || json.isEmpty) return null;
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      return map.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return null;
+    }
   }
 
   String _conditionToString(AntiqueCondition c) {
@@ -78,7 +93,7 @@ class AntiqueDao {
     }
   }
 
-  ValuationRecordEntity _valuationToEntity(ValuationRecordRow row) {
+  ValuationRecordEntity _valuationToEntity(ValuationRecord row) {
     return ValuationRecordEntity(
       id: row.id,
       itemId: row.itemId,
@@ -88,7 +103,7 @@ class AntiqueDao {
     );
   }
 
-  PattingLogEntity _pattingToEntity(PattingLogRow row) {
+  PattingLogEntity _pattingToEntity(PattingLog row) {
     return PattingLogEntity(
       id: row.id,
       itemId: row.itemId,

@@ -15,7 +15,7 @@ class ResumeDao {
 
   // ===== 个人资料 =====
 
-  ResumeProfileEntity _profileToEntity(ResumeProfileRow row) =>
+  ResumeProfileEntity _profileToEntity(ResumeProfileData row) =>
       ResumeProfileEntity(
         id: row.id,
         fullName: row.fullName,
@@ -62,7 +62,7 @@ class ResumeDao {
 
   // ===== 工作经历 =====
 
-  WorkExperienceEntity _workToEntity(WorkExperienceRow row) =>
+  WorkExperienceEntity _workToEntity(WorkExperience row) =>
       WorkExperienceEntity(
         id: row.id,
         company: row.company,
@@ -125,7 +125,7 @@ class ResumeDao {
 
   // ===== 教育经历 =====
 
-  EducationEntity _eduToEntity(EducationRow row) => EducationEntity(
+  EducationEntity _eduToEntity(Education row) => EducationEntity(
         id: row.id,
         school: row.school,
         major: row.major,
@@ -181,7 +181,7 @@ class ResumeDao {
 
   // ===== 技能 =====
 
-  SkillItemEntity _skillToEntity(SkillItemRow row) => SkillItemEntity(
+  SkillItemEntity _skillToEntity(SkillItem row) => SkillItemEntity(
         id: row.id,
         name: row.name,
         category: row.category,
@@ -231,7 +231,7 @@ class ResumeDao {
 
   // ===== 项目经历 =====
 
-  ProjectExperienceEntity _projectToEntity(ProjectExperienceRow row) =>
+  ProjectExperienceEntity _projectToEntity(ProjectExperience row) =>
       ProjectExperienceEntity(
         id: row.id,
         name: row.name,

@@ -14,7 +14,7 @@ class ReviewDao {
 
   // ===== 日报转换 =====
 
-  DailyReviewEntity _dailyToEntity(DailyReviewRow row) {
+  DailyReviewEntity _dailyToEntity(DailyReview row) {
     return DailyReviewEntity(
       id: row.id,
       date: row.date,
@@ -63,7 +63,7 @@ class ReviewDao {
 
   // ===== 周报转换 =====
 
-  WeeklyReportEntity _weeklyToEntity(WeeklyReportRow row) {
+  WeeklyReportEntity _weeklyToEntity(WeeklyReport row) {
     return WeeklyReportEntity(
       id: row.id,
       weekNumber: row.weekNumber,

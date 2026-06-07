@@ -357,6 +357,30 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                           color: Colors.grey.shade700,
                         )),
               ],
+              // 分类专属参数
+              if (item.categoryMetadata != null && item.categoryMetadata!.isNotEmpty) ...[
+                const Divider(height: 16),
+                Text('详细参数', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 4),
+                ...item.categoryMetadata!.entries.map((e) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 72,
+                          child: Text(e.key,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                        ),
+                        Expanded(
+                          child: Text(e.value,
+                              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),

@@ -15,6 +15,7 @@ class AntiqueEntity {
   final AntiqueCondition condition;
   final double? currentValuation;
   final List<String> imagePaths;
+  final Map<String, String>? categoryMetadata; // 分类专属字段 (边宽/重量/尺寸等)
   final String? fingerprints;
   final String? notes;
   final DateTime createdAt;
@@ -32,6 +33,7 @@ class AntiqueEntity {
     this.condition = AntiqueCondition.good,
     this.currentValuation,
     this.imagePaths = const [],
+    this.categoryMetadata,
     this.fingerprints,
     this.notes,
     required this.createdAt,
@@ -50,6 +52,7 @@ class AntiqueEntity {
     AntiqueCondition? condition,
     double? currentValuation,
     List<String>? imagePaths,
+    Map<String, String>? categoryMetadata,
     String? fingerprints,
     String? notes,
     DateTime? createdAt,
@@ -67,6 +70,7 @@ class AntiqueEntity {
       condition: condition ?? this.condition,
       currentValuation: currentValuation ?? this.currentValuation,
       imagePaths: imagePaths ?? this.imagePaths,
+      categoryMetadata: categoryMetadata ?? this.categoryMetadata,
       fingerprints: fingerprints ?? this.fingerprints,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,

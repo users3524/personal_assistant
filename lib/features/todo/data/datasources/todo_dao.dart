@@ -32,7 +32,7 @@ class TodoDao {
   }
 
   /// 将数据库行转为领域实体
-  TodoEntity _toEntity(TodoRow row) {
+  TodoEntity _toEntity(Todo row) {
     // 兼容旧数据：'life'/'work' → '生活'/'工作'
     final cat = _normalizeCategory(row.category);
     // 兼容旧数据：tags 可能是逗号分隔字符串

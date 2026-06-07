@@ -12,23 +12,20 @@ import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
 
 /// 预置分类
-const kPresetCategories = [
-  '松石', '南红', '菩提', '翡翠', '和田玉',
-  '紫砂', '书画', '核桃', '葫芦', '杂项',
-];
+const kPresetCategories = ['核桃', '手串', '把件'];
 
 /// 各分类的细分选项
 const kSubtypeMap = {
-  '松石': ['绿松石', '蓝松石', '菜籽黄', '水草纹', '铁线松'],
-  '南红': ['柿子红', '樱桃红', '玫瑰红', '火焰纹', '冰飘'],
-  '菩提': ['星月', '金刚', '凤眼', '菩提根', '莲花'],
-  '翡翠': ['玻璃种', '冰种', '糯种', '豆种', '油青'],
-  '和田玉': ['白玉', '青玉', '碧玉', '墨玉', '糖玉'],
-  '紫砂': ['紫泥', '朱泥', '段泥', '绿泥', '清水泥'],
-  '书画': ['水墨', '工笔', '书法', '油画', '版画'],
-  '核桃': ['狮子头', '虎头', '官帽', '鸡心', '楸子'],
-  '葫芦': ['大亚腰', '小亚腰', '压腰', '瓢葫芦', '天鹅'],
-  '杂项': [],
+  '核桃': ['白狮子', '苹果园', '鸡心', '官帽', '虎头', '四座楼', '南将石', '磨盘', '蛤蟆头', '满天星'],
+  '手串': ['百香籽', '牛骨', '南红', '紫金鼠', '星月', '金刚', '凤眼', '猴头', '紫檀', '木患子'],
+  '把件': ['葫芦', '贝壳', '折扇', '竹雕', '核雕', '玉牌', '铜件', '牙角'],
+};
+
+/// 各分类需要额外记录的字段
+const kCategoryFields = {
+  '核桃': ['边宽(mm)', '肚厚(mm)', '桩高(mm)', '重量(g)'],
+  '手串': ['尺寸(mm)', '串型', '重量(g)'],
+  '把件': ['长宽高(mm)', '重量(g)'],
 };
 
 class AntiqueFormPage extends ConsumerStatefulWidget {
@@ -47,6 +44,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   late TextEditingController _sellerCtrl;
   late TextEditingController _notesCtrl;
   late TextEditingController _subtypeCtrl;
+
+  // 分类专属字段控制器 (按 kCategoryFields 的 key 索引)
+  final _metaCtrls = <String, TextEditingController>{};
 
   String _category = kPresetCategories[0];
   String? _subtype;
@@ -68,6 +68,16 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _notesCtrl = TextEditingController();
     _subtypeCtrl = TextEditingController();
     if (_isEditing) _loadExisting();
+    // 初始化当前分类的专属字段控制器
+    _initMetaCtrls();
+  }
+
+  void _initMetaCtrls() {
+    _metaCtrls.clear();
+    final fields = kCategoryFields[_category] ?? [];
+    for (final f in fields) {
+      _metaCtrls[f] = TextEditingController();
+    }
   }
 
   Future<void> _loadExisting() async {
@@ -83,6 +93,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _category = item.category;
         _subtype = item.subtype;
         _subtypeCtrl.text = item.subtype ?? '';
+        // 回填分类专属字段
+        _initMetaCtrls();
+        if (item.categoryMetadata != null) {
+          for (final e in item.categoryMetadata!.entries) {
+            _metaCtrls[e.key]?.text = e.value;
+          }
+        }
         _acquiredDate = item.acquiredDate;
         _condition = item.condition;
         _currentValuation = item.currentValuation;
@@ -99,6 +116,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _sellerCtrl.dispose();
     _notesCtrl.dispose();
     _subtypeCtrl.dispose();
+    for (final c in _metaCtrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -169,6 +189,17 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     setState(() => _isLoading = true);
     try {
       final now = DateTime.now();
+
+      // 收集分类专属字段
+      final fields = kCategoryFields[_category] ?? [];
+      final metadata = <String, String>{};
+      for (final f in fields) {
+        final ctrl = _metaCtrls[f];
+        if (ctrl != null && ctrl.text.trim().isNotEmpty) {
+          metadata[f] = ctrl.text.trim();
+        }
+      }
+
       final item = AntiqueEntity(
         id: widget.editId,
         name: _nameCtrl.text.trim(),
@@ -182,6 +213,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         condition: _condition,
         currentValuation: _currentValuation,
         imagePaths: _imagePaths,
+        categoryMetadata: metadata.isNotEmpty ? metadata : null,
         notes: _notesCtrl.text.trim().isEmpty
             ? null
             : _notesCtrl.text.trim(),
@@ -279,6 +311,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                                 _category = cat;
                                 _subtype = null;
                                 _subtypeCtrl.text = '';
+                                _initMetaCtrls();
                               });
                             },
                           );
@@ -308,6 +341,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                                   _category = v.trim();
                                   _subtype = null;
                                   _subtypeCtrl.text = '';
+                                  _initMetaCtrls();
                                 });
                               }
                             },
@@ -353,6 +387,29 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                           if (v.trim().isNotEmpty) setState(() => _subtype = v.trim());
                         },
                       ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // 分类专属字段
+                    if (kCategoryFields[_category] != null && kCategoryFields[_category]!.isNotEmpty) ...[
+                      Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      ...kCategoryFields[_category]!.map((field) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: TextField(
+                            controller: _metaCtrls[field],
+                            decoration: InputDecoration(
+                              hintText: field,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                            keyboardType: field.contains('重量') || field.contains('mm')
+                                ? TextInputType.number : TextInputType.text,
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 16),
                     ],
 

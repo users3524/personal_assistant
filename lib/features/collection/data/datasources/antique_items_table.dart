@@ -18,6 +18,7 @@ class AntiqueItems extends Table {
   TextColumn get condition => text().withDefault(const Constant('good'))();
   RealColumn get currentValuation => real().nullable()();
   TextColumn get imagePaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
+  TextColumn get categoryMetadata => text().nullable()(); // JSON: 分类专属字段
   TextColumn get fingerprints => text().nullable()();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

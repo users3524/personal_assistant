@@ -123,6 +123,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 _buildImageCarousel(item, _getBannerImages(item)),
                 // 基本信息 + 情感卡片
                 _buildInfoCard(item),
+                // 本月盘玩热力图
+                _buildPattingHeatmap(item),
                 // 盘玩打卡时间线
                 _buildPattingTimeline(item),
                 // 底部留白，给 FAB 让位
@@ -411,6 +413,148 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
+  // ===== 本月盘玩热力图 =====
+
+  Widget _buildPattingHeatmap(AntiqueEntity item) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.local_fire_department, size: 18, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Text('本月打卡热力图',
+                      style: Theme.of(context).textTheme.titleSmall),
+                ],
+              ),
+              const SizedBox(height: 8),
+              FutureBuilder<List<PattingLogEntity>>(
+                future: _logsFuture,
+                builder: (context, snapshot) {
+                  final logs = snapshot.data ?? <PattingLogEntity>[];
+                  return _buildHeatmapGrid(logs);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeatmapGrid(List<PattingLogEntity> logs) {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year, now.month, 1);
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final startWeekday = firstDay.weekday - 1;
+    final daysInMonth = lastDay.day;
+    final totalCells = startWeekday + daysInMonth;
+    final rows = (totalCells + 6) ~/ 7;
+
+    // 构建打卡日期集合（仅统计本月）
+    final pattingDays = <int>{};
+    for (final log in logs) {
+      if (log.date.year == now.year && log.date.month == now.month) {
+        pattingDays.add(log.date.day);
+      }
+    }
+
+    // 按打卡次数分色：1次浅色，2次中色，3次+深色
+    final pattingCount = <int, int>{};
+    for (final log in logs) {
+      if (log.date.year == now.year && log.date.month == now.month) {
+        pattingCount[log.date.day] = (pattingCount[log.date.day] ?? 0) + 1;
+      }
+    }
+
+    Color _heatColor(int count) {
+      if (count == 0) return Colors.grey.shade100;
+      if (count == 1) return Colors.orange.shade100;
+      if (count <= 3) return Colors.orange.shade300;
+      return Colors.orange.shade600;
+    }
+
+    return Column(
+      children: [
+        // 星期标签
+        Row(
+          children: ['一','二','三','四','五','六','日'].map((d) {
+            return Expanded(
+              child: Center(
+                child: Text(d, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 4),
+        // 日期网格
+        Table(
+          children: List.generate(rows, (weekIndex) {
+            return TableRow(
+              children: List.generate(7, (colIndex) {
+                final dayNum = weekIndex * 7 + colIndex - startWeekday + 1;
+                if (dayNum < 1 || dayNum > daysInMonth) {
+                  return const SizedBox(height: 28);
+                }
+                final count = pattingCount[dayNum] ?? 0;
+                final isToday = dayNum == now.day;
+
+                return Container(
+                  height: 28,
+                  margin: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(
+                    color: _heatColor(count),
+                    borderRadius: BorderRadius.circular(4),
+                    border: isToday ? Border.all(color: Colors.orange.shade800, width: 1.5) : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$dayNum',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: isToday ? FontWeight.bold : null,
+                      color: count >= 3 ? Colors.white : null,
+                    ),
+                  ),
+                );
+              }),
+            );
+          }),
+        ),
+        const SizedBox(height: 6),
+        // 图例
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _heatLegend(Colors.grey.shade100, '无'),
+            const SizedBox(width: 8),
+            _heatLegend(Colors.orange.shade100, '1次'),
+            const SizedBox(width: 8),
+            _heatLegend(Colors.orange.shade300, '2-3次'),
+            const SizedBox(width: 8),
+            _heatLegend(Colors.orange.shade600, '3次+'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _heatLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 3),
+        Text(label, style: TextStyle(fontSize: 9, color: Colors.grey.shade600)),
+      ],
+    );
+  }
+
   // ===== 盘玩打卡时间线 =====
 
   Widget _buildPattingTimeline(AntiqueEntity item) {
@@ -694,6 +838,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               onTap: () {
                 Navigator.pop(ctx);
                 _doPickImage(item, picker, ImageSource.gallery);
+              },
+            ),
+            const Divider(indent: 16, endIndent: 16, height: 8),
+            ListTile(
+              leading: const Icon(Icons.touch_app, color: Colors.grey),
+              title: const Text('仅打卡（不拍照）'),
+              subtitle: const Text('快速记录盘玩'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showCheckinDialog(item, null);
               },
             ),
             const SizedBox(height: 8),

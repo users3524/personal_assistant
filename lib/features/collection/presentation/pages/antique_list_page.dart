@@ -241,17 +241,34 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   Widget _buildCalendarView(BuildContext context) {
     final month = ref.watch(calendarMonthProvider);
+    final filter = ref.watch(calendarFilterProvider);
     final calendarData = ref.watch(pattingCalendarProvider(month));
 
     return calendarData.when(
-      data: (dayLogs) => _buildCalendarContent(context, month, dayLogs),
+      data: (dayLogs) => _buildCalendarContent(context, month, dayLogs, filter),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(child: Text('加载失败: $err')),
     );
   }
 
+  Widget _buildCalFilterChip(String label, String? filterValue) {
+    final current = ref.watch(calendarFilterProvider);
+    final selected = current == filterValue;
+    return FilterChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      selected: selected,
+      onSelected: (_) {
+        ref.read(calendarFilterProvider.notifier).state =
+            selected ? null : filterValue;
+      },
+      visualDensity: VisualDensity.compact,
+      selectedColor: Colors.orange.shade100.withValues(alpha: 0.5),
+      checkmarkColor: Colors.orange,
+    );
+  }
+
   Widget _buildCalendarContent(
-      BuildContext context, DateTime month, Map<int, List<PattingLogEntity>> dayLogs) {
+      BuildContext context, DateTime month, Map<int, List<PattingLogEntity>> dayLogs, [String? filter]) {
     final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final startWeekday = firstDay.weekday - 1; // Mon=0
@@ -286,6 +303,28 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 },
               ),
             ],
+          ),
+        ),
+        // 分类趣味筛选
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildCalFilterChip('🌸 全部', null),
+                const SizedBox(width: 6),
+                _buildCalFilterChip('🥜 核桃', '核桃'),
+                const SizedBox(width: 6),
+                _buildCalFilterChip('📿 手串', '手串'),
+                const SizedBox(width: 6),
+                _buildCalFilterChip('🎯 把件', '把件'),
+                const SizedBox(width: 6),
+                _buildCalFilterChip('🔥 最勤', 'most'),
+                const SizedBox(width: 6),
+                _buildCalFilterChip('💤 摸鱼', 'least'),
+              ],
+            ),
           ),
         ),
         // 星期标签

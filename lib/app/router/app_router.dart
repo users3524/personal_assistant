@@ -47,7 +47,7 @@ class MainShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.diamond_outlined),
             selectedIcon: Icon(Icons.diamond),
-            label: '文玩包',
+            label: '盘串',
           ),
           NavigationDestination(
             icon: Icon(Icons.check_circle_outline),

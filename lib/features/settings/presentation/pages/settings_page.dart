@@ -11,6 +11,8 @@ import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
 import 'package:dio/dio.dart';
 import 'category_management_page.dart';
+import '../../../../features/collection/presentation/providers/antique_providers.dart'
+    show dailyPickConfigProvider;
 
 // AI 供应商预设
 const _aiProviders = {
@@ -77,6 +79,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _modelCtrl.text = _savedModel;
     _loadSettings();
   }
+
+  bool get _isOllama => _selectedProvider == '本地模型 (Ollama)';
 
   Future<void> _loadSettings() async {
     try {
@@ -222,31 +226,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onTap: () => _showModelPicker(),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.key),
-                  title: const Text('API Key'),
-                  subtitle: Text(
-                    _savedApiKey.isEmpty
-                        ? '未配置'
-                        : _showApiKey
-                            ? _savedApiKey
-                            : _savedApiKey.length > 12
-                                ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
-                                : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility, size: 20),
-                        onPressed: () => setState(() => _showApiKey = !_showApiKey),
+                _isOllama
+                    ? const ListTile(
+                        leading: Icon(Icons.key_off),
+                        title: Text('API Key'),
+                        subtitle: Text('本地模型无需 API Key', style: TextStyle(color: Colors.green)),
+                      )
+                    : ListTile(
+                        leading: const Icon(Icons.key),
+                        title: const Text('API Key'),
+                        subtitle: Text(
+                          _savedApiKey.isEmpty
+                              ? '未配置'
+                              : _showApiKey
+                                  ? _savedApiKey
+                                  : _savedApiKey.length > 12
+                                      ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
+                                      : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
+                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility, size: 20),
+                              onPressed: () => setState(() => _showApiKey = !_showApiKey),
+                            ),
+                            const Icon(Icons.edit, size: 20),
+                          ],
+                        ),
+                        onTap: () => _showApiKeyEditor(),
                       ),
-                      const Icon(Icons.edit, size: 20),
-                    ],
-                  ),
-                  onTap: () => _showApiKeyEditor(),
-                ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 ListTile(
                   leading: const Icon(Icons.wifi_tethering),
@@ -299,6 +309,57 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          _sectionHeader('文玩'),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Consumer(builder: (context, ref, _) {
+              final config = ref.watch(dailyPickConfigProvider);
+              return Column(
+                children: [
+                  const ListTile(
+                    leading: Icon(Icons.auto_awesome),
+                    title: Text('每日翻牌推荐'),
+                    subtitle: Text('配置每日推荐的种类和数量'),
+                  ),
+                  ...config.counts.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 60,
+                          child: Text(entry.key, style: const TextStyle(fontSize: 14)),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline, size: 20),
+                          onPressed: () {
+                            final notifier = ref.read(dailyPickConfigProvider.notifier);
+                            if (entry.value > 1) {
+                              notifier.setCount(entry.key, entry.value - 1);
+                            }
+                          },
+                        ),
+                        SizedBox(
+                          width: 24,
+                          child: Text('${entry.value}', textAlign: TextAlign.center),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                          onPressed: () {
+                            ref.read(dailyPickConfigProvider.notifier).setCount(entry.key, entry.value + 1);
+                          },
+                        ),
+                        const SizedBox(width: 24),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 8),
+                ],
+              );
+            }),
           ),
           const SizedBox(height: 16),
 
@@ -388,37 +449,39 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _showProviderPicker() {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('选择 AI 平台', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          ..._aiProviders.keys.map((provider) => RadioListTile<String>(
-                title: Text(provider),
-                subtitle: Text(_aiProviders[provider]!['baseUrl']!.toString()),
-                value: provider,
-                groupValue: _selectedProvider,
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() {
-                    _selectedProvider = v;
-                    final info = _aiProviders[v]!;
-                    _savedBaseUrl = info['baseUrl']!.toString();
-                    _baseUrlCtrl.text = _savedBaseUrl;
-                    if (info['defaultModel']!.toString().isNotEmpty) {
-                      _savedModel = info['defaultModel']!.toString();
-                      _modelCtrl.text = _savedModel;
-                    }
-                    _savedProvider = v;
-                  });
-                  _saveAIConfigToDb();
-                  Navigator.pop(ctx);
-                },
-              )),
-          const SizedBox(height: 16),
-        ],
+      builder: (ctx) => SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('选择 AI 平台', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ..._aiProviders.keys.map((provider) => RadioListTile<String>(
+                  title: Text(provider),
+                  subtitle: Text(_aiProviders[provider]!['baseUrl']!.toString()),
+                  value: provider,
+                  groupValue: _selectedProvider,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      _selectedProvider = v;
+                      final info = _aiProviders[v]!;
+                      _savedBaseUrl = info['baseUrl']!.toString();
+                      _baseUrlCtrl.text = _savedBaseUrl;
+                      if (info['defaultModel']!.toString().isNotEmpty) {
+                        _savedModel = info['defaultModel']!.toString();
+                        _modelCtrl.text = _savedModel;
+                      }
+                      _savedProvider = v;
+                    });
+                    _saveAIConfigToDb();
+                    Navigator.pop(ctx);
+                  },
+                )),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -431,26 +494,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('选择模型', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          ...models.map((model) => RadioListTile<String>(
-                title: Text(model),
-                value: model,
-                groupValue: _savedModel,
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() { _savedModel = v; _modelCtrl.text = v; });
-                  _saveAIConfigToDb();
-                  Navigator.pop(ctx);
-                },
-              )),
-          const SizedBox(height: 16),
-        ],
+      builder: (ctx) => SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('选择模型', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ...models.map((model) => RadioListTile<String>(
+                  title: Text(model),
+                  value: model,
+                  groupValue: _savedModel,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() { _savedModel = v; _modelCtrl.text = v; });
+                    _saveAIConfigToDb();
+                    Navigator.pop(ctx);
+                  },
+                )),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }

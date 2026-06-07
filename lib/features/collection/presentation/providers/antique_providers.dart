@@ -23,6 +23,9 @@ final collectionViewModeProvider =
 final calendarMonthProvider =
     StateProvider<DateTime>((ref) => DateTime.now());
 
+// 月历分类筛选
+final calendarFilterProvider = StateProvider<String?>((ref) => null);
+
 // ===== 列表 Provider（可刷新） =====
 
 final antiqueListProvider =
@@ -167,12 +170,52 @@ final pattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
   });
 });
 
-// ===== 每日翻牌推荐 =====
+// ===== 每日翻牌推荐配置 =====
+
+/// 翻牌推荐配置：每个类别推荐的数量
+class DailyPickConfig {
+  final Map<String, int> counts;
+
+  const DailyPickConfig({this.counts = const {'核桃': 2, '手串': 4}});
+
+  DailyPickConfig copyWith({Map<String, int>? counts}) =>
+      DailyPickConfig(counts: counts ?? this.counts);
+}
+
+final dailyPickConfigProvider = StateNotifierProvider<DailyPickConfigNotifier, DailyPickConfig>((ref) {
+  return DailyPickConfigNotifier();
+});
+
+class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
+  DailyPickConfigNotifier() : super(const DailyPickConfig());
+
+  void setCount(String category, int count) {
+    if (count <= 0) return;
+    final newCounts = Map<String, int>.from(state.counts);
+    newCounts[category] = count;
+    state = DailyPickConfig(counts: newCounts);
+  }
+
+  void addCategory(String category, int count) {
+    final newCounts = Map<String, int>.from(state.counts);
+    newCounts[category] = count;
+    state = DailyPickConfig(counts: newCounts);
+  }
+
+  void removeCategory(String category) {
+    final newCounts = Map<String, int>.from(state.counts);
+    newCounts.remove(category);
+    state = DailyPickConfig(counts: newCounts);
+  }
+}
+
+// ===== 每日翻牌推荐（按配置） =====
 
 final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
     final freq = await ref.watch(pattingFrequencyProvider.future);
+    final config = ref.watch(dailyPickConfigProvider);
 
     // 按打卡频率排序
     items.sort((a, b) {
@@ -181,15 +224,12 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
       return fb.compareTo(fa);
     });
 
-    // 分组：核桃、手串、其他
-    final walnuts = items.where((i) => i.category == '核桃').toList();
-    final bracelets = items.where((i) => i.category == '手串').toList();
-
-    // 各取前 N 个
+    // 按配置取每个类别指定数量
     final picks = <AntiqueEntity>[];
-    picks.addAll(walnuts.take(2));
-    picks.addAll(bracelets.take(4));
-
+    for (final entry in config.counts.entries) {
+      final categoryItems = items.where((i) => i.category == entry.key).take(entry.value);
+      picks.addAll(categoryItems);
+    }
     return picks;
   });
 });

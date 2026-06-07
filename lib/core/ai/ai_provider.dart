@@ -35,7 +35,10 @@ class AIConfig {
         apiKey: apiKey ?? this.apiKey,
       );
 
-  bool get isConfigured => apiKey.isNotEmpty;
+  /// 是否已配置可用的 AI 服务
+  /// Ollama 本地模型不需要 API Key
+  bool get isConfigured =>
+      provider == '本地模型 (Ollama)' || apiKey.isNotEmpty;
 }
 
 /// AI 配置 Provider（可读写，启动时自动加载数据库配置）

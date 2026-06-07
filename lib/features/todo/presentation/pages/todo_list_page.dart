@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
-import '../providers/todo_categories_provider.dart';
 
 // ===== 视图模式 =====
 enum CalendarView { week, month }
@@ -58,11 +57,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             },
           ),
           // 分类管理
-          IconButton(
-            icon: const Icon(Icons.category),
-            tooltip: '管理分类',
-            onPressed: () => _showCategoryManager(context),
-          ),
           // 归档切换
           IconButton(
             icon: Icon(_showArchived ? Icons.archive : Icons.archive_outlined),
@@ -531,82 +525,5 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  // ===== 分类管理弹窗 =====
-
-  void _showCategoryManager(BuildContext context) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => Consumer(
-        builder: (ctx, ref, _) {
-          final cats = ref.watch(todoCategoriesProvider).valueOrNull ?? ['生活', '工作'];
-          return AlertDialog(
-            title: const Text('管理分类'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: ctrl,
-                          decoration: const InputDecoration(
-                            hintText: '新分类名称',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle, color: Colors.blue),
-                        onPressed: () {
-                          if (ctrl.text.trim().isNotEmpty) {
-                            ref
-                                .read(todoCategoriesProvider.notifier)
-                                .add(ctrl.text.trim());
-                            ctrl.clear();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  ...cats.map((cat) => ListTile(
-                        dense: true,
-                        title: Text(cat),
-                        trailing: cat == '生活' || cat == '工作'
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    size: 18, color: Colors.red),
-                                onPressed: () => ref
-                                    .read(todoCategoriesProvider.notifier)
-                                    .remove(cat),
-                              ),
-                      )),
-                  if (cats.length <= 2)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('至少保留一个分类',
-                          style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('完成'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
   }
 }

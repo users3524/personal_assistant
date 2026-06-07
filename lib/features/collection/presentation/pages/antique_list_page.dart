@@ -237,45 +237,52 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  // ===== 月历视图 =====
+  // ===== 月历视图 + 趣味排行 =====
 
   Widget _buildCalendarView(BuildContext context) {
     final month = ref.watch(calendarMonthProvider);
-    final filter = ref.watch(calendarFilterProvider);
     final calendarData = ref.watch(pattingCalendarProvider(month));
+    final listAsync = ref.watch(antiqueListProvider);
 
-    return calendarData.when(
-      data: (dayLogs) => _buildCalendarContent(context, month, dayLogs, filter),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('加载失败: $err')),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(antiqueListProvider.notifier).refresh(),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 月历部分
+            calendarData.when(
+              data: (dayLogs) => _buildCalendarGrid(context, month, dayLogs),
+              loading: () => const SizedBox(
+                height: 300, child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, _) => SizedBox(
+                height: 300, child: Center(child: Text('加载失败: $err')),
+              ),
+            ),
+            const Divider(height: 24),
+            // 趣味排行
+            listAsync.when(
+              data: (items) => _buildRankings(context, items, month),
+              loading: () => const SizedBox(height: 100),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildCalFilterChip(String label, String? filterValue) {
-    final current = ref.watch(calendarFilterProvider);
-    final selected = current == filterValue;
-    return FilterChip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      selected: selected,
-      onSelected: (_) {
-        ref.read(calendarFilterProvider.notifier).state =
-            selected ? null : filterValue;
-      },
-      visualDensity: VisualDensity.compact,
-      selectedColor: Colors.orange.shade100.withValues(alpha: 0.5),
-      checkmarkColor: Colors.orange,
-    );
-  }
-
-  Widget _buildCalendarContent(
-      BuildContext context, DateTime month, Map<int, List<PattingLogEntity>> dayLogs, [String? filter]) {
+  Widget _buildCalendarGrid(
+      BuildContext context, DateTime month, Map<int, List<PattingLogEntity>> dayLogs) {
     final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0);
-    final startWeekday = firstDay.weekday - 1; // Mon=0
+    final startWeekday = firstDay.weekday - 1;
     final daysInMonth = lastDay.day;
     final totalCells = startWeekday + daysInMonth;
     final rows = (totalCells + 6) ~/ 7;
     final today = DateTime.now();
+    final now = DateTime(today.year, today.month, today.day);
     final monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
     return Column(
@@ -305,28 +312,6 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             ],
           ),
         ),
-        // 分类趣味筛选
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildCalFilterChip('🌸 全部', null),
-                const SizedBox(width: 6),
-                _buildCalFilterChip('🥜 核桃', '核桃'),
-                const SizedBox(width: 6),
-                _buildCalFilterChip('📿 手串', '手串'),
-                const SizedBox(width: 6),
-                _buildCalFilterChip('🎯 把件', '把件'),
-                const SizedBox(width: 6),
-                _buildCalFilterChip('🔥 最勤', 'most'),
-                const SizedBox(width: 6),
-                _buildCalFilterChip('💤 摸鱼', 'least'),
-              ],
-            ),
-          ),
-        ),
         // 星期标签
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -334,9 +319,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             children: ['一','二','三','四','五','六','日'].map((d) {
               return Expanded(
                 child: Center(
-                  child: Text(d,
-                      style: TextStyle(fontSize: 12,
-                          color: (d == '六' || d == '日') ? Colors.grey : null)),
+                  child: Text(d, style: TextStyle(fontSize: 12,
+                      color: (d == '六' || d == '日') ? Colors.grey : null)),
                 ),
               );
             }).toList(),
@@ -344,9 +328,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         ),
         const SizedBox(height: 4),
         // 日期网格
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: SizedBox(
+            height: (rows * 74).toDouble(),
             child: Table(
               children: List.generate(rows, (weekIndex) {
                 return TableRow(
@@ -356,7 +341,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                       return const SizedBox(height: 72);
                     }
                     final date = DateTime(month.year, month.month, dayNum);
-                    final isToday = _isSameDay(date, today);
+                    final isToday = date == now;
                     final logs = dayLogs[dayNum] ?? [];
                     final hasPhoto = logs.any((l) => l.photoPaths.isNotEmpty);
 
@@ -388,8 +373,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                   borderRadius: BorderRadius.circular(4),
                                   child: Image.file(
                                     File(logs.first.photoPaths.first),
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
+                                    fit: BoxFit.cover, width: double.infinity,
                                     errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 16, color: Colors.grey),
                                   ),
                                 ),
@@ -410,6 +394,186 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           ),
         ),
       ],
+    );
+  }
+
+  // ===== 趣味排行 =====
+
+  Widget _buildRankings(BuildContext context, List<AntiqueEntity> items, DateTime month) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.emoji_events, size: 18, color: Colors.amber),
+              const SizedBox(width: 6),
+              Text('🏆 趣味排行',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // 财富榜
+        _buildWealthRank(context, items),
+        const SizedBox(height: 8),
+        // 侍寝榜
+        _buildPattingRank(context, items),
+        const SizedBox(height: 8),
+        // 尺度榜
+        _buildSizeRank(context, items),
+      ],
+    );
+  }
+
+  Widget _buildWealthRank(BuildContext context, List<AntiqueEntity> items) {
+    final ranked = List<AntiqueEntity>.from(items)
+      ..sort((a, b) => (b.currentValuation ?? b.acquiredPrice ?? 0)
+          .compareTo(a.currentValuation ?? a.acquiredPrice ?? 0));
+    final top = ranked.where((i) => (i.currentValuation ?? i.acquiredPrice ?? 0) > 0).take(5).toList();
+    if (top.isEmpty) return const SizedBox.shrink();
+
+    return _buildRankCard(
+      title: '💰 财富榜',
+      subtitle: '按当前估价排序',
+      items: top,
+      label: (i) => '¥${(i.currentValuation ?? i.acquiredPrice ?? 0).toStringAsFixed(0)}',
+      icon: Icons.monetization_on,
+    );
+  }
+
+  Widget _buildPattingRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, int>>(
+      future: ref.read(pattingFrequencyProvider.future),
+      builder: (context, snapshot) {
+        final freq = snapshot.data ?? {};
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (freq[b.id] ?? 0).compareTo(freq[a.id] ?? 0));
+        final top = ranked.where((i) => (freq[i.id] ?? 0) > 0).take(5).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '💆 侍寝榜',
+          subtitle: '按本月打卡次数排序',
+          items: top,
+          label: (i) => '${freq[i.id] ?? 0}次',
+          icon: Icons.touch_app,
+        );
+      },
+    );
+  }
+
+  Widget _buildSizeRank(BuildContext context, List<AntiqueEntity> items) {
+    // 核桃按边宽、手串按尺寸分别排行
+    final walnuts = items.where((i) => i.category == '核桃').toList();
+    final bracelets = items.where((i) => i.category == '手串').toList();
+
+    if (walnuts.isEmpty && bracelets.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.straighten, size: 16, color: Colors.brown),
+              const SizedBox(width: 6),
+              Text('📏 尺度榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.brown.shade700)),
+              const Spacer(),
+              Text('按尺寸大小排序', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            ]),
+            const SizedBox(height: 8),
+            if (walnuts.isNotEmpty) ...[
+              Text('🥜 核桃', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.brown)),
+              _buildSizeList(context, walnuts, '边宽'),
+            ],
+            if (walnuts.isNotEmpty && bracelets.isNotEmpty) const SizedBox(height: 8),
+            if (bracelets.isNotEmpty) ...[
+              Text('📿 手串', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+              _buildSizeList(context, bracelets, '尺寸'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSizeList(BuildContext context, List<AntiqueEntity> items, String fieldKey) {
+    // 从 categoryMetadata 中提取尺寸信息
+    final withSize = items.where((i) =>
+        i.categoryMetadata != null &&
+        i.categoryMetadata!.keys.any((k) => k.contains(fieldKey))).toList();
+    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, fieldKey)
+        .compareTo(_extractSize(a.categoryMetadata!, fieldKey)));
+
+    if (withSize.isEmpty) return const Padding(
+      padding: EdgeInsets.all(8),
+      child: Text('暂无尺寸数据', style: TextStyle(fontSize: 11, color: Colors.grey)),
+    );
+
+    return Column(
+      children: withSize.take(5).map((item) {
+        final size = _extractSize(item.categoryMetadata!, fieldKey);
+        return ListTile(
+          dense: true,
+          leading: Text('${withSize.indexOf(item) + 1}.',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          title: Text(item.name, style: const TextStyle(fontSize: 13)),
+          trailing: Text(size > 0 ? '$size mm' : '',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        );
+      }).toList(),
+    );
+  }
+
+  double _extractSize(Map<String, String> metadata, String fieldKey) {
+    for (final entry in metadata.entries) {
+      if (entry.key.contains(fieldKey)) {
+        return double.tryParse(entry.value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+      }
+    }
+    return 0;
+  }
+
+  Widget _buildRankCard({
+    required String title,
+    required String subtitle,
+    required List<AntiqueEntity> items,
+    required String Function(AntiqueEntity) label,
+    required IconData icon,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(icon, size: 16, color: Colors.amber.shade700),
+              const SizedBox(width: 6),
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
+              const Spacer(),
+              Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            ]),
+            const SizedBox(height: 8),
+            ...items.map((item) => ListTile(
+              dense: true,
+              leading: Text('${items.indexOf(item) + 1}.',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber.shade700)),
+              title: Text(item.name, style: const TextStyle(fontSize: 13)),
+              subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 11)),
+              trailing: Text(label(item),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.green)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+            )),
+          ],
+        ),
+      ),
     );
   }
 
@@ -512,9 +676,6 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
 }
 
 class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {

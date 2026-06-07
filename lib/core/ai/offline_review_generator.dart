@@ -4,6 +4,8 @@
 /// 而非仅仅根据情绪/能量评分。
 library;
 
+import 'dart:math';
+
 import 'ai_service.dart';
 
 class OfflineReviewGenerator implements AIService {
@@ -17,28 +19,30 @@ class OfflineReviewGenerator implements AIService {
     final msg = message.trim();
     if (msg.isEmpty) return '可以聊聊今天的感受哦～';
 
-    // 提取对话上下文中的关键词，给出人性化回应
     if (_containsAny(msg, ['好', '嗯', 'ok', '可以', '是的', '对'])) {
       return _pick([
         '好的，继续聊聊今天的感受吧～',
         '嗯嗯，我听着呢，然后呢？',
         '好的呢，还有想分享的吗？',
         '明白了，还有别的想说的吗？',
-      ]);
+        '收到～今天的你有什么特别的事吗？',
+      ], msg);
     }
     if (_containsAny(msg, ['没有', '没什么', '没啥'])) {
       return _pick([
         '没关系，平平淡淡也是生活～那我们来打分吧！',
         '好的，那咱们进入评分环节？',
         '理解，那咱们看看今天的整体评分怎么样？',
-      ]);
+        '平淡的一天也挺好的，来说说心情怎么样？',
+      ], msg);
     }
     if (_containsAny(msg, ['谢谢', '感谢', '辛苦了'])) {
       return _pick([
         '不客气！每天进步一点点就好 😊',
         '加油！明天会更好～',
         '棒棒哒，继续保持！',
-      ]);
+        '应该的！一起成长的感觉真好 💪',
+      ], msg);
     }
     if (_containsAny(msg, ['累', '烦', '压力', '忙', '疲惫', '困'])) {
       return _pick([
@@ -46,41 +50,47 @@ class OfflineReviewGenerator implements AIService {
         '压力大是很正常的，你已经做得很好了！',
         '理解你，生活不易，但每天的小进步都值得被看见 💪',
         '累了就歇歇，身体和心情最重要～',
-      ]);
+        '要不要喝杯水、伸个懒腰？简单放松一下 🌿',
+      ], msg);
     }
     if (_containsAny(msg, ['开心', '高兴', '顺利', '成功', '完成', '棒', '不错'])) {
       return _pick([
         '太棒了！今天收获满满呀 🎉',
         '真好，听到这个我也很开心！继续保持～',
         '厉害厉害，今天状态很在线嘛！',
-      ]);
+        'nice ！今天的表现值得给自己点个赞 👍',
+      ], msg);
     }
     if (_containsAny(msg, ['生气', '难过', '伤心', '郁闷', '焦虑', '烦躁'])) {
       return _pick([
         '抱抱你，情绪不好也是正常的，我陪你聊聊？🤗',
         '不开心的事说出来会好受一些，我在听～',
         '情绪低谷总会过去的，今天辛苦了 🫂',
-      ]);
+        '有什么我能帮上忙的吗？说出来也许会好一点 💙',
+      ], msg);
     }
     if (_containsAny(msg, ['盘串', '盘玩', '核桃', '手串'])) {
       return _pick([
         '盘串解压效果一流！今天盘了多久呀？🎯',
         '文玩人的快乐就是这么简单～',
         '盘串的时候最放松了，感觉怎么样？',
-      ]);
+        '越盘越润，心情也越来越好 😌',
+      ], msg);
     }
     if (_containsAny(msg, ['复盘', '保存', '确认'])) {
       return _pick([
         '好的，准备复盘保存啦～',
         '确认保存本次复盘？',
-      ]);
+        '收到，那就保存咯！',
+      ], msg);
     }
-    // 默认回复
     return _pick([
       '收到！继续说说看～',
       '明白了，还有吗？',
       '好嘞，我记下了，接着说～',
-    ]);
+      '嗯嗯，我在听呢，然后呢？',
+      '好的，今天还有什么想聊的？',
+    ], msg);
   }
 
   bool _containsAny(String text, List<String> keywords) {
@@ -385,7 +395,18 @@ class OfflineReviewGenerator implements AIService {
 
   // ===== 工具方法 =====
 
-  String _pick(List<String> options) {
-    return options[DateTime.now().microsecondsSinceEpoch % options.length];
+  final Random _random = Random();
+
+  /// 从列表中随机选一个（使用内容哈希作为种子的一部分，保证同一输入有变化）
+  String _pick(List<String> options, [String? seed]) {
+    if (options.isEmpty) return '';
+    int index;
+    if (seed != null) {
+      // 结合种子和时间片段，让同一输入每次回复不同
+      index = (seed.hashCode.abs() + DateTime.now().millisecondsSinceEpoch ~/ 10000) % options.length;
+    } else {
+      index = _random.nextInt(options.length);
+    }
+    return options[index];
   }
 }

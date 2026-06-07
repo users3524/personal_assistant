@@ -13,7 +13,8 @@ class ReviewHomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
+    // 归一化到午夜，确保 family provider 参数稳定、不重复加载
+    final now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     final todayReview = ref.watch(dailyReviewProvider(now));
     final weekNumber = ref.watch(currentWeekNumberProvider);
 

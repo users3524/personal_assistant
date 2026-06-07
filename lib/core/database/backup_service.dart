@@ -138,37 +138,64 @@ class BackupService {
     await _db.delete(_db.todos).go();
     await _db.delete(_db.userPreferences).go();
 
-    // 恢复 user_preferences
-    final prefs = data['user_preferences'] as List?;
-    if (prefs != null && prefs.isNotEmpty) {
-      await _db.batch((batch) {
-        for (final row in prefs) {
-          if (row is Map<String, dynamic>) {
-            batch.insert(
-              _db.userPreferences,
-              UserPreferencesCompanion(
-                id: Value(row['id'] as int? ?? 1),
-                themeMode: Value(row['theme_mode']?.toString() ?? 'system'),
-                language: Value(row['language']?.toString() ?? 'zh'),
-                notificationEnabled: Value(
-                    row['notification_enabled'] == true ||
-                        row['notification_enabled'] == 1),
-                aiProvider:
-                    Value(row['ai_provider']?.toString() ?? 'OpenAI'),
-                aiApiKey: Value(row['ai_api_key']?.toString()),
-                aiBaseUrl: Value(row['ai_base_url']?.toString()),
-                aiModel: Value(row['ai_model']?.toString()),
-                dailyReviewTime:
-                    Value(row['daily_review_time']?.toString() ?? '21:00'),
-                weeklyReportDay:
-                    Value(row['weekly_report_day']?.toString() ?? 'sunday'),
-                resumeTemplateId: Value(row['resume_template_id'] as int? ?? 0),
-              ),
-              mode: InsertMode.insertOrReplace,
-            );
+    // 逐表恢复 — 使用 Raw SQL INSERT，避免逐个构造 Companion
+    final tableOrder = [
+      'user_preferences', 'todos', 'antique_items', 'valuation_records',
+      'patting_logs', 'daily_reviews', 'weekly_reports',
+      'resume_profile', 'work_experiences', 'educations',
+      'skill_items', 'project_experiences',
+    ];
+
+    // JSON key → SQL column name 映射 (drift toJson 使用 camelCase)
+    String toSnakeCase(String camel) {
+      return camel.replaceAllMapped(
+        RegExp(r'[A-Z]'),
+        (m) => '_${m.group(0)!.toLowerCase()}',
+      );
+    }
+
+    String escapeValue(dynamic v) {
+      if (v == null) return 'NULL';
+      if (v is bool) return v ? '1' : '0';
+      if (v is num) return v.toString();
+      if (v is String) return "'${v.replaceAll("'", "''")}'";
+      if (v is List) {
+        final escaped = v.map((e) => "'${e.toString().replaceAll("'", "''")}'").join(',');
+        return "'[$escaped]'";
+      }
+      return "'${v.toString().replaceAll("'", "''")}'";
+    }
+
+    for (final tableName in tableOrder) {
+      final rows = data[tableName];
+      if (rows is! List || rows.isEmpty) continue;
+
+      for (final row in rows) {
+        if (row is! Map<String, dynamic>) continue;
+
+        final columns = <String>[];
+        final values = <String>[];
+        for (final entry in row.entries) {
+          // 跳过 imagePaths/photoPaths 中不存在的文件路径 — 设为空数组
+          var val = entry.value;
+          if ((entry.key == 'imagePaths' || entry.key == 'photoPaths') && val is List) {
+            val = val.where((p) {
+              if (p is! String) return false;
+              return File(p).existsSync();
+            }).toList();
           }
+          columns.add(toSnakeCase(entry.key));
+          values.add(escapeValue(val));
         }
-      });
+
+        if (columns.isEmpty) continue;
+        final sql = 'INSERT INTO $tableName (${columns.join(', ')}) VALUES (${values.join(', ')})';
+        try {
+          await _db.customStatement(sql);
+        } catch (_) {
+          // 单行失败不影响其他行
+        }
+      }
     }
   }
 

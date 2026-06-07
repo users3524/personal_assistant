@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -233,7 +234,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
           date: _acquiredDate,
           durationMinutes: 0,
           method: 'bare_hand',
-          note: '入手',
+          note: null,
           photoPaths: _imagePaths,
         ));
       }
@@ -395,6 +396,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                       Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       ...kCategoryFields[_category]!.map((field) {
+                        final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: TextField(
@@ -405,8 +407,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             ),
-                            keyboardType: field.contains('重量') || field.contains('mm')
-                                ? TextInputType.number : TextInputType.text,
+                            keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+                            inputFormatters: isNumeric
+                                ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
+                                : null,
                           ),
                         );
                       }),

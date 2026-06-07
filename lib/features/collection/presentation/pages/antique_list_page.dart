@@ -24,7 +24,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final listAsync = ref.watch(antiqueListProvider);
     final categoryCount = ref.watch(categoryCountProvider).valueOrNull ?? {};
     final viewMode = ref.watch(collectionViewModeProvider);
-    final gridColumns = ref.watch(gridColumnsProvider).valueOrNull ?? 2;
+    final gridColumns = ref.watch(gridColumnsProvider);
     final aspectRatio = gridColumns == 2 ? 0.78 : (gridColumns == 3 ? 0.85 : 0.9);
 
     return Scaffold(

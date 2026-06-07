@@ -38,10 +38,8 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
         ref.read(themeModeProvider.notifier).state = ThemeMode.system;
     }
   } catch (_) {}
-  // 初始化通知服务
-  try {
-    await NotificationService().init();
-  } catch (_) {}
+  // 通知初始化放后台，不阻塞启动
+  NotificationService().init();
   return true;
 });
 

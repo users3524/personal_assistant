@@ -272,7 +272,5 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
   });
 });
 
-/// 盘串网格列数（持久化）
-final gridColumnsProvider = FutureProvider<int>((ref) {
-  return AppSettingsPersistence().getGridColumns();
-});
+/// 盘串网格列数（默认 2 列）
+final gridColumnsProvider = StateProvider<int>((ref) => 2);

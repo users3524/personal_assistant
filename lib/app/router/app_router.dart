@@ -72,7 +72,7 @@ class MainShell extends StatelessWidget {
 /// 创建路由配置
 GoRouter createRouter() {
   return GoRouter(
-    initialLocation: RouteNames.collectionList,
+    initialLocation: RouteNames.todoList,
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

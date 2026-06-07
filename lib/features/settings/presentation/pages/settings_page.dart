@@ -10,7 +10,7 @@ import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
 import 'package:dio/dio.dart';
 import '../../../../features/collection/presentation/providers/antique_providers.dart'
-    show dailyPickConfigProvider;
+    show dailyPickConfigProvider, gridColumnsProvider;
 import '../../../../core/database/app_settings_persistence.dart';
 import '../../../../core/notification_service.dart';
 import 'category_management_page.dart';
@@ -90,6 +90,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final cols = await _appSettings.getGridColumns();
     if (!mounted) return;
     setState(() => _gridColumns = cols);
+    ref.read(gridColumnsProvider.notifier).state = cols;
 
     // 加载每日翻牌推荐配置
     final pickCounts = await _appSettings.getDailyPickCounts();
@@ -144,6 +145,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _setGridColumns(int cols) async {
     setState(() => _gridColumns = cols);
     await _appSettings.setGridColumns(cols);
+    ref.read(gridColumnsProvider.notifier).state = cols;
   }
 
   bool get _isOffline => _selectedProvider == '离线模式';

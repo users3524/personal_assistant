@@ -911,39 +911,114 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   // ===== 操作 =====
 
-  /// 编辑打卡记录（修改备注）
+  /// 编辑打卡记录（修改备注和照片）
   Future<void> _editPattingLog(AntiqueEntity item, PattingLogEntity log) async {
     final noteCtrl = TextEditingController(text: log.note);
-    final result = await showDialog<String>(
+    // 当前照片路径（可被替换/删除）
+    String? photoPath = log.photoPaths.isNotEmpty ? log.photoPaths.first : null;
+    bool saved = false;
+
+    await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改备注'),
-        content: TextField(
-          controller: noteCtrl,
-          decoration: const InputDecoration(
-            hintText: '此刻的想法...',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, noteCtrl.text.trim()),
-            child: const Text('保存'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('编辑记录'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 图片预览
+                  if (photoPath != null && File(photoPath!).existsSync())
+                    SizedBox(
+                      height: 140,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(photoPath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _photoPlaceholder(),
+                        ),
+                      ),
+                    )
+                  else
+                    _photoPlaceholder(),
+                  const SizedBox(height: 8),
+                  // 拍照/选图/删除 按钮行
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text('拍照', style: TextStyle(fontSize: 12)),
+                        onPressed: () async {
+                          final photo = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 1024);
+                          if (photo != null && ctx.mounted) {
+                            final p = await _saveImageToAppDir(photo);
+                            setDialogState(() => photoPath = p);
+                          }
+                        },
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: const Text('相册', style: TextStyle(fontSize: 12)),
+                        onPressed: () async {
+                          final photo = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024);
+                          if (photo != null && ctx.mounted) {
+                            final p = await _saveImageToAppDir(photo);
+                            setDialogState(() => photoPath = p);
+                          }
+                        },
+                      ),
+                      if (photoPath != null)
+                        TextButton.icon(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                          label: const Text('删除', style: TextStyle(fontSize: 12, color: Colors.red)),
+                          onPressed: () => setDialogState(() => photoPath = null),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteCtrl,
+                    decoration: const InputDecoration(
+                      hintText: '此刻的想法...',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+              FilledButton(
+                onPressed: () {
+                  saved = true;
+                  Navigator.pop(ctx);
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (result == null || !mounted) return;
+
+    if (!saved || !mounted) return;
     try {
       final repo = await ref.read(antiqueRepositoryProvider.future);
-      await repo.updatePattingLog(log.copyWith(note: result.isEmpty ? null : result));
+      await repo.updatePattingLog(log.copyWith(
+        note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+        photoPaths: photoPath != null ? [photoPath!] : [],
+      ));
       _refreshPage();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('备注已更新'), duration: Duration(seconds: 1)),
+          const SnackBar(content: Text('已更新'), duration: Duration(seconds: 1)),
         );
       }
     } catch (e) {
@@ -951,6 +1026,26 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
+  }
+
+  Widget _photoPlaceholder() {
+    return Container(
+      height: 90,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_outlined, color: Colors.grey, size: 28),
+            SizedBox(height: 4),
+            Text('无照片', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 删除打卡记录

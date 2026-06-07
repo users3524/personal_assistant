@@ -36,9 +36,27 @@ class BackupService {
     return filePath;
   }
 
-  /// 让用户选择导出目录
-  Future<String?> pickExportDirectory() async {
-    return FilePicker.platform.getDirectoryPath();
+  /// 使用 SAF 让用户选择保存位置，写入后返回路径
+  /// Android 上不可直接 dart:io 写入 getDirectoryPath 拿到的路径
+  Future<String?> exportViaSaf() async {
+    final data = await _collectData();
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .split('.')
+        .first
+        .replaceAll(':', '-');
+    final fileName = 'backup_$timestamp.json';
+
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: '选择保存位置',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      bytes: utf8.encode(jsonStr),
+    );
+    // On some platforms saveFile returns the path, on others null with bytes written
+    return result;
   }
 
   /// 导入备份 — 从 JSON 文件恢复数据

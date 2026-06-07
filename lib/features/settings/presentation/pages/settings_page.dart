@@ -477,7 +477,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final db = await ref.read(appDatabaseProvider.future);
       final backupService = BackupService(db);
 
-      // 让用户选择：存到默认目录 or 自定义目录
+      // 让用户选择：存到默认目录 or 自定义位置
       final choice = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -490,26 +490,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, 'custom'),
-              child: const Text('选择目录'),
+              child: const Text('自定义位置'),
             ),
           ],
         ),
       );
       if (choice == null || !mounted) return;
 
-      String path;
+      String? path;
       if (choice == 'custom') {
-        final dirPath = await backupService.pickExportDirectory();
-        if (dirPath == null || !mounted) return;
-        path = await backupService.exportBackupTo(dirPath);
+        // Android 上用 SAF 选择保存位置，iOS 上 saveFile 也兼容
+        path = await backupService.exportViaSaf();
       } else {
         path = await backupService.exportBackup();
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 4)),
-        );
+        if (path != null && path.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 4)),
+          );
+        } else {
+          // SAF 写入成功但没返回路径（部分 Android 版本）
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已导出'), duration: const Duration(seconds: 2)),
+          );
+        }
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败: $e')));

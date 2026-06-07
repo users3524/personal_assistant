@@ -527,6 +527,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
     final noteCtrl = TextEditingController();
+    // 预检查文件是否真实存在
+    final fileExists = photoPath != null && File(photoPath).existsSync();
 
     showDialog(
       context: context,
@@ -535,23 +537,38 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         title: const Text('盘玩打卡'),
         content: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 图片预览 — 用已保存到本地的真实路径，和表单页一样用 Image.file
-              if (photoPath != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(photoPath),
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      width: double.infinity,
-                      color: Colors.grey.shade200,
-                      child: const Center(child: Text('图片加载失败')),
+              // 图片预览
+              if (fileExists)
+                SizedBox(
+                  height: 160,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(photoPath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, __) => Container(
+                        color: Colors.grey.shade200,
+                        alignment: Alignment.center,
+                        child: Text('图片加载失败\n${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            textAlign: TextAlign.center),
+                      ),
                     ),
+                  ),
+                )
+              else if (photoPath != null && !fileExists)
+                Container(
+                  height: 90,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Text('图片文件不存在', style: TextStyle(fontSize: 12, color: Colors.orange)),
                   ),
                 )
               else
@@ -583,7 +600,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   isDense: true,
                 ),
                 maxLines: 3,
-                autofocus: photoPath == null,
+                autofocus: photoPath == null || !fileExists,
               ),
             ],
           ),
@@ -597,7 +614,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             onPressed: () async {
               final note = noteCtrl.text.trim();
               try {
-                // 图片路径已在 _doPickImage 中保存到磁盘，这里直接存入数据库
                 final repo = await ref.read(antiqueRepositoryProvider.future);
                 await repo.addPattingLog(PattingLogEntity(
                   itemId: widget.itemId,
@@ -605,9 +621,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   durationMinutes: 0,
                   method: 'bare_hand',
                   note: note.isEmpty ? null : note,
-                  photoPaths: (photoPath != null && photoPath.isNotEmpty)
-                      ? [photoPath]
-                      : [],
+                  photoPaths: (fileExists) ? [photoPath!] : [],
                 ));
                 if (ctx.mounted) Navigator.pop(ctx);
                 ref.invalidate(antiqueRepositoryProvider);
@@ -617,9 +631,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 if (mounted) setState(() {});
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('打卡成功'),
-                        duration: Duration(seconds: 1)),
+                    const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),
                   );
                 }
               } catch (e) {

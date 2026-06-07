@@ -25,6 +25,7 @@ class RouteNames {
   static const String reviewHome = '/review';
   static const String dailyReviewNew = '/review/daily/new';
   static const String dailyReviewDetail = '/review/daily/:date';
+  static const String dailyReviewEdit = '/review/daily/edit/:date';
   static const String weeklyReportDetail = '/review/weekly/:id';
 
   // 简历模块

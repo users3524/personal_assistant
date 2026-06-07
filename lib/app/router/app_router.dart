@@ -15,6 +15,7 @@ import '../../features/collection/presentation/pages/antique_list_page.dart';
 import '../../features/collection/presentation/pages/antique_form_page.dart';
 import '../../features/collection/presentation/pages/antique_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
+import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
@@ -160,7 +161,14 @@ GoRouter createRouter() {
                   GoRoute(
                     path: 'daily/new',
                     builder: (context, state) =>
-                        const DailyReviewFormPage(),
+                        const DailyReviewChatPage(),
+                  ),
+                  GoRoute(
+                    path: 'daily/edit/:date',
+                    builder: (context, state) {
+                      final date = state.pathParameters['date']!;
+                      return DailyReviewChatPage(dateStr: date);
+                    },
                   ),
                   GoRoute(
                     path: 'daily/:date',

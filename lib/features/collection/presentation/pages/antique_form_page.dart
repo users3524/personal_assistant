@@ -177,14 +177,14 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         await repo.update(item);
       } else {
         final created = await repo.create(item);
-        // 新建时自动创建首条打卡记录（入手当天）
+        // 新建时自动创建首条打卡记录（入手当天，含藏品照片）
         await repo.addPattingLog(PattingLogEntity(
           itemId: created.id!,
           date: _acquiredDate,
           durationMinutes: 0,
           method: 'bare_hand',
           note: '入手',
-          photoPaths: [],
+          photoPaths: _imagePaths,
         ));
       }
 

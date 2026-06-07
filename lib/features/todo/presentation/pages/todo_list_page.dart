@@ -35,7 +35,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   @override
   Widget build(BuildContext context) {
     final todoListAsync = ref.watch(todoListProvider);
-    final categories = ref.watch(todoCategoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -229,14 +228,13 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   }
 
   Widget _buildMonthGrid(DateTime today) {
-    final monthNames = [
-      '一', '二', '三', '四', '五', '六', '七',
-      '八', '九', '十', '十一', '十二'
-    ];
     final firstDay = DateTime(_monthStart.year, _monthStart.month, 1);
     final lastDay = DateTime(_monthStart.year, _monthStart.month + 1, 0);
-    final startWeekday = firstDay.weekday - 1; // 0=周一
+    // DateTime.weekday: Mon=1 .. Sun=7, 转为 Mon=0 .. Sun=6
+    final startWeekday = firstDay.weekday - 1;
     final daysInMonth = lastDay.day;
+    final totalCells = startWeekday + daysInMonth;
+    final rows = (totalCells + 6) ~/ 7;
 
     return Padding(
       padding: const EdgeInsets.all(8),
@@ -258,51 +256,52 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             }).toList(),
           ),
           const SizedBox(height: 4),
-          // 日期网格
-          ...List.generate(
-            ((startWeekday + daysInMonth + 6) ~/ 7),
-            (weekIndex) => Row(
-              children: List.generate(7, (weekday) {
-                final dayIndex = weekIndex * 7 + weekday - startWeekday + 1;
-                if (dayIndex < 1 || dayIndex > daysInMonth) {
-                  return const Expanded(child: SizedBox());
-                }
-                final date = DateTime(
-                    _monthStart.year, _monthStart.month, dayIndex);
-                final isToday = _isSameDay(date, today);
-                final isSelected = _isSameDay(date, _selectedDate);
+          // 日期网格 - 使用 Table 确保完全对齐
+          Table(
+            children: List.generate(rows, (weekIndex) {
+              return TableRow(
+                children: List.generate(7, (colIndex) {
+                  final dayNum = weekIndex * 7 + colIndex - startWeekday + 1;
+                  if (dayNum < 1 || dayNum > daysInMonth) {
+                    return const SizedBox(height: 38);
+                  }
+                  final date = DateTime(
+                      _monthStart.year, _monthStart.month, dayNum);
+                  final isToday = _isSameDay(date, today);
+                  final isSelected = _isSameDay(date, _selectedDate);
+                  final isWeekend = colIndex >= 5;
 
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedDate = date),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : isToday
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.1)
-                              : null,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$dayIndex',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isToday ? FontWeight.bold : null,
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedDate = date),
+                    child: Container(
+                      height: 38,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.white
-                            : (weekday >= 5 ? Colors.grey : null),
+                            ? Theme.of(context).colorScheme.primary
+                            : isToday
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.1)
+                                : null,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$dayNum',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isToday ? FontWeight.bold : null,
+                          color: isSelected
+                              ? Colors.white
+                              : (isWeekend ? Colors.grey : null),
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
-            ),
+                  );
+                }),
+              );
+            }),
           ),
         ],
       ),
@@ -339,7 +338,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   }
 
   Widget _buildTodoItem(TodoEntity todo) {
-    final categories = ref.watch(todoCategoriesProvider);
     return Dismissible(
       key: Key('todo_${todo.id}'),
       direction: DismissDirection.endToStart,

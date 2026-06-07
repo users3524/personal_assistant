@@ -408,12 +408,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   // ===== 盘玩打卡（修复拍照后灰屏、打卡后刷新） =====
 
-  /// 将 content:// URI 复制到应用私有目录，避免 File() 无法读取
-  Future<String> _copyToAppDir(String sourcePath) async {
+  /// 将 XFile 保存到应用私有目录（解决 content:// URI 无法被 File() 读取）
+  Future<String> _saveImageToAppDir(XFile photo) async {
     final dir = await getTemporaryDirectory();
     final fileName = 'patting_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final dest = File('${dir.path}/$fileName');
-    await File(sourcePath).copy(dest.path);
+    final bytes = await photo.readAsBytes();
+    await dest.writeAsBytes(bytes);
     return dest.path;
   }
 
@@ -438,7 +439,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 try {
                   final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1024);
                   if (photo != null) {
-                    final savedPath = await _copyToAppDir(photo.path);
+                    final savedPath = await _saveImageToAppDir(photo);
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
                   }
@@ -457,7 +458,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 try {
                   final photo = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
                   if (photo != null) {
-                    final savedPath = await _copyToAppDir(photo.path);
+                    final savedPath = await _saveImageToAppDir(photo);
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
                   }

@@ -1,4 +1,4 @@
-/// 藏品详情页。
+/// 盘串详情页 — 时间线 + 盘玩打卡 + 情感记录。
 library;
 
 import 'dart:io';
@@ -6,10 +6,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
-import '../widgets/valuation_chart.dart';
 
 class AntiqueDetailPage extends ConsumerStatefulWidget {
   final int itemId;
@@ -36,8 +36,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         final item = snapshot.data;
         if (item == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('藏品详情')),
-            body: const Center(child: Text('藏品不存在')),
+            appBar: AppBar(title: const Text('盘串详情')),
+            body: const Center(child: Text('宝贝不存在')),
           );
         }
 
@@ -49,7 +49,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 onSelected: (value) => _handleAction(context, item, value),
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('编辑')),
-                  const PopupMenuItem(value: 'patting', child: Text('盘玩打卡')),
                   const PopupMenuItem(value: 'delete', child: Text('删除')),
                 ],
               ),
@@ -61,14 +60,17 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               children: [
                 // 图片轮播
                 _buildImageCarousel(item),
-                // 基本信息
+                // 基本信息 + 情感卡片
                 _buildInfoCard(item),
-                // 估值走势
-                _buildValuationSection(item),
-                // 盘玩日志
-                _buildPattingSection(item),
+                // 盘玩打卡时间线
+                _buildPattingTimeline(item),
               ],
             ),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            icon: const Icon(Icons.favorite),
+            label: const Text('盘玩打卡'),
+            onPressed: () => _addPattingCheckin(item),
           ),
         );
       },
@@ -78,16 +80,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   Widget _buildImageCarousel(AntiqueEntity item) {
     if (item.imagePaths.isEmpty) {
       return Container(
-        height: 280,
+        height: 260,
         color: Colors.grey.shade200,
         child: const Center(
-          child: Icon(Icons.image, size: 64, color: Colors.grey),
+          child: Icon(Icons.diamond_outlined, size: 64, color: Colors.grey),
         ),
       );
     }
 
     return SizedBox(
-      height: 280,
+      height: 260,
       child: PageView.builder(
         itemCount: item.imagePaths.length,
         itemBuilder: (context, index) {
@@ -105,6 +107,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   }
 
   Widget _buildInfoCard(AntiqueEntity item) {
+    // 计算拥有天数
+    final daysOwned = DateTime.now().difference(item.acquiredDate).inDays;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Card(
@@ -113,6 +118,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 名称+分类
               Row(
                 children: [
                   Expanded(
@@ -121,32 +127,80 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   ),
                   Chip(
                     label: Text(item.category, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: Colors.teal.withValues(alpha: 0.1),
                   ),
                 ],
               ),
               if (item.subtype != null) ...[
                 const SizedBox(height: 4),
                 Text(item.subtype!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        )),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey)),
               ],
-              const Divider(height: 24),
+              const SizedBox(height: 8),
+              // 情感价值卡片
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.amber.shade50,
+                      Colors.orange.shade50,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.favorite, color: Colors.pink, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '陪伴 $daysOwned 天',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.brown,
+                            ),
+                          ),
+                          if (item.description != null && item.description!.isNotEmpty)
+                            Text(
+                              item.description!,
+                              style: const TextStyle(fontSize: 12, color: Colors.brown),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+
+              // 详细信息
               _infoRow('品相', item.conditionLabel),
-              _infoRow('入手日期',
-                  '${item.acquiredDate.year}-${item.acquiredDate.month.toString().padLeft(2, '0')}-${item.acquiredDate.day.toString().padLeft(2, '0')}'),
+              _infoRow(
+                '入手日期',
+                '${item.acquiredDate.year}-${item.acquiredDate.month.toString().padLeft(2, '0')}-${item.acquiredDate.day.toString().padLeft(2, '0')}',
+              ),
               if (item.acquiredPrice != null)
                 _infoRow('入手价格', '¥${item.acquiredPrice!.toStringAsFixed(0)}'),
               if (item.sourceSeller != null)
                 _infoRow('来源', item.sourceSeller!),
-              if (item.currentValuation != null)
-                _infoRow('当前估值', '¥${item.currentValuation!.toStringAsFixed(0)}',
-                    valueColor: Colors.green),
               if (item.notes != null && item.notes!.isNotEmpty) ...[
-                const Divider(height: 16),
+                const Divider(height: 12),
                 Text('备注', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
-                Text(item.notes!),
+                Text(item.notes!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey.shade700,
+                        )),
               ],
             ],
           ),
@@ -157,13 +211,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   Widget _infoRow(String label, String value, {Color? valueColor}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
           SizedBox(
-            width: 80,
+            width: 72,
             child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                style: const TextStyle(color: Colors.grey, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,
@@ -178,7 +232,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  Widget _buildValuationSection(AntiqueEntity item) {
+  // ===== 盘玩打卡时间线 =====
+
+  Widget _buildPattingTimeline(AntiqueEntity item) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Card(
@@ -189,20 +245,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             children: [
               Row(
                 children: [
-                  Text('估值走势',
+                  const Icon(Icons.timeline, size: 20, color: Colors.teal),
+                  const SizedBox(width: 8),
+                  Text('盘玩时光',
                       style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('记录估值'),
-                    onPressed: () => _addValuation(item),
-                  ),
                 ],
               ),
-              SizedBox(
-                height: 200,
-                child: ValuationChart(itemId: widget.itemId),
-              ),
+              const SizedBox(height: 12),
+              _buildTimelineList(item),
             ],
           ),
         ),
@@ -210,36 +260,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  Widget _buildPattingSection(AntiqueEntity item) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('盘玩日志',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('打卡'),
-                    onPressed: () => _addPattingLog(item),
-                  ),
-                ],
-              ),
-              _buildPattingLogList(item),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPattingLogList(AntiqueEntity item) {
+  Widget _buildTimelineList(AntiqueEntity item) {
     return FutureBuilder<List<PattingLogEntity>>(
       future: ref
           .read(antiqueRepositoryProvider.future)
@@ -247,23 +268,136 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('暂无盘玩记录', style: TextStyle(color: Colors.grey)),
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.pan_tool_outlined, size: 40, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('还没有盘玩记录',
+                      style: TextStyle(color: Colors.grey)),
+                  SizedBox(height: 4),
+                  Text('点击下方按钮打卡',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+            ),
           );
         }
+
+        final logs = snapshot.data!;
+        // 按日期降序排列
+        final sorted = List<PattingLogEntity>.from(logs)
+          ..sort((a, b) => b.date.compareTo(a.date));
+
         return Column(
-          children: snapshot.data!.take(5).map((log) {
-            return ListTile(
-              dense: true,
-              leading: const Icon(Icons.timer, size: 20),
-              title: Text(
-                  '${log.date.month}/${log.date.day}  ${log.methodLabel}  ${log.durationMinutes}分钟'),
-              trailing: log.note != null
-                  ? IconButton(
-                      icon: const Icon(Icons.info_outline, size: 16),
-                      onPressed: () => _showLogNote(context, log),
-                    )
-                  : null,
+          children: sorted.map((log) {
+            // 格式化日期显示
+            final dateStr =
+                '${log.date.month}月${log.date.day}日 ${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
+            final hasPhoto = log.photoPaths.isNotEmpty;
+
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 时间线左侧
+                  SizedBox(
+                    width: 60,
+                    child: Column(
+                      children: [
+                        Text(
+                          '${log.date.month}/${log.date.day}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 时间线圆点+线
+                  Column(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        margin: const EdgeInsets.only(top: 4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.teal,
+                          border: Border.all(
+                            color: Colors.teal.shade100,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: Colors.teal.shade100,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  // 内容卡片
+                  Expanded(
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      elevation: 0,
+                      color: Colors.grey.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Icon(Icons.favorite,
+                                    size: 14, color: Colors.pink.shade200),
+                              ],
+                            ),
+                            if (log.note != null && log.note!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  log.note!,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            if (hasPhoto) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.photo,
+                                      size: 14, color: Colors.teal),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${log.photoPaths.length} 张照片',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.teal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             );
           }).toList(),
         );
@@ -271,94 +405,109 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  void _addValuation(AntiqueEntity item) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('记录估值'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: '估值金额（元）',
-            prefixText: '¥ ',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final amount = double.tryParse(ctrl.text);
-              if (amount == null) return;
-              final repo = await ref.read(antiqueRepositoryProvider.future);
-              await repo.addValuation(ValuationRecordEntity(
-                itemId: widget.itemId,
-                date: DateTime.now(),
-                amount: amount,
-              ));
-              if (context.mounted) Navigator.pop(context);
-              setState(() {});
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
+  // ===== 盘玩打卡（简化版：不需要时长，支持拍照） =====
 
-  void _addPattingLog(AntiqueEntity item) {
-    final durationCtrl = TextEditingController(text: '30');
-    String method = 'bare_hand';
+  void _addPattingCheckin(AntiqueEntity item) {
+    final noteCtrl = TextEditingController();
+    final pickedImages = <String>[];
+    final picker = ImagePicker();
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('盘玩打卡'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: durationCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '盘玩时长（分钟）',
+              const Text('记录此刻与宝贝的相处时光',
+                  style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 12),
+              // 拍照
+              if (pickedImages.isEmpty)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('拍照记录'),
+                  onPressed: () async {
+                    final photo = await picker.pickImage(
+                      source: ImageSource.camera,
+                      maxWidth: 1024,
+                    );
+                    if (photo != null) {
+                      setDialogState(() => pickedImages.add(photo.path));
+                    }
+                  },
+                )
+              else
+                Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(pickedImages.first),
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton.icon(
+                      icon: const Icon(Icons.camera_alt, size: 16),
+                      label: const Text('重新拍照'),
+                      onPressed: () async {
+                        final photo = await picker.pickImage(
+                          source: ImageSource.camera,
+                          maxWidth: 1024,
+                        );
+                        if (photo != null) {
+                          setDialogState(() {
+                            pickedImages.clear();
+                            pickedImages.add(photo.path);
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'bare_hand', label: Text('净手盘')),
-                  ButtonSegment(value: 'glove', label: Text('手套盘')),
-                ],
-                selected: {method},
-                onSelectionChanged: (sel) =>
-                    setDialogState(() => method = sel.first),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteCtrl,
+                decoration: const InputDecoration(
+                  hintText: '此刻的想法...',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                maxLines: 2,
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('取消'),
             ),
             TextButton(
               onPressed: () async {
-                final minutes = int.tryParse(durationCtrl.text) ?? 30;
                 final repo = await ref.read(antiqueRepositoryProvider.future);
                 await repo.addPattingLog(PattingLogEntity(
                   itemId: widget.itemId,
                   date: DateTime.now(),
-                  durationMinutes: minutes,
-                  method: method,
+                  durationMinutes: 0,
+                  method: 'bare_hand',
+                  note: noteCtrl.text.trim().isEmpty
+                      ? null
+                      : noteCtrl.text.trim(),
+                  photoPaths: pickedImages,
                 ));
-                if (context.mounted) Navigator.pop(context);
+                if (ctx.mounted) Navigator.pop(ctx);
                 setState(() {});
+                // 刷新列表统计
+                ref.read(antiqueListProvider.notifier).refresh();
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.pink,
+              ),
               child: const Text('打卡'),
             ),
           ],
@@ -367,21 +516,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  void _showLogNote(BuildContext context, PattingLogEntity log) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('盘玩备注'),
-        content: Text(log.note ?? '无'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
+  // ===== 操作 =====
 
   void _handleAction(
     BuildContext context,
@@ -391,9 +526,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     switch (action) {
       case 'edit':
         context.push('/collection/${item.id}/edit');
-        break;
-      case 'patting':
-        _addPattingLog(item);
         break;
       case 'delete':
         _confirmDelete(context, item);
@@ -406,7 +538,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除「${item.name}」吗？\n所有图片、估值记录和盘玩日志也将被删除。'),
+        content: Text(
+            '确定要删除「${item.name}」吗？\n所有图片、盘玩记录也将被删除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

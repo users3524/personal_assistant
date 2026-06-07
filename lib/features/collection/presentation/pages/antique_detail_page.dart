@@ -24,12 +24,21 @@ class AntiqueDetailPage extends ConsumerStatefulWidget {
 class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   late Future<AntiqueEntity?> _itemFuture;
   late Future<List<PattingLogEntity>> _logsFuture;
+  final _pageController = PageController();
+  final _currentPage = ValueNotifier<int>(0);
 
   @override
   void initState() {
     super.initState();
     _itemFuture = _loadItem();
     _logsFuture = _loadLogs();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _currentPage.dispose();
+    super.dispose();
   }
 
   Future<AntiqueEntity?> _loadItem() {
@@ -101,7 +110,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           floatingActionButton: Container(
             margin: const EdgeInsets.only(bottom: 8, right: 4),
             child: FloatingActionButton.extended(
-              icon: const Icon(Icons.favorite_border),
               label: const Text('打卡'),
               backgroundColor: Colors.pink,
               foregroundColor: Colors.white,
@@ -124,50 +132,91 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       );
     }
 
-    return SizedBox(
-      height: 260,
-      child: PageView.builder(
-        itemCount: item.imagePaths.length,
-        itemBuilder: (context, index) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.file(
-                File(item.imagePaths[index]),
-                fit: BoxFit.cover,
-                width: double.infinity,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(child: Icon(Icons.broken_image)),
-                ),
-              ),
-              // 全屏查看按钮
-              Positioned(
-                bottom: 8,
-                right: 8,
-                child: Material(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => _showFullScreenImage(context, item.imagePaths[index]),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.fullscreen, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text('全屏', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ],
-                      ),
-                    ),
+    if (item.imagePaths.length == 1) {
+      return SizedBox(
+        height: 260,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(File(item.imagePaths[0]), fit: BoxFit.cover, width: double.infinity,
+              errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
+            ),
+            Positioned(bottom: 8, right: 8,
+              child: _fullscreenButton(context, item.imagePaths[0]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 240,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: item.imagePaths.length,
+            onPageChanged: (i) => _currentPage.value = i,
+            itemBuilder: (context, index) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.file(File(item.imagePaths[index]), fit: BoxFit.cover, width: double.infinity,
+                    errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
                   ),
-                ),
+                  Positioned(bottom: 8, right: 8,
+                    child: _fullscreenButton(context, item.imagePaths[index]),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        ValueListenableBuilder<int>(
+          valueListenable: _currentPage,
+          builder: (_, page, __) => Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(item.imagePaths.length, (i) => Container(
+              width: i == page ? 8 : 6,
+              height: i == page ? 8 : 6,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i == page ? Colors.teal : Colors.grey.shade300,
               ),
+            )),
+          ),
+        ),
+        const SizedBox(height: 4),
+        ValueListenableBuilder<int>(
+          valueListenable: _currentPage,
+          builder: (_, page, __) => Text('${page + 1} / ${item.imagePaths.length}',
+            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ),
+      ],
+    );
+  }
+
+  Widget _fullscreenButton(BuildContext context, String path) {
+    return Material(
+      color: Colors.black54,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showFullScreenImage(context, path),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.fullscreen, color: Colors.white, size: 16),
+              SizedBox(width: 4),
+              Text('全屏', style: TextStyle(color: Colors.white, fontSize: 12)),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -503,28 +552,37 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   /// 全屏查看图片
   void _showFullScreenImage(BuildContext context, String path) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            Center(
-              child: InteractiveViewer(
-                maxScale: 4,
-                child: Image.file(File(path), fit: BoxFit.contain),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) => Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  maxScale: 4,
+                  child: Image.file(File(path), fit: BoxFit.contain),
+                ),
               ),
-            ),
-            Positioned(
-              top: 40,
-              right: 16,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                onPressed: () => Navigator.pop(context),
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8,
+                right: 12,
+                child: Material(
+                  color: Colors.white24,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(Icons.close, color: Colors.white, size: 24),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -597,15 +655,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
     final noteCtrl = TextEditingController();
     final fileExists = photoPath != null && File(photoPath).existsSync();
+    // 选中的打卡时间 — 在对话框外创建，避免每次 setState 重建重置为 now
+    final selectedDate = ValueNotifier<DateTime>(DateTime.now());
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          // 打卡时间状态，默认当前
-          final selectedDate = ValueNotifier<DateTime>(DateTime.now());
-
           return AlertDialog(
             title: const Text('打卡'),
             content: SingleChildScrollView(

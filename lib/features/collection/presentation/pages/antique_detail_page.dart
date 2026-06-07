@@ -2,7 +2,6 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -420,74 +419,15 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   // ===== 盘玩打卡 =====
 
-  void _addPattingCheckin(AntiqueEntity item) {
-    final picker = ImagePicker();
-
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('记录此刻', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.teal),
-              title: const Text('拍照'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                _pickAndShowCheckin(item, picker, ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.blue),
-              title: const Text('从相册选择'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                _pickAndShowCheckin(item, picker, ImageSource.gallery);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 统一入口：打开相机/相册 → 读字节 → 立刻弹对话框
-  Future<void> _pickAndShowCheckin(
-    AntiqueEntity item,
-    ImagePicker picker,
-    ImageSource source,
-  ) async {
-    try {
-      final photo = await picker.pickImage(source: source, maxWidth: 1024);
-      if (photo == null || !mounted) return;
-
-      // 立刻把图片读到内存 — Image.memory 不需要文件路径，不会灰屏
-      final bytes = await photo.readAsBytes();
-      if (!mounted) return;
-      _showCheckinDialog(item, bytes);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('图片读取失败: $e')),
-        );
-        // 即使图片失败也允许纯文字打卡
-        if (mounted) _showCheckinDialog(item, null);
-      }
-    }
-  }
-
-  /// 将 bytes 写入本地文件，返回路径（仅在保存打卡记录时调用）
-  Future<String> _saveImageToAppDir(Uint8List bytes) async {
+  /// 将 XFile 保存到应用私有目录，返回真实文件路径。
+  /// 和 antique_form_page 使用完全相同的逻辑。
+  Future<String> _saveImageToAppDir(XFile photo) async {
     final dir = await getApplicationDocumentsDirectory();
     final imgDir = Directory('${dir.path}/patting_images');
     if (!await imgDir.exists()) await imgDir.create(recursive: true);
     final fileName = 'patting_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final dest = File('${imgDir.path}/$fileName');
+    final bytes = await photo.readAsBytes();
     await dest.writeAsBytes(bytes);
     return dest.path;
   }
@@ -521,7 +461,71 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  void _showCheckinDialog(AntiqueEntity item, Uint8List? imageBytes) {
+  void _addPattingCheckin(AntiqueEntity item) {
+    final picker = ImagePicker();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('记录此刻',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.teal),
+              title: const Text('拍照'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _doPickImage(item, picker, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('从相册选择'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _doPickImage(item, picker, ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 选图 → 保存到本地 → 弹对话框预览。
+  /// 和 antique_form_page._pickImage 逻辑一致：先保存再显示。
+  Future<void> _doPickImage(
+    AntiqueEntity item,
+    ImagePicker picker,
+    ImageSource source,
+  ) async {
+    try {
+      final photo = await picker.pickImage(source: source, maxWidth: 1024);
+      if (photo == null || !mounted) return;
+
+      // 保存到应用私有目录（和表单页同一个函数签名）
+      final savedPath = await _saveImageToAppDir(photo);
+      if (!mounted) return;
+
+      _showCheckinDialog(item, savedPath);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('图片处理失败: $e')),
+        );
+        // 图片失败也允许纯文字打卡
+        _showCheckinDialog(item, null);
+      }
+    }
+  }
+
+  void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
     final noteCtrl = TextEditingController();
 
     showDialog(
@@ -533,12 +537,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 图片预览 — 用 Image.memory，彻底避免 content:// URI 问题
-              if (imageBytes != null)
+              // 图片预览 — 用已保存到本地的真实路径，和表单页一样用 Image.file
+              if (photoPath != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                    imageBytes,
+                  child: Image.file(
+                    File(photoPath),
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -564,7 +568,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       children: [
                         Icon(Icons.favorite_border, color: Colors.pink, size: 28),
                         SizedBox(height: 4),
-                        Text('无照片，纯文字记录', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('无照片，纯文字记录',
+                            style: TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -578,7 +583,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   isDense: true,
                 ),
                 maxLines: 3,
-                autofocus: imageBytes == null,
+                autofocus: photoPath == null,
               ),
             ],
           ),
@@ -592,12 +597,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             onPressed: () async {
               final note = noteCtrl.text.trim();
               try {
-                // 到保存时才把图片写入文件
-                String? savedPath;
-                if (imageBytes != null) {
-                  savedPath = await _saveImageToAppDir(imageBytes);
-                }
-
+                // 图片路径已在 _doPickImage 中保存到磁盘，这里直接存入数据库
                 final repo = await ref.read(antiqueRepositoryProvider.future);
                 await repo.addPattingLog(PattingLogEntity(
                   itemId: widget.itemId,
@@ -605,7 +605,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   durationMinutes: 0,
                   method: 'bare_hand',
                   note: note.isEmpty ? null : note,
-                  photoPaths: savedPath != null ? [savedPath] : [],
+                  photoPaths: (photoPath != null && photoPath.isNotEmpty)
+                      ? [photoPath]
+                      : [],
                 ));
                 if (ctx.mounted) Navigator.pop(ctx);
                 ref.invalidate(antiqueRepositoryProvider);
@@ -615,7 +617,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 if (mounted) setState(() {});
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),
+                    const SnackBar(
+                        content: Text('打卡成功'),
+                        duration: Duration(seconds: 1)),
                   );
                 }
               } catch (e) {

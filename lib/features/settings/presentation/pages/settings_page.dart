@@ -11,6 +11,8 @@ import '../../../../core/database/user_preferences_dao.dart';
 import 'package:dio/dio.dart';
 import '../../../../features/collection/presentation/providers/antique_providers.dart'
     show dailyPickConfigProvider;
+import '../../../../core/database/app_settings_persistence.dart';
+import 'category_management_page.dart';
 
 // AI 供应商预设
 const _aiProviders = {
@@ -69,8 +71,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _weeklyReminder = true;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 21, minute: 0);
   TimeOfDay _weeklyTime = const TimeOfDay(hour: 20, minute: 0);
+  int _gridColumns = 2;
 
   UserPreferencesDao? _prefsDao;
+  AppSettingsPersistence _appSettings = AppSettingsPersistence();
 
   @override
   void initState() {
@@ -78,6 +82,50 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _baseUrlCtrl.text = _savedBaseUrl;
     _modelCtrl.text = _savedModel;
     _loadSettings();
+    _loadAppSettings();
+  }
+
+  Future<void> _loadAppSettings() async {
+    final cols = await _appSettings.getGridColumns();
+    if (!mounted) return;
+    setState(() => _gridColumns = cols);
+
+    // 加载每日翻牌推荐配置
+    final pickCounts = await _appSettings.getDailyPickCounts();
+    if (!mounted) return;
+    if (pickCounts.isNotEmpty) {
+      ref.read(dailyPickConfigProvider.notifier).load(pickCounts);
+    }
+
+    // 首次启动显示通知提示
+    final hintShown = await _appSettings.isNotificationHintShown();
+    if (!mounted) return;
+    if (!hintShown) {
+      _appSettings.setNotificationHintShown();
+      _showNotificationHint();
+    }
+  }
+
+  void _showNotificationHint() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.notifications_outlined, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('通知提醒'),
+        ]),
+        content: const Text('如需接收每日复盘和每周周报的推送提醒，请在系统设置中允许「个人全能助手」的通知权限。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+        ],
+      ),
+    );
+  }
+
+  void _setGridColumns(int cols) async {
+    setState(() => _gridColumns = cols);
+    await _appSettings.setGridColumns(cols);
   }
 
   bool get _isOffline => _selectedProvider == '离线模式';
@@ -289,11 +337,46 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () => _pickTime(context, false),
                   ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-                const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('关于通知'),
-                  subtitle: Text('提醒需要 App 在后台运行权限，请在系统设置中允许通知', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _sectionHeader('系统'),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.category),
+                  title: const Text('分类管理'),
+                  subtitle: const Text('管理文玩类别和待办分类'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
+                  ),
                 ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                Consumer(builder: (context, ref, _) {
+                  return ListTile(
+                    leading: const Icon(Icons.grid_view),
+                    title: const Text('盘串网格列数'),
+                    subtitle: Text('当前 ${_gridColumns} 列'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [2, 3, 4].map((n) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: ChoiceChip(
+                          label: Text('$n', style: const TextStyle(fontSize: 12)),
+                          selected: _gridColumns == n,
+                          onSelected: (_) => _setGridColumns(n),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )).toList(),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -322,10 +405,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline, size: 20),
-                          onPressed: () {
+                          onPressed: () async {
                             final notifier = ref.read(dailyPickConfigProvider.notifier);
                             if (entry.value > 1) {
                               notifier.setCount(entry.key, entry.value - 1);
+                              await _appSettings.setDailyPickCounts(
+                                ref.read(dailyPickConfigProvider).counts,
+                              );
                             }
                           },
                         ),
@@ -335,8 +421,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline, size: 20),
-                          onPressed: () {
+                          onPressed: () async {
                             ref.read(dailyPickConfigProvider.notifier).setCount(entry.key, entry.value + 1);
+                            await _appSettings.setDailyPickCounts(
+                              ref.read(dailyPickConfigProvider).counts,
+                            );
                           },
                         ),
                         const SizedBox(width: 24),

@@ -164,8 +164,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
               error: (err, _) => Center(child: Text('加载失败: $err')),
             ),
           ),
-          // 每日复盘卡片
-          _DailyReviewCard(),
+          // 每日复盘卡片（仅在周视图显示）
+          if (_viewMode == CalendarView.week) _DailyReviewCard(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -214,7 +214,10 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   Widget _buildCalendarGrid() {
     final today = DateTime.now();
     final now = DateTime(today.year, today.month, today.day);
-    final monthlyReviews = ref.watch(dailyListByMonthProvider(now.month));
+    // 按月视图当前查看的月份加载日报，而非始终加载本月
+    final targetMonth = _viewMode == CalendarView.month ? _monthStart.month : now.month;
+    final targetYear = _viewMode == CalendarView.month ? _monthStart.year : now.year;
+    final monthlyReviews = ref.watch(dailyListByYearMonthProvider(targetYear * 100 + targetMonth));
     final reviewDays = monthlyReviews.valueOrNull
         ?.map((r) => r.date.day)
         .toSet() ?? <int>{};
@@ -262,7 +265,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
               final hasReview = reviewDays.contains(date.day);
 
               return GestureDetector(
-                onTap: () => setState(() => _selectedDate = date),
+                onTap: () {
+                  setState(() => _selectedDate = date);
+                  if (hasReview && !_isSameDay(date, DateTime.now())) {
+                    _showReviewEntry(context, date);
+                  }
+                },
                 child: Container(
                   width: 38,
                   height: 42,
@@ -364,7 +372,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                   final hasReview = reviewDays.contains(dayNum);
 
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedDate = date),
+                    onTap: () {
+                      setState(() => _selectedDate = date);
+                      if (hasReview) {
+                        _showReviewEntry(context, date);
+                      }
+                    },
                     child: Container(
                       height: 42,
                       alignment: Alignment.center,
@@ -579,6 +592,76 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         _monthStart = DateTime(_monthStart.year, _monthStart.month + 1, 1);
       }
     });
+  }
+
+  void _showReviewEntry(BuildContext context, DateTime date) async {
+    final today = DateTime.now();
+    final isPastOrToday = !date.isAfter(today);
+    if (!isPastOrToday) return; // 未来日期不显示
+
+    final normalized = DateTime(date.year, date.month, date.day);
+    final review = await ref.read(dailyReviewProvider(normalized).future);
+    if (review == null) return;
+
+    final dateStr = normalized.toIso8601String().split('T')[0];
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${date.month}月${date.day}日 复盘',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(review.summary,
+                maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            const SizedBox(height: 6),
+            Row(children: [
+              _miniBadge('能量 ${review.energyLevel}/5', Colors.orange),
+              const SizedBox(width: 8),
+              _miniBadge('情绪 ${review.moodLevel}/5', Colors.blue),
+            ]),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.visibility, size: 18),
+                    label: const Text('查看详情'),
+                    onPressed: () { Navigator.pop(ctx); context.push('/review/daily/$dateStr'); },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('编辑'),
+                    onPressed: () { Navigator.pop(ctx); context.push('/review/daily/edit/$dateStr'); },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _miniBadge(String text, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 11, color: color.shade700)),
+    );
   }
 
   bool _isSameDay(DateTime a, DateTime b) {

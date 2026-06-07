@@ -4,11 +4,14 @@ library;
 export '../../data/repositories/antique_repository_impl.dart'
     show antiqueRepositoryProvider;
 
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/antique_repository_impl.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../../domain/repositories/antique_repository.dart';
+import '../../../../core/database/app_settings_persistence.dart';
 
 // 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
@@ -187,13 +190,24 @@ final dailyPickConfigProvider = StateNotifierProvider<DailyPickConfigNotifier, D
 });
 
 class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
-  DailyPickConfigNotifier() : super(const DailyPickConfig());
+  final void Function(Map<String, int>)? _onChanged;
+
+  DailyPickConfigNotifier({void Function(Map<String, int>)? onChanged})
+      : _onChanged = onChanged,
+        super(const DailyPickConfig());
+
+  void load(Map<String, int> counts) {
+    if (counts.isNotEmpty) {
+      state = DailyPickConfig(counts: counts);
+    }
+  }
 
   void setCount(String category, int count) {
     if (count <= 0) return;
     final newCounts = Map<String, int>.from(state.counts);
     newCounts[category] = count;
     state = DailyPickConfig(counts: newCounts);
+    _onChanged?.call(newCounts);
   }
 
   void addCategory(String category, int count) {
@@ -232,4 +246,9 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
     }
     return picks;
   });
+});
+
+/// 盘串网格列数（持久化）
+final gridColumnsProvider = FutureProvider<int>((ref) {
+  return AppSettingsPersistence().getGridColumns();
 });

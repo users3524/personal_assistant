@@ -24,6 +24,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final listAsync = ref.watch(antiqueListProvider);
     final categoryCount = ref.watch(categoryCountProvider).valueOrNull ?? {};
     final viewMode = ref.watch(collectionViewModeProvider);
+    final gridColumns = ref.watch(gridColumnsProvider).valueOrNull ?? 2;
+    final aspectRatio = gridColumns == 2 ? 0.78 : (gridColumns == 3 ? 0.85 : 0.9);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,7 +77,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         },
         child: viewMode == CollectionViewMode.calendar
             ? _buildCalendarView(context)
-            : _buildGridView(context, ref, listAsync, categoryCount),
+            : _buildGridView(context, ref, listAsync, categoryCount, gridColumns, aspectRatio),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/collection/new'),
@@ -91,6 +93,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     WidgetRef ref,
     AsyncValue<List<AntiqueEntity>> listAsync,
     Map<String, int> categoryCount,
+    int gridColumns,
+    double aspectRatio,
   ) {
     return CustomScrollView(
       slivers: [
@@ -105,11 +109,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               : SliverPadding(
                   padding: const EdgeInsets.all(12),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: gridColumns,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 0.78,
+                      childAspectRatio: aspectRatio,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {

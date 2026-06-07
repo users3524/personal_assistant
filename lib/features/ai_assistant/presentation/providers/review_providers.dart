@@ -31,6 +31,16 @@ final dailyListByMonthProvider =
   });
 });
 
+/// 可刷新的日报列表（按年月，year*100+month 作为 key）
+final dailyListByYearMonthProvider =
+    FutureProvider.family<List<DailyReviewEntity>, int>((ref, key) {
+  final year = key ~/ 100;
+  final month = key % 100;
+  return ref.watch(reviewRepositoryProvider.future).then((repo) {
+    return repo.getDailyByMonth(year, month);
+  });
+});
+
 // ===== 周报 Provider =====
 
 final weeklyReportProvider =

@@ -1,4 +1,5 @@
 /// Weekly reports table.
+library;
 
 import 'package:drift/drift.dart';
 

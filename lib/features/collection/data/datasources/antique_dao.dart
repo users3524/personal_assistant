@@ -5,9 +5,6 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/antique_entity.dart';
-import '../datasources/antique_items_table.dart';
-import '../datasources/patting_logs_table.dart';
-import '../datasources/valuation_records_table.dart';
 
 class AntiqueDao {
   final AppDatabase _db;

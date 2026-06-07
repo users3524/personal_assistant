@@ -1,5 +1,6 @@
 /// Valuation records table.
 /// Foreign key to AntiqueItems, cascade delete.
+library;
 
 import 'package:drift/drift.dart';
 

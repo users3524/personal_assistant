@@ -1,4 +1,5 @@
 /// Education experiences table.
+library;
 
 import 'package:drift/drift.dart';
 

@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/todo_entity.dart';
-import '../pages/todo_list_page.dart';
 
 class TodoListView extends StatelessWidget {
   final List<TodoEntity> todos;

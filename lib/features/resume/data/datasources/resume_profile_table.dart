@@ -1,4 +1,5 @@
 /// Resume profile table (singleton).
+library;
 
 import 'package:drift/drift.dart';
 

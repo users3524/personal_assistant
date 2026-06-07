@@ -1,4 +1,5 @@
 /// Skill items table.
+library;
 
 import 'package:drift/drift.dart';
 

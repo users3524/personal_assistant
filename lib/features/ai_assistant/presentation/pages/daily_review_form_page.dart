@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/ai/ai_service.dart';
 import '../../../../core/ai/openai_service.dart';
 import '../../../todo/domain/entities/todo_entity.dart';
 import '../../../todo/presentation/providers/todo_providers.dart';

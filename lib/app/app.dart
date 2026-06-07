@@ -36,7 +36,7 @@ class PersonalAssistantApp extends ConsumerWidget {
       themeMode: ref.watch(themeModeProvider),
       locale: ref.watch(localeProvider),
       routerConfig: createRouter(),
-      localizationsDelegates: [
+      localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

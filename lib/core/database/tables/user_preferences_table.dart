@@ -1,4 +1,5 @@
 /// User preferences table.
+library;
 
 import 'package:drift/drift.dart';
 

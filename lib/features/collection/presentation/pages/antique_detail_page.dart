@@ -545,8 +545,22 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                   ),
                                 ),
                                 const Spacer(),
-                                Icon(Icons.favorite,
-                                    size: 14, color: Colors.pink.shade200),
+                                // 编辑按钮
+                                GestureDetector(
+                                  onTap: () => _editPattingLog(item, log),
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 4),
+                                    child: Icon(Icons.edit, size: 14, color: Colors.grey),
+                                  ),
+                                ),
+                                // 删除按钮
+                                GestureDetector(
+                                  onTap: () => _deletePattingLog(log),
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(left: 2),
+                                    child: Icon(Icons.close, size: 16, color: Colors.grey),
+                                  ),
+                                ),
                               ],
                             ),
                             if (log.note != null && log.note!.isNotEmpty)
@@ -897,7 +911,82 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   // ===== 操作 =====
 
-  /// 选择两个打卡记录进行对比
+  /// 编辑打卡记录（修改备注）
+  Future<void> _editPattingLog(AntiqueEntity item, PattingLogEntity log) async {
+    final noteCtrl = TextEditingController(text: log.note);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改备注'),
+        content: TextField(
+          controller: noteCtrl,
+          decoration: const InputDecoration(
+            hintText: '此刻的想法...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, noteCtrl.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+    try {
+      final repo = await ref.read(antiqueRepositoryProvider.future);
+      await repo.updatePattingLog(log.copyWith(note: result.isEmpty ? null : result));
+      _refreshPage();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('备注已更新'), duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+      }
+    }
+  }
+
+  /// 删除打卡记录
+  Future<void> _deletePattingLog(PattingLogEntity log) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除记录'),
+        content: const Text('确定要删除这条打卡记录吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final repo = await ref.read(antiqueRepositoryProvider.future);
+      await repo.deletePattingLog(log.id!);
+      _refreshPage();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已删除'), duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      }
+    }
+  }
+
   Future<void> _showComparePicker(BuildContext context, AntiqueEntity item) async {
     final logs = await _logsFuture;
     // 筛出有照片的记录

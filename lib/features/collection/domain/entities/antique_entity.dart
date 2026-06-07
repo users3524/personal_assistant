@@ -131,4 +131,24 @@ class PattingLogEntity {
 
   String get methodLabel =>
       method == 'bare_hand' ? '净手盘' : '手套盘';
+
+  PattingLogEntity copyWith({
+    int? id,
+    int? itemId,
+    DateTime? date,
+    int? durationMinutes,
+    String? method,
+    String? note,
+    List<String>? photoPaths,
+  }) {
+    return PattingLogEntity(
+      id: id ?? this.id,
+      itemId: itemId ?? this.itemId,
+      date: date ?? this.date,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      method: method ?? this.method,
+      note: note ?? this.note,
+      photoPaths: photoPaths ?? this.photoPaths,
+    );
+  }
 }

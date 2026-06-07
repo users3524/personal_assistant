@@ -25,6 +25,8 @@ abstract class AntiqueRepository {
   Future<List<PattingLogEntity>> getPattingLogs(int itemId);
   Future<List<PattingLogEntity>> getPattingLogsByDate(DateTime date);
   Future<PattingLogEntity> addPattingLog(PattingLogEntity log);
+  Future<PattingLogEntity> updatePattingLog(PattingLogEntity log);
+  Future<void> deletePattingLog(int id);
 
   // ===== 统计 =====
   Future<Map<String, int>> countByCategory();

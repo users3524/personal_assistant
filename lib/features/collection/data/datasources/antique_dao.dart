@@ -265,6 +265,21 @@ class AntiqueDao {
     );
   }
 
+  /// 更新打卡记录（仅备注和照片路径）
+  Future<PattingLogEntity> updatePattingLog(PattingLogEntity log) async {
+    await (_db.update(_db.pattingLogs)..where((t) => t.id.equals(log.id!)))
+        .write(PattingLogsCompanion(
+      note: Value(log.note),
+      photoPaths: Value(log.photoPaths),
+    ));
+    return log;
+  }
+
+  /// 删除打卡记录
+  Future<void> deletePattingLog(int id) async {
+    await (_db.delete(_db.pattingLogs)..where((t) => t.id.equals(id))).go();
+  }
+
   /// 批量获取每个藏品最新一条有照片的打卡记录的第一张图路径
   /// 返回 Map<itemId, photoPath> — 没有打卡照片的 item 不出现在结果中
   Future<Map<int, String>> getLatestPattingPhotos() async {

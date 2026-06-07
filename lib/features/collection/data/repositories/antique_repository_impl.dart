@@ -64,6 +64,14 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
       _dao.addPattingLog(log);
 
   @override
+  Future<PattingLogEntity> updatePattingLog(PattingLogEntity log) =>
+      _dao.updatePattingLog(log);
+
+  @override
+  Future<void> deletePattingLog(int id) =>
+      _dao.deletePattingLog(id);
+
+  @override
   Future<Map<int, String>> getLatestPattingPhotos() =>
       _dao.getLatestPattingPhotos();
 

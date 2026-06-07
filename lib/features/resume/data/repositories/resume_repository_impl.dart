@@ -123,3 +123,6 @@ final resumeRepositoryProvider =
   final dao = await ref.watch(resumeDaoProvider.future);
   return ResumeRepositoryImpl(dao);
 });
+
+/// 简历数据刷新通知（自增计数器，每次保存后触发）
+final resumeRefreshProvider = StateProvider<int>((ref) => 0);

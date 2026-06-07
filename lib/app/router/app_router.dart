@@ -16,7 +16,6 @@ import '../../features/collection/presentation/pages/antique_form_page.dart';
 import '../../features/collection/presentation/pages/antique_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.dart';
-import '../../features/ai_assistant/presentation/pages/daily_review_form_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
 import '../../features/resume/presentation/pages/resume_home_page.dart';

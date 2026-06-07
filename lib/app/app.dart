@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/database/app_database_provider.dart';
+import '../core/database/user_preferences_dao.dart';
 import '../l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
@@ -19,7 +20,23 @@ final localeProvider = StateProvider<Locale>((ref) => const Locale('zh', 'CN'));
 /// 应用是否已初始化
 final appInitializedProvider = FutureProvider<bool>((ref) async {
   // 触发数据库初始化
-  await ref.watch(appDatabaseProvider.future);
+  final db = await ref.watch(appDatabaseProvider.future);
+  // 从数据库加载主题
+  try {
+    final dao = UserPreferencesDao(db);
+    final prefs = await dao.getOrCreate();
+    final themeModeStr = prefs.themeMode;
+    switch (themeModeStr) {
+      case 'light':
+        ref.read(themeModeProvider.notifier).state = ThemeMode.light;
+        break;
+      case 'dark':
+        ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
+        break;
+      default:
+        ref.read(themeModeProvider.notifier).state = ThemeMode.system;
+    }
+  } catch (_) {}
   return true;
 });
 

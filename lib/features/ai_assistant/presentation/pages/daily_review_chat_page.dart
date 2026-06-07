@@ -6,7 +6,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/ai/ai_provider.dart';
@@ -55,7 +54,10 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
   String _improvements = '';
   String _aiComment = '';
   String _aiSuggestion = '';
-  String _sentimentTag = '平稳';
+
+  // AI 对话状态
+  int _flowStep = 0; // 0=等待首次输入, 1=收集收获, 2=收集不足, 3=评分, 4=AI分析, 5=完成
+  bool _awaitingConfirmation = false;
 
   // 语音识别
   final _speech = stt.SpeechToText();
@@ -122,67 +124,168 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     ));
   }
 
+  /// 核心对话处理 — 自然语言驱动，AI 全程参与
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    final userText = text.trim();
     setState(() {
-      _messages.add(ChatMessage(text: text.trim(), isUser: true));
+      _messages.add(ChatMessage(text: userText, isUser: true));
       _isProcessing = true;
     });
     _scrollToBottom();
 
-    // 第一步：先收集用户输入作为总结
-    if (_summary.isEmpty) {
-      setState(() {
-        _summary = text.trim();
-        // 询问更多信息
-        _messages.add(ChatMessage(
-          text: '好的，收到了！今天有什么特别开心的收获或成就吗？🥰',
-          isUser: false,
-        ));
-        _isProcessing = false;
-      });
-      return;
+    // 检测保存确认
+    if (_awaitingConfirmation && _aiComment.isNotEmpty) {
+      if (userText.contains('确认') || userText.contains('保存') || userText.contains('好') || userText.contains('是')) {
+        await _saveReview();
+        setState(() => _isProcessing = false);
+        return;
+      }
     }
 
-    // 第二步：收集收获
-    if (_highlights.isEmpty) {
-      setState(() {
-        _highlights = text.trim();
-        _messages.add(ChatMessage(
-          text: '真棒！那有什么不足或想改进的地方吗？🤔',
-          isUser: false,
-        ));
-        _isProcessing = false;
-      });
-      return;
+    // 根据当前步骤引导对话
+    switch (_flowStep) {
+      case 0: // 首次输入 → 作为总结
+        await _handleStep0(userText);
+        break;
+      case 1: // 收集收获
+        await _handleStep1(userText);
+        break;
+      case 2: // 收集不足
+        await _handleStep2(userText);
+        break;
+      case 3: // 评分阶段
+        await _handleStep3(userText);
+        break;
+      case 4: // AI 已生成 → 可继续对话或保存
+        await _handleStep4(userText);
+        break;
+      case 5: // 已完成
+        _addBotMessage('复盘已保存。你可以继续聊天，或者返回查看历史记录。');
+        setState(() => _isProcessing = false);
+        break;
     }
-
-    // 第三步：收集不足
-    if (_improvements.isEmpty) {
-      setState(() {
-        _improvements = text.trim();
-        _messages.add(ChatMessage(
-          text: '感谢分享！现在给你的今天打个分吧：',
-          isUser: false,
-        ));
-        _messages.add(_buildMoodEnergySelector());
-        _isProcessing = false;
-      });
-      return;
-    }
-
-    // 第四步：已有所有信息 → 调用 AI 生成复盘
-    await _generateReview();
   }
 
-  ChatMessage _buildMoodEnergySelector() {
-    return ChatMessage(
-      text: '请选择情绪和能量水平（1-5）：\n\n'
-          '当前设置 — 情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡\n'
-          '回复「确认」或修改数值如「情绪4 能量5」',
-      isUser: false,
-    );
+  Future<void> _handleStep0(String text) async {
+    _summary = text;
+    setState(() {
+      _flowStep = 1;
+      _messages.add(ChatMessage(
+        text: '收到！今天有什么特别开心的收获或成就吗？🥰\n'
+            '（也可以直接告诉我"没有"）',
+        isUser: false,
+      ));
+      _isProcessing = false;
+    });
+  }
+
+  Future<void> _handleStep1(String text) async {
+    if (text == '没有' || text == '无' || text == '暂无') {
+      _highlights = '今天平稳度过';
+    } else {
+      _highlights = text;
+    }
+    setState(() {
+      _flowStep = 2;
+      _messages.add(ChatMessage(
+        text: '好的！那有什么不足或想改进的地方吗？🤔\n'
+            '（诚实面对自己才能成长，也可以说"没有"）',
+        isUser: false,
+      ));
+      _isProcessing = false;
+    });
+  }
+
+  Future<void> _handleStep2(String text) async {
+    if (text == '没有' || text == '无' || text == '暂无') {
+      _improvements = '';
+    } else {
+      _improvements = text;
+    }
+    setState(() {
+      _flowStep = 3;
+      _messages.add(ChatMessage(
+        text: '感谢你的坦诚！给你的今天打个分吧：\n\n'
+            '😊 情绪指数（1-5）：目前 $_moodLevel\n'
+            '⚡ 能量指数（1-5）：目前 $_energyLevel\n\n'
+            '回复「确认」使用当前评分，或输入「情绪4 能量3」来修改',
+        isUser: false,
+      ));
+      _isProcessing = false;
+    });
+  }
+
+  Future<void> _handleStep3(String text) async {
+    // 解析评分
+    final moodMatch = RegExp(r'情绪[：:\s]*(\d)').firstMatch(text);
+    final energyMatch = RegExp(r'能量[：:\s]*(\d)').firstMatch(text);
+    
+    if (moodMatch != null) _moodLevel = int.parse(moodMatch.group(1)!).clamp(1, 5);
+    if (energyMatch != null) _energyLevel = int.parse(energyMatch.group(1)!).clamp(1, 5);
+
+    if (text.contains('确认') || text.contains('好') || text.contains('可以') || text.contains('是')) {
+      // 进入 AI 生成阶段
+      setState(() {
+        _flowStep = 4;
+        _messages.add(ChatMessage(
+          text: '好的，情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡\n\n'
+              '正在为你生成 AI 复盘分析...',
+          isUser: false,
+        ));
+      });
+      await _generateReview();
+    } else if (moodMatch != null || energyMatch != null) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: '已更新：情绪 $_moodLevel ⭐  能量 $_energyLevel ⚡\n'
+              '回复「确认」开始 AI 分析，或继续修改。',
+          isUser: false,
+        ));
+        _isProcessing = false;
+      });
+    } else {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: '请用「情绪数字 能量数字」的格式，或直接回复「确认」。',
+          isUser: false,
+        ));
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<void> _handleStep4(String text) async {
+    // AI 已生成，用户可以继续对话
+    final ai = ref.read(aiServiceProvider);
+    if (ai != null) {
+      try {
+        final reply = await ai.chat(
+          '以下是我的今日复盘：\n'
+          '总结：$_summary\n'
+          '收获：$_highlights\n'
+          '不足：${_improvements.isEmpty ? "无" : _improvements}\n'
+          '情绪：$_moodLevel/5 能量：$_energyLevel/5\n'
+          'AI评语：$_aiComment\n'
+          'AI建议：$_aiSuggestion\n\n'
+          '用户说：$text\n\n'
+          '请以温暖、专业的口吻简短回复（50字以内）。',
+        );
+        _addBotMessage(reply);
+      } catch (_) {
+        _addBotMessage('收到！你可以继续和我聊，或者回复「保存」来保存复盘。');
+      }
+    } else {
+      _addBotMessage('收到！你可以回复「保存」来保存当前复盘。');
+    }
+    setState(() => _isProcessing = false);
+  }
+
+  void _addBotMessage(String text) {
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: false));
+    });
   }
 
   Future<void> _generateReview() async {
@@ -190,19 +293,24 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     if (ai == null) {
       setState(() {
         _messages.add(ChatMessage(
-          text: '⚠️ 请先在设置中配置 AI API Key 后使用 AI 生成功能。\n'
-              '（或者你也可以直接手动填写保存）',
+          text: '⚠️ 请先在「设置」页面配置 AI API Key，然后才能使用 AI 智能分析功能。\n\n'
+              '配置方法：\n'
+              '1. 前往设置 → AI 配置\n'
+              '2. 选择 AI 平台（推荐 DeepSeek，便宜好用）\n'
+              '3. 填入 API Key 和模型\n\n'
+              '（当前可以手动填写内容后保存）',
           isUser: false,
         ));
         _isProcessing = false;
+        _awaitingConfirmation = true;
       });
       return;
     }
 
     try {
       // 获取今日已完成待办
-      final repo = await ref.read(todoRepositoryProvider.future);
-      final todayTodos = await repo.getToday();
+      final todoRepo = await ref.read(todoRepositoryProvider.future);
+      final todayTodos = await todoRepo.getToday();
       final completedTitles = todayTodos
           .where((t) => t.isDone)
           .map((t) => t.title)
@@ -222,17 +330,21 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
       setState(() {
         _aiComment = result.comment;
         _aiSuggestion = result.suggestion;
-        _sentimentTag = result.sentimentTag;
+        _awaitingConfirmation = true;
+        
+        final improvementNote = _improvements.isNotEmpty 
+            ? '\n\n📌 **可改进点（已置顶）**：\n$_improvements'
+            : '';
+        
         _messages.add(ChatMessage(
-          text: '✨ **AI 复盘**\n\n'
-              '📝 ${result.comment}\n\n'
+          text: '✨ **AI 复盘分析**\n\n'
+              '📝 评语：${result.comment}\n\n'
               '💡 建议：${result.suggestion}\n\n'
-              '🏷️ 情绪标签：${result.sentimentTag}',
-          isUser: false,
-        ));
-        _messages.add(ChatMessage(
-          text: '以上是 AI 为你生成的复盘。要保存吗？\n'
-              '回复「确认」或「保存」✅',
+              '🏷️ 情绪标签：${result.sentimentTag}'
+              '$improvementNote\n\n'
+              '———\n'
+              '回复「确认」或「保存」来保存本次复盘 ✅\n'
+              '也可以继续和我聊聊你的想法 💬',
           isUser: false,
         ));
         _isProcessing = false;
@@ -241,10 +353,13 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
       setState(() {
         _messages.add(ChatMessage(
           text: '❌ AI 生成失败：$e\n\n'
-              '你可以手动填写后保存。',
+              '可能是网络问题或 API Key 无效。\n'
+              '请检查设置中的 AI 配置。\n'
+              '你也可以手动填写后保存。',
           isUser: false,
         ));
         _isProcessing = false;
+        _awaitingConfirmation = true;
       });
     }
   }
@@ -291,7 +406,11 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         ));
       }
 
-      setState(() => _reviewSaved = true);
+      setState(() {
+        _reviewSaved = true;
+        _flowStep = 5;
+        _awaitingConfirmation = false;
+      });
       _messages.add(ChatMessage(
         text: '✅ 复盘已保存！',
         isUser: false,
@@ -365,55 +484,21 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     }
   }
 
-  void _setMoodEnergy(String text) {
-    final moodMatch = RegExp(r'情绪[：:\s]*(\d)').firstMatch(text);
-    final energyMatch = RegExp(r'能量[：:\s]*(\d)').firstMatch(text);
-    final confirmMatch = RegExp(r'确认|确定|好|可以').hasMatch(text);
-
-    if (confirmMatch && moodMatch == null && energyMatch == null) {
-      // 确认当前值
-      setState(() {
-        _messages.add(ChatMessage(
-          text: '好的，情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡',
-          isUser: false,
-        ));
-        _isProcessing = true;
-      });
-      _generateReview();
-      return;
-    }
-
-    if (moodMatch != null) {
-      _moodLevel = int.parse(moodMatch.group(1)!);
-    }
-    if (energyMatch != null) {
-      _energyLevel = int.parse(energyMatch.group(1)!);
-    }
-    setState(() {
-      _messages.add(ChatMessage(
-        text: '情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡',
-        isUser: false,
-      ));
-      _isProcessing = true;
-    });
-    _generateReview();
-  }
-
   void _handleTextMessage(String text) {
     final lower = text.trim().toLowerCase();
 
     // 保存确认
-    if (_reviewSaved == false &&
-        _aiComment.isNotEmpty &&
-        (lower.contains('确认') || lower.contains('保存') || lower.contains('好'))) {
-      _saveReview();
-      return;
+    if (_awaitingConfirmation && _aiComment.isNotEmpty) {
+      if (lower.contains('确认') || lower.contains('保存') || lower.contains('好') || lower.contains('是')) {
+        _saveReview();
+        return;
+      }
     }
 
-    // 情绪/能量设置
-    if (_summary.isNotEmpty && _highlights.isNotEmpty && _improvements.isNotEmpty) {
-      if (RegExp(r'情绪|能量|确认|好|可以').hasMatch(lower) && _aiComment.isEmpty) {
-        _setMoodEnergy(text);
+    // 评分阶段特殊处理
+    if (_flowStep == 3) {
+      if (RegExp(r'情绪|能量|确认|好|可以|是').hasMatch(lower)) {
+        _sendMessage(text);
         return;
       }
     }

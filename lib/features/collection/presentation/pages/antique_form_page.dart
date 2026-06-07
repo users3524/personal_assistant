@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 import '../../domain/entities/antique_entity.dart';
@@ -39,6 +40,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   double? _currentValuation;
   List<String> _imagePaths = [];
   bool _isLoading = false;
+  bool _isSavingImage = false;
 
   bool get _isEditing => widget.editId != null;
 
@@ -91,8 +93,19 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       imageQuality: 80,
     );
     if (file != null && mounted) {
-      // 这里使用临时路径，实际应使用相对路径方案
-      setState(() => _imagePaths.add(file.path));
+      setState(() => _isSavingImage = true);
+      try {
+        final savedPath = await _saveImageToAppDir(file);
+        setState(() => _imagePaths.add(savedPath));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存图片失败: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isSavingImage = false);
+      }
     }
   }
 
@@ -105,8 +118,32 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       imageQuality: 80,
     );
     if (file != null && mounted) {
-      setState(() => _imagePaths.add(file.path));
+      setState(() => _isSavingImage = true);
+      try {
+        final savedPath = await _saveImageToAppDir(file);
+        setState(() => _imagePaths.add(savedPath));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存图片失败: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isSavingImage = false);
+      }
     }
+  }
+
+  /// 将 XFile 保存到应用私有目录（解决 content:// URI 无法被 File() 读取的问题）
+  Future<String> _saveImageToAppDir(XFile photo) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final imgDir = Directory('${dir.path}/antique_images');
+    if (!await imgDir.exists()) await imgDir.create(recursive: true);
+    final fileName = 'antique_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final dest = File('${imgDir.path}/$fileName');
+    final bytes = await photo.readAsBytes();
+    await dest.writeAsBytes(bytes);
+    return dest.path;
   }
 
   Future<void> _save() async {
@@ -351,7 +388,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
 
   Widget _buildAddImageButton() {
     return GestureDetector(
-      onTap: () => _showImagePickerOptions(),
+      onTap: _isSavingImage ? null : () => _showImagePickerOptions(),
       child: Container(
         width: 100,
         height: 100,
@@ -360,14 +397,22 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade300),
         ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey),
-            SizedBox(height: 4),
-            Text('添加', style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
-        ),
+        child: _isSavingImage
+            ? const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey),
+                  SizedBox(height: 4),
+                  Text('添加', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
       ),
     );
   }
@@ -380,9 +425,18 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
           height: 100,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            image: DecorationImage(
-              image: FileImage(File(_imagePaths[index])),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              File(_imagePaths[index]),
               fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey.shade200,
+                child: const Center(
+                  child: Icon(Icons.broken_image, color: Colors.grey),
+                ),
+              ),
             ),
           ),
         ),

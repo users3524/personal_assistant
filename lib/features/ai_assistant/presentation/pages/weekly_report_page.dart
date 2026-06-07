@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ai/ai_service.dart';
-import '../../../../core/ai/openai_service.dart';
+import '../../../../core/ai/ai_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../providers/review_providers.dart';
 
@@ -98,10 +98,16 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
       }).toList();
 
       // 调用 AI
-      final ai = OpenAIService(
-        baseUrl: 'https://api.openai.com/v1',
-        apiKey: '', // 需要用户配置
-      );
+      final ai = ref.read(aiServiceProvider);
+      if (ai == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请先在设置中配置 AI API Key')),
+          );
+        }
+        setState(() => _isGenerating = false);
+        return;
+      }
 
       final result = await ai.generateWeeklyReport(
         weekNumber: widget.weekNumber,

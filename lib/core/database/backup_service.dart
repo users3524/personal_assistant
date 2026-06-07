@@ -10,6 +10,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:drift/drift.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -132,21 +133,39 @@ class BackupService {
     await _db.delete(_db.todos).go();
     await _db.delete(_db.userPreferences).go();
 
-    // 逐表恢复
-    // 注意：这里需要用原始 SQL 插入，因为 drift 的 Companion 需要完整类型
-    // 简化实现：实际应使用 batch insert
-    for (final table in data.keys) {
-      if (table == 'version' || table == 'exportedAt') continue;
-      if (data[table] is! List) continue;
-    }
+    // 逐表恢复 — 使用 batch insert
+    await _db.batch((batch) {
+      // user_preferences
+      final prefs = data['user_preferences'] as List?;
+      if (prefs != null) {
+        for (final row in prefs) {
+          if (row is Map<String, dynamic>) {
+            batch.insert(_db.userPreferences, UserPreferencesCompanion(
+              id: Value(row['id'] as int),
+              themeMode: Value(row['theme_mode']?.toString() ?? 'system'),
+              language: Value(row['language']?.toString() ?? 'zh'),
+              notificationEnabled: Value(row['notification_enabled'] == true || row['notification_enabled'] == 1),
+              aiProvider: Value(row['ai_provider']?.toString() ?? 'OpenAI'),
+              aiApiKey: Value(row['ai_api_key']?.toString()),
+              aiBaseUrl: Value(row['ai_base_url']?.toString()),
+              aiModel: Value(row['ai_model']?.toString()),
+              dailyReviewTime: Value(row['daily_review_time']?.toString() ?? '21:00'),
+              weeklyReportDay: Value(row['weekly_report_day']?.toString() ?? 'sunday'),
+              resumeTemplateId: Value(row['resume_template_id'] as int? ?? 0),
+            ), mode: InsertMode.insertOrReplace);
+          }
+        }
+      }
+    });
   }
 
   Map<String, dynamic> _rowToMap(Object row, dynamic table) {
-    // 使用 dart:mirrors 或 jsonEncode 的偷懒方式：
-    // drift 的行对象可以直接 toString 看到字段
-    final jsonStr = row.toString();
-    // 正则提取字段值（简化实现）
-    return {'_raw': jsonStr};
+    // drift DataClass 直接 toJson 序列化
+    if (row is DataClass) {
+      return row.toJson();
+    }
+    // 兜底
+    return {'_raw': row.toString()};
   }
 
   String _encrypt(String plainText, String password) {

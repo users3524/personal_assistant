@@ -421,7 +421,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   }
 
   void _addPattingCheckin(AntiqueEntity item) {
-    final noteCtrl = TextEditingController();
     final picker = ImagePicker();
 
     showModalBottomSheet(
@@ -438,16 +437,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               leading: const Icon(Icons.camera_alt, color: Colors.teal),
               title: const Text('拍照'),
               onTap: () async {
+                Navigator.pop(ctx); // 先关闭底部菜单
                 try {
                   final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1024);
-                  if (photo != null) {
-                    final savedPath = await _saveImageToAppDir(photo);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
+                  if (photo != null && mounted) {
+                    _showCheckinDialog(item, photo, null);
                   }
                 } catch (e) {
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (context.mounted) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('拍照失败: $e')));
                   }
                 }
@@ -457,16 +454,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               leading: const Icon(Icons.photo_library, color: Colors.blue),
               title: const Text('从相册选择'),
               onTap: () async {
+                Navigator.pop(ctx); // 先关闭底部菜单
                 try {
                   final photo = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
-                  if (photo != null) {
-                    final savedPath = await _saveImageToAppDir(photo);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
+                  if (photo != null && mounted) {
+                    _showCheckinDialog(item, photo, null);
                   }
                 } catch (e) {
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (context.mounted) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('选择失败: $e')));
                   }
                 }
@@ -479,72 +474,155 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  void _showCheckinDialog(AntiqueEntity item, String photoPath, TextEditingController noteCtrl) {
+  void _showCheckinDialog(AntiqueEntity item, XFile? photo, String? existingNote) {
+    final noteCtrl = TextEditingController(text: existingNote);
+    String? savedPhotoPath;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('盘玩打卡'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (photoPath.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(photoPath),
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 120,
-                    color: Colors.grey.shade200,
-                    child: const Center(child: Text('图片加载失败')),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('盘玩打卡'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 图片预览区域
+                if (photo != null)
+                  FutureBuilder<String?>(
+                    future: _saveImageToAppDir(photo).then<String?>((p) {
+                      savedPhotoPath = p;
+                      return p;
+                    }).catchError((_) => null),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Container(
+                          height: 180,
+                          width: double.infinity,
+                          color: Colors.grey.shade100,
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(strokeWidth: 2),
+                                SizedBox(height: 8),
+                                Text('处理图片中...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      if (snapshot.hasError || snapshot.data == null) {
+                        return Container(
+                          height: 120,
+                          width: double.infinity,
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.broken_image, color: Colors.grey),
+                                SizedBox(height: 4),
+                                Text('图片加载失败', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(snapshot.data!),
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 120,
+                            color: Colors.grey.shade200,
+                            child: const Center(child: Text('图片加载失败')),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                else
+                  Container(
+                    height: 100,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.favorite_border, color: Colors.pink, size: 32),
+                          SizedBox(height: 4),
+                          Text('无照片，纯文字记录', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
                   ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: const InputDecoration(
+                    hintText: '此刻的想法...',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  maxLines: 2,
+                  autofocus: photo == null,
                 ),
-              ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteCtrl,
-              decoration: const InputDecoration(
-                hintText: '此刻的想法...',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 2,
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () async {
-              try {
-                final repo = await ref.read(antiqueRepositoryProvider.future);
-                await repo.addPattingLog(PattingLogEntity(
-                  itemId: widget.itemId,
-                  date: DateTime.now(),
-                  durationMinutes: 0,
-                  method: 'bare_hand',
-                  note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
-                  photoPaths: photoPath.isNotEmpty ? [photoPath] : [],
-                ));
-                if (ctx.mounted) Navigator.pop(ctx);
-                // 强制刷新：使所有相关 Provider 失效
-                ref.invalidate(antiqueRepositoryProvider);
-                ref.invalidate(antiqueListProvider);
-                ref.invalidate(categoryCountProvider);
-                ref.invalidate(totalValuationProvider);
-                setState(() {});
-              } catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('打卡失败: $e')));
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.pink),
-            child: const Text('打卡'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  try {
+                    final repo = await ref.read(antiqueRepositoryProvider.future);
+                    await repo.addPattingLog(PattingLogEntity(
+                      itemId: widget.itemId,
+                      date: DateTime.now(),
+                      durationMinutes: 0,
+                      method: 'bare_hand',
+                      note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+                      photoPaths: savedPhotoPath != null && savedPhotoPath!.isNotEmpty
+                          ? [savedPhotoPath!]
+                          : [],
+                    ));
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    // 强制刷新
+                    ref.invalidate(antiqueRepositoryProvider);
+                    ref.invalidate(antiqueListProvider);
+                    ref.invalidate(categoryCountProvider);
+                    ref.invalidate(totalValuationProvider);
+                    if (mounted) setState(() {});
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('打卡成功！'), duration: Duration(seconds: 1)),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('打卡失败: $e')),
+                      );
+                    }
+                  }
+                },
+                style: FilledButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('打卡'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

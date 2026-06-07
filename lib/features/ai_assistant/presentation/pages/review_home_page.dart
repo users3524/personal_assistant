@@ -122,6 +122,7 @@ class ReviewHomePage extends ConsumerWidget {
     DateTime now,
   ) {
     final hasReviewed = todayReview.valueOrNull != null;
+    final review = todayReview.valueOrNull;
 
     return Card(
       child: Padding(
@@ -145,19 +146,46 @@ class ReviewHomePage extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               hasReviewed
-                  ? '今日复盘已完成，可以查看或重新生成。'
+                  ? '今日复盘已完成，可以查看或继续对话。'
                   : '回顾今天的工作与生活，让 AI 帮你总结和提升。',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey,
                   ),
             ),
+            // 显示可改进点（如有）
+            if (hasReviewed && review!.improvements != null && review.improvements!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.lightbulb, size: 16, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '📌 ${review.improvements}',
+                        style: const TextStyle(fontSize: 13, color: Colors.brown),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () => context.push('/review/daily/new'),
                 icon: Icon(hasReviewed ? Icons.refresh : Icons.edit),
-                label: Text(hasReviewed ? '查看/重新复盘' : '开始今日复盘'),
+                label: Text(hasReviewed ? '查看/继续对话' : '开始今日复盘'),
               ),
             ),
           ],
@@ -172,6 +200,8 @@ class ReviewHomePage extends ConsumerWidget {
     int weekNumber,
   ) {
     final weeklyAsync = ref.watch(weeklyReportProvider(weekNumber));
+    final now = DateTime.now();
+    final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
 
     return Card(
       child: Padding(
@@ -206,13 +236,23 @@ class ReviewHomePage extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            if (!weeklyAsync.hasValue || weeklyAsync.valueOrNull == null)
+              Text(
+                isWeekend
+                    ? '📊 周末了！本周有足够的数据，可以生成周报了。'
+                    : '每天坚持复盘，周末自动汇总生成周报。',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () => context.push('/review/weekly/$weekNumber'),
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('查看 / 生成周报'),
+                label: Text(isWeekend && (weeklyAsync.valueOrNull == null)
+                    ? '生成周报'
+                    : '查看 / 生成周报'),
               ),
             ),
           ],

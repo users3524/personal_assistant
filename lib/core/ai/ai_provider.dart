@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ai/ai_service.dart';
 import '../../core/ai/openai_service.dart';
+import '../database/app_database_provider.dart';
+import '../database/user_preferences_dao.dart';
 
-/// AI 配置状态（内存中保持，可扩展为持久化）
+/// AI 配置状态（内存中保持，启动时从数据库加载）
 class AIConfig {
   final String provider;
   final String baseUrl;
@@ -36,13 +38,37 @@ class AIConfig {
   bool get isConfigured => apiKey.isNotEmpty;
 }
 
-/// AI 配置 Provider（可读写）
+/// AI 配置 Provider（可读写，启动时自动加载数据库配置）
 final aiConfigProvider = StateNotifierProvider<AIConfigNotifier, AIConfig>((ref) {
-  return AIConfigNotifier();
+  final notifier = AIConfigNotifier(ref);
+  // 异步从数据库加载配置
+  Future.microtask(() => notifier.loadFromDb());
+  return notifier;
 });
 
 class AIConfigNotifier extends StateNotifier<AIConfig> {
-  AIConfigNotifier() : super(const AIConfig());
+  final Ref _ref;
+  bool _loaded = false;
+
+  AIConfigNotifier(this._ref) : super(const AIConfig());
+
+  Future<void> loadFromDb() async {
+    if (_loaded) return;
+    try {
+      final db = await _ref.read(appDatabaseProvider.future);
+      final dao = UserPreferencesDao(db);
+      final prefs = await dao.getOrCreate();
+      state = AIConfig(
+        provider: prefs.aiProvider,
+        baseUrl: prefs.aiBaseUrl ?? 'https://api.openai.com/v1',
+        model: prefs.aiModel ?? 'gpt-4o-mini',
+        apiKey: prefs.aiApiKey ?? '',
+      );
+      _loaded = true;
+    } catch (_) {
+      _loaded = true;
+    }
+  }
 
   void update({
     String? provider,

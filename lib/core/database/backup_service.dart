@@ -159,7 +159,6 @@ class BackupService {
     await _db.delete(_db.todos).go();
     await _db.delete(_db.userPreferences).go();
 
-    // 逐表恢复 — 使用 Raw SQL INSERT，避免逐个构造 Companion
     final tableOrder = [
       'user_preferences', 'todos', 'antique_items', 'valuation_records',
       'patting_logs', 'daily_reviews', 'weekly_reports',
@@ -167,24 +166,36 @@ class BackupService {
       'skill_items', 'project_experiences',
     ];
 
-    // JSON key → SQL column name 映射 (drift toJson 使用 camelCase)
-    String toSnakeCase(String camel) {
-      return camel.replaceAllMapped(
-        RegExp(r'[A-Z]'),
-        (m) => '_${m.group(0)!.toLowerCase()}',
-      );
-    }
+    // 每张表的 snake_case 列名，与实际 SQL schema 一致
+    const tableColumns = {
+      'user_preferences': ['id','theme_mode','language','notification_enabled','ai_provider','ai_api_key','ai_base_url','ai_model','daily_review_time','weekly_report_day','resume_template_id','created_at','updated_at'],
+      'todos': ['id','title','description','category','priority','due_date','status','tags','is_starred','started_at','completed_at','cancelled_at','actual_minutes','delay_count','created_at','updated_at'],
+      'antique_items': ['id','name','category','subtype','description','acquired_date','acquired_price','source_seller','condition','current_valuation','image_paths','category_metadata','fingerprints','notes','created_at','updated_at'],
+      'valuation_records': ['id','item_id','date','amount','remark','created_at'],
+      'patting_logs': ['id','item_id','date','duration_minutes','method','note','photo_paths','created_at'],
+      'daily_reviews': ['id','date','summary','highlights','improvements','energy_level','mood_level','completed_todo_ids','patting_minutes','ai_comment','ai_suggestion','is_ai_generated','is_manually_edited','created_at','updated_at'],
+      'weekly_reports': ['id','week_number','year','overview','highlights','improvements','next_week_plan','is_ai_generated','is_manually_edited','created_at','updated_at'],
+      'resume_profile': ['id','name','email','phone','website','summary','location','created_at','updated_at'],
+      'work_experiences': ['id','company','position','start_date','end_date','description','is_visible','sort_order','created_at','updated_at'],
+      'educations': ['id','school','major','degree','start_date','end_date','description','is_visible','sort_order','created_at','updated_at'],
+      'skill_items': ['id','name','category','proficiency','is_visible','sort_order','created_at','updated_at'],
+      'project_experiences': ['id','name','url','start_date','end_date','description','is_visible','sort_order','image_paths','created_at','updated_at'],
+    };
 
-    String escapeValue(dynamic v) {
-      if (v == null) return 'NULL';
-      if (v is bool) return v ? '1' : '0';
-      if (v is num) return v.toString();
-      if (v is String) return "'${v.replaceAll("'", "''")}'";
-      if (v is List) {
-        final escaped = v.map((e) => "'${e.toString().replaceAll("'", "''")}'").join(',');
-        return "'[$escaped]'";
+    // camelCase → snake_case（drift.toJson 输出的是 camelCase）
+    String _snake(String c) {
+      // 确保首字母 D/N 不会被 _ 包围：acquiredDate→acquired_date
+      final sb = StringBuffer();
+      for (int i = 0; i < c.length; i++) {
+        final ch = c[i];
+        if (ch == ch.toUpperCase() && i > 0) {
+          sb.write('_');
+          sb.write(ch.toLowerCase());
+        } else {
+          sb.write(ch.toLowerCase());
+        }
       }
-      return "'${v.toString().replaceAll("'", "''")}'";
+      return sb.toString();
     }
 
     for (final tableName in tableOrder) {
@@ -194,38 +205,50 @@ class BackupService {
       for (final row in rows) {
         if (row is! Map<String, dynamic>) continue;
 
-        final columns = <String>[];
-        final values = <String>[];
-        for (final entry in row.entries) {
-          var val = entry.value;
+        // 把 JSON 行转成 snake_case
+        final snakeRow = <String, dynamic>{};
+        for (final e in row.entries) {
+          snakeRow[_snake(e.key)] = e.value;
+        }
 
-          // 解码 Base64 内联图片 → 写入文件 → 替换为文件路径
-          if ((entry.key == 'imagePaths' || entry.key == 'photoPaths') && val is List) {
-            val = val.map((p) {
+        final cols = tableColumns[tableName]!;
+        final vals = <dynamic>[];
+
+        for (final col in cols) {
+          var v = snakeRow[col];
+
+          // 图片列表：base64 → 解码写盘
+          if ((col == 'image_paths' || col == 'photo_paths') && v is List) {
+            v = v.map<dynamic>((p) {
               if (p is String && p.startsWith('base64:')) {
                 return _decodeAndSaveImage(p.substring(7));
               }
+              if (p is String && (p.startsWith('/data/') || p.startsWith('/storage/'))) {
+                return null; // 别的设备的绝对路径，没用
+              }
               return p;
-            }).toList();
-          }
-          // 跳过不可用的文件路径（不同设备的路径直接去掉）
-          if ((entry.key == 'imagePaths' || entry.key == 'photoPaths') && val is List) {
-            val = val.where((p) => p is String && p.isNotEmpty).toList();
+            }).whereType<String>().toList();
           }
 
-          columns.add(toSnakeCase(entry.key));
-          values.add(escapeValue(val));
+          vals.add(_toRaw(v));
         }
 
-        if (columns.isEmpty) continue;
-        final sql = 'INSERT INTO $tableName (${columns.join(', ')}) VALUES (${values.join(', ')})';
+        final qs = vals.map((_) => '?').join(', ');
+        final sql = 'INSERT OR REPLACE INTO $tableName (${cols.join(', ')}) VALUES ($qs)';
         try {
-          await _db.customStatement(sql);
-        } catch (_) {
-          // 单行失败不影响其他行
-        }
+          await _db.customStatement(sql, vals);
+        } catch (_) {}
       }
     }
+  }
+
+  dynamic _toRaw(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is double) return v;
+    if (v is bool) return v ? 1 : 0;
+    if (v is List) return jsonEncode(v);
+    return v.toString();
   }
 
   Map<String, dynamic> _rowToMap(DataClass row) {

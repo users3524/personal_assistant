@@ -15,20 +15,16 @@ class AntiqueItems extends Table {
 
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get category => text()();  // 松石 | 南红 | 菩提 | 翡翠 | 和田玉 | 紫砂 | 书画 | 杂项 | 自定义
-  TextColumn get subtype => text().nullable()();  // 子类，如 "高瓷" "绿松"
+  TextColumn get category => text()();  // 核桃 | 手串 | 把件 | 自定义
+  TextColumn get subtype => text().nullable()();  // 细分品类，如 "白狮子" "百香籽" "葫芦"
   TextColumn get description => text().nullable()();
   DateTimeColumn get acquiredDate => dateTime()();
   RealColumn get acquiredPrice => real().nullable()();
   TextColumn get sourceSeller => text().nullable()();
   TextColumn get condition => text().withDefault(const Constant('good'))();  // perfect | good | fair | poor
   RealColumn get currentValuation => real().nullable()();
-
-  // ✅ 图片存储：只存相对路径，如 "antiques/item_3_0.jpg"
-  // 渲染时通过 path_provider 获取 ApplicationDocumentsDirectory 拼接
   TextColumn get imagePaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
-
-  // 指纹特征（JSON），用于记录特定纹理、朱砂点、铁线等防伪特征
+  TextColumn get categoryMetadata => text().nullable()();  // JSON: 分类专属字段 {"边宽(mm)":"42","重量(g)":"45"}
   TextColumn get fingerprints => text().nullable()();
 
   TextColumn get notes => text().nullable()();
@@ -114,24 +110,28 @@ Future<File> getAntiqueImageFile(String relativePath) async {
 
 | 功能 | 说明 |
 |------|------|
-| 新增藏品 | 填写表单 + 拍照/选取多图 |
+| 新增藏品 | 填写表单 + 拍照/选取多图 + 分类专属字段 |
 | 编辑藏品 | 修改任意字段，增减图片 |
 | 删除藏品 | 级联删除估值记录 + 盘玩日志 + 图片文件 |
-| 分类管理 | 预置分类，支持自定义添加 |
+| 分类管理 | 三大类：核桃、手串、把件，每类支持细分品类选择 + 自定义 |
+| 分类专属字段 | 核桃：边宽/肚厚/桩高/重量；手串：尺寸/串型/重量；把件：长宽高/重量 |
+| 新建首条打卡 | 新建藏品自动创建入手当天打卡记录（含照片） |
 
 ### 3.2 浏览与查看
 
 | 视图 | 说明 |
 |------|------|
-| 网格视图 | 2 列网格，封面大图 + 名称 + 当前估值 |
-| 详情页 | 大图轮播 + 信息卡片 + 估值折线图 |
-| 筛选面板 | 底部弹出：分类勾选、年份范围、品相选择 |
+| 网格视图 | 2 列网格，封面优先展示最新打卡照片 + 入手天数 + 品类标签 |
+| 详情页 | Banner 轮播（带页码指示器+全屏按钮）+ 信息卡片 + 详细参数 + 盘玩时间线 |
+| 打卡时间线 | 左侧第N天 + 时间圆点 + 右侧卡片（日期时间+备注+照片缩略图） |
 
 ### 3.3 盘玩日志
 
 | 功能 | 说明 |
 |------|------|
-| 每日打卡 | 选择藏品 → 填写盘玩时长 + 方式 → 可选拍照 |
+| 打卡记录 | 选择拍照/相册 → 预览 → 填写备注 → 选择打卡日期时间 → 保存 |
+| 图片存储 | XFile.readAsBytes → getApplicationDocumentsDirectory → File.writeAsBytes → Image.file |
+| 打卡对比 | 选择两条打卡记录，照片并排全屏对比 + 天数统计 |
 | 时间线 | 按日期排列所有盘玩记录 |
 | 盘玩进化录 | 选取多个时间点的照片生成前后对比图 |
 

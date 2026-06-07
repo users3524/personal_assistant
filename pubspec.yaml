@@ -1,7 +1,7 @@
 name: personal_assistant
 description: 个人全能助手 - 待办/文玩/AI复盘/动态简历
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.10.0

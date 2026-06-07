@@ -167,6 +167,7 @@ class BackupService {
     ];
 
     // 每张表的 snake_case 列名，与实际 SQL schema 一致
+    // 注意：这些是数据库列名（snake_case），由 drift 的 toJson() camelCase 输出经 _snake() 转换而来
     const tableColumns = {
       'user_preferences': ['id','theme_mode','language','notification_enabled','ai_provider','ai_api_key','ai_base_url','ai_model','daily_review_time','weekly_report_day','resume_template_id','created_at','updated_at'],
       'todos': ['id','title','description','category','priority','due_date','status','tags','is_starred','started_at','completed_at','cancelled_at','actual_minutes','delay_count','created_at','updated_at'],
@@ -175,11 +176,11 @@ class BackupService {
       'patting_logs': ['id','item_id','date','duration_minutes','method','note','photo_paths','created_at'],
       'daily_reviews': ['id','date','summary','highlights','improvements','energy_level','mood_level','completed_todo_ids','patting_minutes','ai_comment','ai_suggestion','is_ai_generated','is_manually_edited','created_at','updated_at'],
       'weekly_reports': ['id','week_number','year','overview','highlights','improvements','next_week_plan','is_ai_generated','is_manually_edited','created_at','updated_at'],
-      'resume_profile': ['id','name','email','phone','website','summary','location','created_at','updated_at'],
-      'work_experiences': ['id','company','position','start_date','end_date','description','is_visible','sort_order','created_at','updated_at'],
-      'educations': ['id','school','major','degree','start_date','end_date','description','is_visible','sort_order','created_at','updated_at'],
-      'skill_items': ['id','name','category','proficiency','is_visible','sort_order','created_at','updated_at'],
-      'project_experiences': ['id','name','url','start_date','end_date','description','is_visible','sort_order','image_paths','created_at','updated_at'],
+      'resume_profile': ['id','full_name','avatar_path','email','phone','personal_summary','website','location','job_title','updated_at'],
+      'work_experiences': ['id','company','position','start_date','end_date','description','tech_stack','is_visible','sort_order','created_at','updated_at'],
+      'educations': ['id','school','major','degree','start_date','end_date','description','is_visible','sort_order'],
+      'skill_items': ['id','name','category','proficiency','is_visible','sort_order'],
+      'project_experiences': ['id','name','role','description','tech_stack','link','start_date','end_date','is_visible','sort_order'],
     };
 
     // camelCase → snake_case（drift.toJson 输出的是 camelCase）
@@ -230,30 +231,48 @@ class BackupService {
             }).whereType<String>().toList();
           }
 
-          vals.add(_toRaw(v));
+          vals.add(_toRaw(v, col));
         }
 
         final qs = vals.map((_) => '?').join(', ');
         final sql = 'INSERT OR REPLACE INTO $tableName (${cols.join(', ')}) VALUES ($qs)';
-        try {
-          await _db.customStatement(sql, vals);
-        } catch (_) {}
+        await _db.customStatement(sql, vals);
       }
     }
   }
 
-  dynamic _toRaw(dynamic v) {
+  /// 日期列后缀集合 — 备份 JSON 中日期以 ms epoch 存储（drift toJson 序列化输出），
+  /// 但 drift 在 SQLite 中以 **秒** 存储。customStatement 绕过 drift 类型系统，
+  /// 需手动将 ms 转为秒，否则读回时被 ×1000 导致日期膨胀（如 58400 年）。
+  static const _dateColumnSuffixes = {'_at', '_date'};
+  static const _exactDateColumns = {'date'};
+
+  /// 是否为日期列
+  bool _isDateColumn(String col) {
+    return _exactDateColumns.contains(col) ||
+        _dateColumnSuffixes.any((s) => col.endsWith(s));
+  }
+
+  /// 将 ms epoch 转换为 drift SQLite 存储用的秒 epoch
+  int _msToSeconds(int ms) => (ms / 1000).round();
+
+  dynamic _toRaw(dynamic v, [String? columnName]) {
     if (v == null) return null;
     if (v is int) {
-      // 毫秒时间戳（> 9 亿 = 2001年以后）→ 转 DateTime 对象，drift 自动编码
-      if (v > 900000000000) {
-        return DateTime.fromMillisecondsSinceEpoch(v);
+      // 日期列：JSON 中是 ms epoch，SQLite 用秒 epoch → 除以 1000
+      if (columnName != null && _isDateColumn(columnName)) {
+        return _msToSeconds(v);
       }
       return v;
     }
     if (v is double) return v;
     if (v is bool) return v ? 1 : 0;
     if (v is List) return jsonEncode(v);
+    // ISO 8601 日期字符串 → DateTime → 转换成秒 epoch 给 SQLite
+    if (v is String && v.length >= 19 && v[4] == '-' && v[10] == 'T') {
+      final dt = DateTime.tryParse(v);
+      if (dt != null) return _msToSeconds(dt.millisecondsSinceEpoch);
+    }
     return v.toString();
   }
 

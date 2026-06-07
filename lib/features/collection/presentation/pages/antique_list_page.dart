@@ -640,7 +640,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           const Icon(Icons.diamond, size: 16, color: Colors.grey),
           const SizedBox(width: 6),
           Text(
-            '共 ${categoryCount.values.fold(0, (a, b) => a + b)} 件宝贝',
+            '共 ${categoryCount.values.fold(0, (a, b) => a + b)} 件',
             style: const TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const Spacer(),

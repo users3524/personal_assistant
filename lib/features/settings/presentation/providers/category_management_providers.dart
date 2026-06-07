@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/collection_category.dart';
+import '../../../../core/database/app_settings_persistence.dart';
 
 /// 默认初始分类
 final List<CollectionCategory> _defaultCategories = [
@@ -35,20 +36,40 @@ final collectionCategoriesProvider =
 });
 
 class CollectionCategoriesNotifier extends StateNotifier<List<CollectionCategory>> {
-  CollectionCategoriesNotifier() : super([..._defaultCategories]);
+  final AppSettingsPersistence _persistence = AppSettingsPersistence();
+
+  CollectionCategoriesNotifier() : super([..._defaultCategories]) {
+    _loadFromStorage();
+  }
+
+  Future<void> _loadFromStorage() async {
+    final raw = await _persistence.getCollectionCategories();
+    if (raw.isNotEmpty) {
+      state = raw.map((e) => CollectionCategory.fromJson(e)).toList();
+    }
+  }
+
+  Future<void> _persist() async {
+    await _persistence.setCollectionCategories(
+      state.map((c) => c.toJson()).toList(),
+    );
+  }
 
   void add(CollectionCategory cat) {
     if (state.any((c) => c.name == cat.name)) return;
     state = [...state, cat];
+    _persist();
   }
 
   void update(String name, CollectionCategory updated) {
     state = state.map((c) => c.name == name ? updated : c).toList();
+    _persist();
   }
 
   void remove(String name) {
     if (state.length <= 1) return;
     state = state.where((c) => c.name != name).toList();
+    _persist();
   }
 
   /// 序列化为 JSON 字符串

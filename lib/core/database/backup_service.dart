@@ -139,6 +139,10 @@ class BackupService {
         (await _db.select(_db.projectExperiences).get())
             .map((r) => _rowToMap(r))
             .toList();
+    data['collection_categories'] =
+        (await _db.select(_db.collectionCategories).get())
+            .map((r) => _rowToMap(r))
+            .toList();
 
     return data;
   }
@@ -157,19 +161,20 @@ class BackupService {
     await _db.delete(_db.valuationRecords).go();
     await _db.delete(_db.antiqueItems).go();
     await _db.delete(_db.todos).go();
+    await _db.delete(_db.collectionCategories).go();
     await _db.delete(_db.userPreferences).go();
 
     final tableOrder = [
-      'user_preferences', 'todos', 'antique_items', 'valuation_records',
+      'user_preferences', 'collection_categories', 'todos', 'antique_items', 'valuation_records',
       'patting_logs', 'daily_reviews', 'weekly_reports',
       'resume_profile', 'work_experiences', 'educations',
       'skill_items', 'project_experiences',
     ];
 
     // 每张表的 snake_case 列名，与实际 SQL schema 一致
-    // 注意：这些是数据库列名（snake_case），由 drift 的 toJson() camelCase 输出经 _snake() 转换而来
     const tableColumns = {
       'user_preferences': ['id','theme_mode','language','notification_enabled','ai_provider','ai_api_key','ai_base_url','ai_model','daily_review_time','weekly_report_day','resume_template_id','created_at','updated_at'],
+      'collection_categories': ['id','name','subtypes','metadata_fields','sort_order','created_at','updated_at'],
       'todos': ['id','title','description','category','priority','due_date','status','tags','is_starred','started_at','completed_at','cancelled_at','actual_minutes','delay_count','created_at','updated_at'],
       'antique_items': ['id','name','category','subtype','description','acquired_date','acquired_price','source_seller','condition','current_valuation','image_paths','category_metadata','fingerprints','notes','created_at','updated_at'],
       'valuation_records': ['id','item_id','date','amount','remark','created_at'],

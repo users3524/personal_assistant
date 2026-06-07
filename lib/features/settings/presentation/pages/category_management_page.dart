@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/collection_category.dart';
 import '../providers/category_management_providers.dart';
 import '../../../todo/presentation/providers/todo_categories_provider.dart';
+import '../../../../features/collection/presentation/providers/antique_providers.dart' show antiqueListProvider;
 
 class CategoryManagementPage extends ConsumerStatefulWidget {
   const CategoryManagementPage({super.key});
@@ -234,11 +235,19 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
   }
 
   void _deleteCategory(BuildContext context, CollectionCategory cat) {
+    // 检查有多少藏品使用了此分类
+    final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
+    final count = antiqueItems.where((i) => i.category == cat.name).length;
+
+    final message = count > 0
+        ? '确定删除「${cat.name}」分类吗？\n\n⚠️ 有 $count 件藏品正在使用此分类，删除后它们将保留原分类名称，但将不再显示在分类列表中。'
+        : '确定删除「${cat.name}」分类吗？';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除分类'),
-        content: Text('确定删除「${cat.name}」分类吗？\n已有此分类的藏品不会自动删除。'),
+        content: Text(message),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           FilledButton(

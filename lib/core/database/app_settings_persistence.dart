@@ -73,4 +73,17 @@ class AppSettingsPersistence {
     data['notificationHintShown'] = true;
     await _save();
   }
+
+  // ===== 文玩分类持久化 =====
+  Future<List<Map<String, dynamic>>> getCollectionCategories() async {
+    final data = await _load();
+    return (data['collectionCategories'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<void> setCollectionCategories(List<Map<String, dynamic>> categories) async {
+    final data = await _load();
+    data['collectionCategories'] = categories;
+    await _save();
+  }
 }

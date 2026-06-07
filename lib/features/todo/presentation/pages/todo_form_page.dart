@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
+import '../providers/todo_categories_provider.dart';
 
 const _categoryIcons = {
   '生活': Icons.home,
@@ -171,20 +172,23 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: defaultCategories.map((cat) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _buildCategoryChoice(
-                            label: cat,
-                            icon: _categoryIcons[cat] ?? Icons.category,
-                            color: _categoryColors[cat] ?? Colors.teal,
-                            isSelected: _category == cat,
-                            onTap: () => setState(() => _category = cat),
-                          ),
-                        )).toList(),
-                      ),
+                      child: Consumer(builder: (ctx, ref, _) {
+                        final cats = ref.watch(todoCategoriesProvider);
+                        return Row(
+                          children: cats.map((cat) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildCategoryChoice(
+                              label: cat,
+                              icon: _categoryIcons[cat] ?? Icons.category,
+                              color: _categoryColors[cat] ?? Colors.teal,
+                              isSelected: _category == cat,
+                              onTap: () => setState(() => _category = cat),
+                            ),
+                          )).toList(),
+                        );
+                      }),
                     ),
-                    if (!defaultCategories.contains(_category))
+                    if (!ref.watch(todoCategoriesProvider).contains(_category))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Chip(

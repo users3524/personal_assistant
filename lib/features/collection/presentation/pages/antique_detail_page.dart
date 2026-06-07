@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
@@ -405,7 +406,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  // ===== 盘玩打卡（拍照/相册 + 感想） =====
+  // ===== 盘玩打卡（修复拍照后灰屏、打卡后刷新） =====
+
+  /// 将 content:// URI 复制到应用私有目录，避免 File() 无法读取
+  Future<String> _copyToAppDir(String sourcePath) async {
+    final dir = await getTemporaryDirectory();
+    final fileName = 'patting_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final dest = File('${dir.path}/$fileName');
+    await File(sourcePath).copy(dest.path);
+    return dest.path;
+  }
 
   void _addPattingCheckin(AntiqueEntity item) {
     final noteCtrl = TextEditingController();
@@ -428,12 +438,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 try {
                   final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1024);
                   if (photo != null) {
-                    Navigator.pop(ctx);
-                    if (context.mounted) _showCheckinDialog(item, photo.path, noteCtrl);
+                    final savedPath = await _copyToAppDir(photo.path);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
                   }
                 } catch (e) {
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('拍照失败: $e')));
                   }
                 }
@@ -446,12 +457,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 try {
                   final photo = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
                   if (photo != null) {
-                    Navigator.pop(ctx);
-                    if (context.mounted) _showCheckinDialog(item, photo.path, noteCtrl);
+                    final savedPath = await _copyToAppDir(photo.path);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) _showCheckinDialog(item, savedPath, noteCtrl);
                   }
                 } catch (e) {
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('选择失败: $e')));
                   }
                 }
@@ -514,8 +526,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   photoPaths: photoPath.isNotEmpty ? [photoPath] : [],
                 ));
                 if (ctx.mounted) Navigator.pop(ctx);
+                // 强制刷新：使所有相关 Provider 失效
+                ref.invalidate(antiqueRepositoryProvider);
+                ref.invalidate(antiqueListProvider);
+                ref.invalidate(categoryCountProvider);
+                ref.invalidate(totalValuationProvider);
                 setState(() {});
-                ref.read(antiqueListProvider.notifier).refresh();
               } catch (e) {
                 if (ctx.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('打卡失败: $e')));

@@ -451,7 +451,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   Widget _buildPattingRank(BuildContext context, List<AntiqueEntity> items) {
     return FutureBuilder<Map<int, int>>(
-      future: ref.read(pattingFrequencyProvider.future),
+      future: ref.read(monthlyPattingFrequencyProvider.future),
       builder: (context, snapshot) {
         final freq = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)

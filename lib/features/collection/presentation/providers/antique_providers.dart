@@ -49,6 +49,8 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     ref.invalidate(totalValuationProvider);
     ref.invalidate(pattingCalendarProvider);
     ref.invalidate(dailyPickProvider);
+    ref.invalidate(pattingFrequencyProvider);
+    ref.invalidate(monthlyPattingFrequencyProvider);
   }
 
   Future<AntiqueRepository> _getRepo() async =>
@@ -168,6 +170,28 @@ final pattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
       if (item.id == null) continue;
       final logs = await repo.getPattingLogs(item.id!);
       freq[item.id!] = logs.length;
+    }
+    return freq;
+  });
+});
+
+/// 当月打卡频率计数（用于侍寝榜）
+final monthlyPattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
+  final now = DateTime.now();
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final freq = <int, int>{};
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthEnd = DateTime(now.year, now.month + 1, 1);
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      // 只统计当月
+      final monthLogs = logs.where((l) =>
+          l.date.isAfter(monthStart) && l.date.isBefore(monthEnd)).length;
+      if (monthLogs > 0) {
+        freq[item.id!] = monthLogs;
+      }
     }
     return freq;
   });

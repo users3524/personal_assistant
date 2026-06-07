@@ -168,7 +168,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ? '未配置'
                         : _showApiKey
                             ? _savedApiKey
-                            : '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}',
+                        : _savedApiKey.length > 12
+                            ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
+                            : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
                     style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                   trailing: Row(

@@ -40,6 +40,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   String _category = '生活';
   int _priority = 3;
   DateTime? _dueDate;
+  DateTime _createDate = DateTime.now();
   bool _isLoading = false;
 
   bool get _isEditing => widget.editId != null;
@@ -65,6 +66,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         _category = todo.category;
         _priority = todo.priority;
         _dueDate = todo.dueDate;
+        _createDate = todo.createdAt;
       });
     }
     setState(() => _isLoading = false);
@@ -92,7 +94,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         category: _category,
         priority: _priority,
         dueDate: _dueDate,
-        createdAt: now,
+        createdAt: _createDate,
         updatedAt: now,
       );
 
@@ -235,6 +237,33 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     ),
                     const SizedBox(height: 24),
 
+                    // 创建日期
+                    Text('创建日期',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _pickCreateDate,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_calendar, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${_createDate.year}-${_createDate.month.toString().padLeft(2, '0')}-${_createDate.day.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // 截止日期
                     Text('截止日期',
                         style: Theme.of(context).textTheme.titleMedium),
@@ -335,6 +364,16 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
       default:
         return Colors.grey;
     }
+  }
+
+  Future<void> _pickCreateDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _createDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null) setState(() => _createDate = date);
   }
 
   Future<void> _pickDate() async {

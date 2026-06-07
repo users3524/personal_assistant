@@ -433,6 +433,12 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
       appBar: AppBar(
         title: Text(dateLabel),
         actions: [
+          if (!_reviewSaved && _summary.isNotEmpty)
+            TextButton.icon(
+              icon: const Icon(Icons.save, size: 18),
+              label: const Text('保存'),
+              onPressed: _isProcessing ? null : _saveReview,
+            ),
           if (_reviewSaved || _existingReview != null)
             IconButton(
               icon: const Icon(Icons.edit),

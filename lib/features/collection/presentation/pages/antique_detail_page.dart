@@ -410,9 +410,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   /// 将 XFile 保存到应用私有目录（解决 content:// URI 无法被 File() 读取）
   Future<String> _saveImageToAppDir(XFile photo) async {
-    final dir = await getTemporaryDirectory();
+    final dir = await getApplicationDocumentsDirectory();
+    final imgDir = Directory('${dir.path}/patting_images');
+    if (!await imgDir.exists()) await imgDir.create(recursive: true);
     final fileName = 'patting_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final dest = File('${dir.path}/$fileName');
+    final dest = File('${imgDir.path}/$fileName');
     final bytes = await photo.readAsBytes();
     await dest.writeAsBytes(bytes);
     return dest.path;

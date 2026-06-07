@@ -42,12 +42,11 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         centerTitle: true,
         actions: [
           // 视图切换
-          IconButton(
+          TextButton.icon(
             icon: Icon(_viewMode == CalendarView.week
                 ? Icons.calendar_view_month
                 : Icons.calendar_view_week),
-            tooltip:
-                _viewMode == CalendarView.week ? '月视图' : '周视图',
+            label: Text(_viewMode == CalendarView.week ? '月' : '周'),
             onPressed: () {
               setState(() {
                 _viewMode = _viewMode == CalendarView.week
@@ -313,7 +312,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   List<TodoEntity> _getTodosForDate(
       List<TodoEntity> todos, DateTime date) {
     return todos.where((t) {
-      return t.status != TodoStatus.cancelled &&
+      // 只显示未完成的 (不显示 cancelled 也不显示 done)
+      return t.status != TodoStatus.cancelled && t.status != TodoStatus.done &&
           _isSameDay(t.createdAt, date);
     }).toList()
       ..sort((a, b) {

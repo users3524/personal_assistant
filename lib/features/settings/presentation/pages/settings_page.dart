@@ -42,7 +42,7 @@ const _aiProviders = {
     'defaultModel': '',
   },
   '本地模型 (Ollama)': {
-    'baseUrl': 'http://localhost:11434/v1',
+    'baseUrl': '',
     'models': ['qwen2.5:7b', 'qwen2.5:3b', 'phi3:mini', 'llama3.2:3b'],
     'defaultModel': 'qwen2.5:7b',
   },
@@ -210,7 +210,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ListTile(
                   leading: const Icon(Icons.dns),
                   title: const Text('API 地址'),
-                  subtitle: Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
+                  subtitle: _isOllama
+                      ? Text(_savedBaseUrl.isEmpty
+                          ? '需填写电脑局域网 IP（如 192.168.1.100:11434）'
+                          : _savedBaseUrl,
+                          style: TextStyle(
+                            color: _savedBaseUrl.isEmpty ? Colors.orange : null,
+                            fontSize: 12,
+                          ))
+                      : Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
                   trailing: const Icon(Icons.edit),
                   onTap: () => _showTextEditor(
                     'API 地址', _baseUrlCtrl,
@@ -591,8 +599,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ===== Ollama 连接检测 =====
   Future<void> _testOllamaConnection() async {
-    // 始终检测本地 Ollama 服务
-    const ollamaBaseUrl = 'http://localhost:11434';
+    // 从用户配置的 baseUrl 提取根地址（去掉 /v1 后缀）
+    var baseUrl = _savedBaseUrl.isNotEmpty ? _savedBaseUrl : _baseUrlCtrl.text;
+    if (baseUrl.endsWith('/v1')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 3);
+    }
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
 
     showDialog(
       context: context,
@@ -612,7 +626,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     try {
       final dio = Dio(BaseOptions(
-        baseUrl: ollamaBaseUrl,
+        baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 5),
         receiveTimeout: const Duration(seconds: 10),
       ));

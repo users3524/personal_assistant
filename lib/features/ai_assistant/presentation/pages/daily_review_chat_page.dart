@@ -429,6 +429,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     final dateLabel = '${date.month}/${date.day} 复盘';
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(dateLabel),
         actions: [
@@ -447,7 +448,8 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
             ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // 消息列表
           Expanded(
@@ -476,6 +478,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
           // 输入栏
           _buildInputBar(),
         ],
+      ),
       ),
     );
   }
@@ -525,7 +528,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(

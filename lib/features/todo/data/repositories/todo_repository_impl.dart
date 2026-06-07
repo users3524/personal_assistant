@@ -124,6 +124,19 @@ class TodoRepositoryImpl implements TodoRepository {
     );
     return _dao.update(updated);
   }
+
+  @override
+  Future<TodoEntity> reopen(int id) async {
+    final todo = await _dao.getById(id);
+    if (todo == null) throw Exception('Todo not found');
+    final updated = todo.copyWith(
+      status: TodoStatus.pending,
+      completedAt: null,
+      cancelledAt: null,
+      updatedAt: DateTime.now(),
+    );
+    return _dao.update(updated);
+  }
 }
 
 /// Riverpod Provider

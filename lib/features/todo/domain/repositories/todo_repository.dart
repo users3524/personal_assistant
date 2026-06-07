@@ -68,6 +68,9 @@ abstract class TodoRepository {
   /// 标记为进行中
   Future<TodoEntity> start(int id);
 
+  /// 恢复为待办（从已完成/已取消状态回退）
+  Future<TodoEntity> reopen(int id);
+
   /// 标记为完成
   Future<TodoEntity> complete(int id);
 

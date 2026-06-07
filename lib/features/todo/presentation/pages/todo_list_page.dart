@@ -408,7 +408,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   Widget _buildTodoItem(TodoEntity todo) {
     return Dismissible(
-      key: Key('todo_${todo.id}'),
+      key: Key('todo_${todo.id}_${todo.status.name}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -416,14 +416,27 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         color: Colors.red,
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
-      onDismissed: (_) {
-        ref.read(todoListProvider.notifier).cancelTodo(todo.id!);
+      confirmDismiss: (_) async {
+        if (_showArchived) {
+          // 归档模式：直接删除（已完成的无需再取消）
+          ref.read(todoListProvider.notifier).deleteTodo(todo.id!);
+        } else {
+          ref.read(todoListProvider.notifier).cancelTodo(todo.id!);
+        }
+        return true;
       },
       child: ListTile(
         leading: GestureDetector(
           onTap: () {
-            if (todo.isDone) return;
-            ref.read(todoListProvider.notifier).completeTodo(todo.id!);
+            if (todo.isDone) {
+              // 已完成 → 恢复为待办
+              ref.read(todoListProvider.notifier).reopenTodo(todo.id!);
+            } else if (todo.status == TodoStatus.cancelled) {
+              // 已取消 → 恢复为待办
+              ref.read(todoListProvider.notifier).reopenTodo(todo.id!);
+            } else {
+              ref.read(todoListProvider.notifier).completeTodo(todo.id!);
+            }
           },
           child: Container(
             width: 24,

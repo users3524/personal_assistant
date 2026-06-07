@@ -87,6 +87,12 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
     await repo.start(id);
     await refresh();
   }
+
+  Future<void> reopenTodo(int id) async {
+    final repo = await _getRepo();
+    await repo.reopen(id);
+    await refresh();
+  }
 }
 
 // ===== 分类待办列表 =====

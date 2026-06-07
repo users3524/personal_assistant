@@ -23,11 +23,13 @@ class AntiqueDetailPage extends ConsumerStatefulWidget {
 
 class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   late Future<AntiqueEntity?> _itemFuture;
+  late Future<List<PattingLogEntity>> _logsFuture;
 
   @override
   void initState() {
     super.initState();
     _itemFuture = _loadItem();
+    _logsFuture = _loadLogs();
   }
 
   Future<AntiqueEntity?> _loadItem() {
@@ -36,10 +38,17 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         .then((r) => r.getById(widget.itemId));
   }
 
+  Future<List<PattingLogEntity>> _loadLogs() {
+    return ref
+        .read(antiqueRepositoryProvider.future)
+        .then((r) => r.getPattingLogs(widget.itemId));
+  }
+
   void _refreshPage() {
     if (!mounted) return;
     setState(() {
       _itemFuture = _loadItem();
+      _logsFuture = _loadLogs();
     });
   }
 
@@ -84,13 +93,20 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 _buildInfoCard(item),
                 // 盘玩打卡时间线
                 _buildPattingTimeline(item),
+                // 底部留白，给 FAB 让位
+                const SizedBox(height: 80),
               ],
             ),
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            icon: const Icon(Icons.favorite),
-            label: const Text('盘玩打卡'),
-            onPressed: () => _addPattingCheckin(item),
+          floatingActionButton: Container(
+            margin: const EdgeInsets.only(bottom: 8, right: 4),
+            child: FloatingActionButton.extended(
+              icon: const Icon(Icons.favorite_border),
+              label: const Text('盘玩打卡'),
+              backgroundColor: Colors.pink,
+              foregroundColor: Colors.white,
+              onPressed: () => _addPattingCheckin(item),
+            ),
           ),
         );
       },
@@ -113,12 +129,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       child: PageView.builder(
         itemCount: item.imagePaths.length,
         itemBuilder: (context, index) {
-          return Image.file(
-            File(item.imagePaths[index]),
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey.shade200,
-              child: const Center(child: Icon(Icons.broken_image)),
+          return InteractiveViewer(
+            maxScale: 3.0,
+            child: Image.file(
+              File(item.imagePaths[index]),
+              fit: BoxFit.contain,
+              width: double.infinity,
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey.shade200,
+                child: const Center(child: Icon(Icons.broken_image)),
+              ),
             ),
           );
         },
@@ -282,9 +302,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   Widget _buildTimelineList(AntiqueEntity item) {
     return FutureBuilder<List<PattingLogEntity>>(
-      future: ref
-          .read(antiqueRepositoryProvider.future)
-          .then((r) => r.getPattingLogs(widget.itemId)),
+      future: _logsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Padding(
@@ -306,34 +324,40 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         }
 
         final logs = snapshot.data!;
-        // 按日期降序排列
         final sorted = List<PattingLogEntity>.from(logs)
           ..sort((a, b) => b.date.compareTo(a.date));
 
         return Column(
-          children: sorted.map((log) {
-            // 格式化日期显示
-            final dateStr =
-                '${log.date.month}月${log.date.day}日 ${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
+          children: sorted.asMap().entries.map((entry) {
+            final log = entry.value;
+            final isFirst = entry.key == sorted.length - 1; // 最后一条是最早的
+            final daysSinceAcquisition = log.date.difference(item.acquiredDate).inDays;
+            final dayLabel = daysSinceAcquisition == 0 ? '入手当天' : '第${daysSinceAcquisition}天';
+            // 日期时间：26/03/05 16:38
+            final y = (log.date.year % 100).toString().padLeft(2, '0');
+            final m = log.date.month.toString().padLeft(2, '0');
+            final d = log.date.day.toString().padLeft(2, '0');
+            final time = '${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
+            final dateTimeStr = '$y/$m/$d $time';
             final hasPhoto = log.photoPaths.isNotEmpty;
 
             return IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 时间线左侧
+                  // 时间线左侧：第N天
                   SizedBox(
-                    width: 60,
-                    child: Column(
-                      children: [
-                        Text(
-                          '${log.date.month}/${log.date.day}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    width: 72,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        dayLabel,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.teal,
                         ),
-                      ],
+                      ),
                     ),
                   ),
                   // 时间线圆点+线
@@ -345,7 +369,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         margin: const EdgeInsets.only(top: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.teal,
+                          color: isFirst ? Colors.teal : Colors.teal.shade200,
                           border: Border.all(
                             color: Colors.teal.shade100,
                             width: 3,
@@ -375,7 +399,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                             Row(
                               children: [
                                 Text(
-                                  dateStr,
+                                  dateTimeStr,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey,

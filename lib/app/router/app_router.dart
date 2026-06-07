@@ -14,7 +14,6 @@ import '../../features/todo/presentation/pages/todo_detail_page.dart';
 import '../../features/collection/presentation/pages/antique_list_page.dart';
 import '../../features/collection/presentation/pages/antique_form_page.dart';
 import '../../features/collection/presentation/pages/antique_detail_page.dart';
-import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
@@ -55,11 +54,6 @@ class MainShell extends StatelessWidget {
             label: '待办',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: '复盘',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.description_outlined),
             selectedIcon: Icon(Icons.description),
             label: '简历',
@@ -88,7 +82,7 @@ GoRouter createRouter() {
           );
         },
         branches: [
-          // Tab 0: 文玩包
+          // Tab 0: 盘串
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -119,7 +113,7 @@ GoRouter createRouter() {
               ),
             ],
           ),
-          // Tab 1: 待办
+          // Tab 1: 待办（含复盘入口）
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -150,46 +144,7 @@ GoRouter createRouter() {
               ),
             ],
           ),
-          // Tab 2: 复盘
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RouteNames.reviewHome,
-                builder: (context, state) => const ReviewHomePage(),
-                routes: [
-                  GoRoute(
-                    path: 'daily/new',
-                    builder: (context, state) =>
-                        const DailyReviewChatPage(),
-                  ),
-                  GoRoute(
-                    path: 'daily/edit/:date',
-                    builder: (context, state) {
-                      final date = state.pathParameters['date']!;
-                      return DailyReviewChatPage(dateStr: date);
-                    },
-                  ),
-                  GoRoute(
-                    path: 'daily/:date',
-                    builder: (context, state) {
-                      final date =
-                          state.pathParameters['date']!;
-                      return DailyReviewDetailPage(dateStr: date);
-                    },
-                  ),
-                  GoRoute(
-                    path: 'weekly/:id',
-                    builder: (context, state) {
-                      final id = int.parse(
-                          state.pathParameters['id']!);
-                      return WeeklyReportPage(weekNumber: id);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Tab 3: 简历
+          // Tab 2: 简历
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -210,7 +165,7 @@ GoRouter createRouter() {
               ),
             ],
           ),
-          // Tab 4: 设置
+          // Tab 3: 设置
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -220,6 +175,32 @@ GoRouter createRouter() {
             ],
           ),
         ],
+      ),
+      // 复盘页面（全屏，不显示底部导航）
+      GoRoute(
+        path: RouteNames.dailyReviewNew,
+        builder: (context, state) => const DailyReviewChatPage(),
+      ),
+      GoRoute(
+        path: RouteNames.dailyReviewEdit,
+        builder: (context, state) {
+          final date = state.pathParameters['date']!;
+          return DailyReviewChatPage(dateStr: date);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.dailyReviewDetail,
+        builder: (context, state) {
+          final date = state.pathParameters['date']!;
+          return DailyReviewDetailPage(dateStr: date);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.weeklyReportDetail,
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return WeeklyReportPage(weekNumber: id);
+        },
       ),
     ],
   );

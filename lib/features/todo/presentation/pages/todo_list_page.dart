@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
+import '../../../ai_assistant/presentation/providers/review_providers.dart';
 
 // ===== 视图模式 =====
 enum CalendarView { week, month }
@@ -73,7 +74,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           _buildCalendarGrid(),
           const Divider(height: 1),
           // 选中日期的待办
-          Expanded(
+          Flexible(
+            flex: 1,
             child: todoListAsync.when(
               data: (todos) {
                 if (_showArchived) {
@@ -162,6 +164,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
               error: (err, _) => Center(child: Text('加载失败: $err')),
             ),
           ),
+          // 每日复盘卡片
+          _DailyReviewCard(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -538,5 +542,96 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+}
+
+/// 每日复盘卡片 — 显示在待办列表底部
+class _DailyReviewCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayReview = ref.watch(dailyReviewProvider(today));
+    final hasReviewed = todayReview.valueOrNull != null;
+    final review = todayReview.valueOrNull;
+    final weekNumber = ref.watch(currentWeekNumberProvider);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push('/review/daily/new'),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: hasReviewed
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      hasReviewed ? Icons.check_circle : Icons.auto_awesome,
+                      color: hasReviewed ? Colors.green : Theme.of(context).colorScheme.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasReviewed ? '今日已复盘 ✓' : '每日复盘',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: hasReviewed ? Colors.green : null,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          hasReviewed
+                              ? (review!.summary.length > 25
+                                  ? '${review.summary.substring(0, 25)}…'
+                                  : review.summary)
+                              : '记录今天的感受和收获',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // 周报入口
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.assessment, size: 16),
+                  label: Text('本周周报', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  onPressed: () => context.push('/review/weekly/$weekNumber'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

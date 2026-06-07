@@ -4,8 +4,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/app.dart';
 import '../../../../core/ai/ai_provider.dart';
+import '../../../../core/database/backup_service.dart';
 import '../../../../core/database/backup_service.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
@@ -145,8 +145,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
@@ -154,42 +152,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _sectionHeader('外观'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                RadioListTile<ThemeMode>(
-                  title: const Text('跟随系统'),
-                  value: ThemeMode.system,
-                  groupValue: themeMode,
-                  onChanged: (v) {
-                    if (v != null) {
-                      ref.read(themeModeProvider.notifier).state = v;
-                      _prefsDao?.setThemeMode('system');
-                    }
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  title: const Text('浅色模式'),
-                  value: ThemeMode.light,
-                  groupValue: themeMode,
-                  onChanged: (v) {
-                    if (v != null) {
-                      ref.read(themeModeProvider.notifier).state = v;
-                      _prefsDao?.setThemeMode('light');
-                    }
-                  },
-                ),
-                RadioListTile<ThemeMode>(
-                  title: const Text('深色模式'),
-                  value: ThemeMode.dark,
-                  groupValue: themeMode,
-                  onChanged: (v) {
-                    if (v != null) {
-                      ref.read(themeModeProvider.notifier).state = v;
-                      _prefsDao?.setThemeMode('dark');
-                    }
-                  },
-                ),
-              ],
+            child: ListTile(
+              leading: const Icon(Icons.brightness_auto, color: Colors.blueGrey),
+              title: const Text('主题'),
+              subtitle: const Text('跟随系统', style: TextStyle(color: Colors.green)),
+              trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
             ),
           ),
           const SizedBox(height: 12),

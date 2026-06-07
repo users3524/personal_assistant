@@ -1,6 +1,4 @@
 /// 待办 DAO — drift 数据库操作。
-///
-/// 使用 drift 的类型安全查询 API。
 library;
 
 import 'package:drift/drift.dart';
@@ -19,7 +17,7 @@ class TodoDao {
     return TodosCompanion(
       title: Value(entity.title),
       description: Value(entity.description),
-      category: Value(entity.category == TodoCategory.life ? 'life' : 'work'),
+      category: Value(entity.category), // 直接用中文分类名存储
       priority: Value(entity.priority),
       dueDate: Value(entity.dueDate),
       status: Value(_statusToString(entity.status)),
@@ -35,15 +33,19 @@ class TodoDao {
 
   /// 将数据库行转为领域实体
   TodoEntity _toEntity(TodoRow row) {
+    // 兼容旧数据：'life'/'work' → '生活'/'工作'
+    final cat = _normalizeCategory(row.category);
+    // 兼容旧数据：tags 可能是逗号分隔字符串
+    final tags = row.tags;
     return TodoEntity(
       id: row.id,
       title: row.title,
       description: row.description,
-      category: row.category == 'life' ? TodoCategory.life : TodoCategory.work,
+      category: cat,
       priority: row.priority,
       dueDate: row.dueDate,
       status: _statusFromString(row.status),
-      tags: row.tags,
+      tags: tags,
       isStarred: row.isStarred,
       startedAt: row.startedAt,
       completedAt: row.completedAt,
@@ -53,6 +55,18 @@ class TodoDao {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
+  }
+
+  /// 兼容旧数据
+  String _normalizeCategory(String cat) {
+    switch (cat) {
+      case 'life':
+        return '生活';
+      case 'work':
+        return '工作';
+      default:
+        return cat;
+    }
   }
 
   String _statusToString(TodoStatus status) {
@@ -116,10 +130,9 @@ class TodoDao {
 
   // ===== 查询 =====
 
-  Future<List<TodoEntity>> getByCategory(TodoCategory category) async {
-    final catStr = category == TodoCategory.life ? 'life' : 'work';
+  Future<List<TodoEntity>> getByCategory(String category) async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) => t.category.equals(catStr))
+          ..where((t) => t.category.equals(category))
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .get();
     return rows.map(_toEntity).toList();
@@ -135,14 +148,13 @@ class TodoDao {
   }
 
   Future<List<TodoEntity>> getByCategoryAndStatus(
-    TodoCategory category,
+    String category,
     TodoStatus status,
   ) async {
-    final catStr = category == TodoCategory.life ? 'life' : 'work';
     final statusStr = _statusToString(status);
     final rows = await (_db.select(_db.todos)
           ..where((t) =>
-              t.category.equals(catStr) & t.status.equals(statusStr))
+              t.category.equals(category) & t.status.equals(statusStr))
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .get();
     return rows.map(_toEntity).toList();

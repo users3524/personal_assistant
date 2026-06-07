@@ -163,8 +163,8 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
             _buildInfoRow(
               Icons.category,
               '分类',
-              todo.categoryLabel,
-              todo.category == TodoCategory.life ? Colors.green : Colors.blue,
+              todo.category,
+              todo.category == '生活' ? Colors.green : Colors.blue,
             ),
             const Divider(),
             _buildInfoRow(

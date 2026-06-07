@@ -15,7 +15,7 @@ class RouteNames {
   static const String todoDetail = '/todos/:id';
   static const String todoEdit = '/todos/:id/edit';
 
-  // 文玩模块
+  // 文玩（盘串）模块
   static const String collectionList = '/collection';
   static const String collectionNew = '/collection/new';
   static const String collectionDetail = '/collection/:id';

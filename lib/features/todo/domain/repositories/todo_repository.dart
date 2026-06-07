@@ -26,14 +26,14 @@ abstract class TodoRepository {
   // ===== 查询 =====
 
   /// 按分类查询
-  Future<List<TodoEntity>> getByCategory(TodoCategory category);
+  Future<List<TodoEntity>> getByCategory(String category);
 
   /// 按状态查询
   Future<List<TodoEntity>> getByStatus(TodoStatus status);
 
   /// 按分类+状态查询
   Future<List<TodoEntity>> getByCategoryAndStatus(
-    TodoCategory category,
+    String category,
     TodoStatus status,
   );
 

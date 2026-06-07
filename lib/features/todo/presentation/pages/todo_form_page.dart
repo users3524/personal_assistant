@@ -8,6 +8,20 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
 
+const _categoryIcons = {
+  '生活': Icons.home,
+  '工作': Icons.work,
+  '学习': Icons.school,
+  '健康': Icons.favorite,
+};
+
+const _categoryColors = {
+  '生活': Colors.green,
+  '工作': Colors.blue,
+  '学习': Colors.purple,
+  '健康': Colors.red,
+};
+
 class TodoFormPage extends ConsumerStatefulWidget {
   final int? editId;
 
@@ -22,7 +36,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
 
-  TodoCategory _category = TodoCategory.life;
+  String _category = '生活';
   int _priority = 3;
   DateTime? _dueDate;
   bool _isLoading = false;
@@ -155,26 +169,20 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     // 分类
                     Text('分类', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _buildCategoryChoice(
-                          label: '生活',
-                          icon: Icons.home,
-                          color: Colors.green,
-                          isSelected: _category == TodoCategory.life,
-                          onTap: () =>
-                              setState(() => _category = TodoCategory.life),
-                        ),
-                        const SizedBox(width: 12),
-                        _buildCategoryChoice(
-                          label: '工作',
-                          icon: Icons.work,
-                          color: Colors.blue,
-                          isSelected: _category == TodoCategory.work,
-                          onTap: () =>
-                              setState(() => _category = TodoCategory.work),
-                        ),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: defaultCategories.map((cat) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildCategoryChoice(
+                            label: cat,
+                            icon: _categoryIcons[cat] ?? Icons.category,
+                            color: _categoryColors[cat] ?? Colors.teal,
+                            isSelected: _category == cat,
+                            onTap: () => setState(() => _category = cat),
+                          ),
+                        )).toList(),
+                      ),
                     ),
                     const SizedBox(height: 24),
 

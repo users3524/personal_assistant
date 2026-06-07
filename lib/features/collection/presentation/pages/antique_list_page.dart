@@ -1,4 +1,4 @@
-/// 文玩列表页 — 网格视图。
+/// 盘串列表页 — 网格视图。
 library;
 
 import 'package:flutter/material.dart';
@@ -19,7 +19,7 @@ class AntiqueListPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的文玩'),
+        title: const Text('我的盘串'),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -65,7 +65,7 @@ class AntiqueListPage extends ConsumerWidget {
           const Icon(Icons.diamond, size: 16, color: Colors.grey),
           const SizedBox(width: 6),
           Text(
-            '共 ${categoryCount.values.fold(0, (a, b) => a + b)} 件藏品',
+            '共 ${categoryCount.values.fold(0, (a, b) => a + b)} 件宝贝',
             style: const TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const Spacer(),
@@ -87,10 +87,10 @@ class AntiqueListPage extends ConsumerWidget {
               size: 80,
               color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          Text('还没有藏品',
+          Text('还没有宝贝',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          const Text('点击右下角 + 添加第一件藏品'),
+          const Text('点击右下角 + 添加第一件宝贝'),
         ],
       ),
     );
@@ -215,9 +215,6 @@ class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {
               leading: const Icon(Icons.diamond),
               title: Text(item.name),
               subtitle: Text(item.category),
-              trailing: item.currentValuation != null
-                  ? Text('¥${item.currentValuation!.toStringAsFixed(0)}')
-                  : null,
               onTap: () {
                 close(context, item);
                 context.push('/collection/${item.id}');

@@ -18,7 +18,7 @@ final allTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
 
 /// 按分类的待办列表
 final todosByCategoryProvider2 =
-    FutureProvider.family<List<TodoEntity>, TodoCategory>((ref, category) {
+    FutureProvider.family<List<TodoEntity>, String>((ref, category) {
   return ref.watch(todoRepositoryProvider.future).then((repo) {
     return repo.getByCategory(category);
   });

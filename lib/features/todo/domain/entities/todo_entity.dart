@@ -3,15 +3,16 @@
 /// 纯 Dart 对象，零依赖。是业务逻辑层（domain）的核心模型。
 library;
 
-enum TodoCategory { life, work }
-
 enum TodoStatus { pending, inProgress, done, cancelled }
+
+/// 默认分类列表（用户可自定义）
+const List<String> defaultCategories = ['生活', '工作', '学习', '健康'];
 
 class TodoEntity {
   final int? id;
   final String title;
   final String? description;
-  final TodoCategory category;
+  final String category; // 改为 String，不再用 enum
   final int priority; // 1-5
   final DateTime? dueDate;
   final TodoStatus status;
@@ -29,7 +30,7 @@ class TodoEntity {
     this.id,
     required this.title,
     this.description,
-    this.category = TodoCategory.life,
+    this.category = '生活',
     this.priority = 3,
     this.dueDate,
     this.status = TodoStatus.pending,
@@ -49,7 +50,7 @@ class TodoEntity {
     int? id,
     String? title,
     String? description,
-    TodoCategory? category,
+    String? category,
     int? priority,
     DateTime? dueDate,
     TodoStatus? status,
@@ -95,9 +96,6 @@ class TodoEntity {
 
   /// 是否已完成
   bool get isDone => status == TodoStatus.done;
-
-  /// 分类标签（中文）
-  String get categoryLabel => category == TodoCategory.life ? '生活' : '工作';
 
   /// 状态标签（中文）
   String get statusLabel {

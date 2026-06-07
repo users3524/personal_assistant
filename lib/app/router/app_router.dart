@@ -45,14 +45,14 @@ class MainShell extends StatelessWidget {
         },
         destinations: const [
           NavigationDestination(
+            icon: Icon(Icons.diamond_outlined),
+            selectedIcon: Icon(Icons.diamond),
+            label: '盘串',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.check_circle_outline),
             selectedIcon: Icon(Icons.check_circle),
             label: '待办',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.diamond_outlined),
-            selectedIcon: Icon(Icons.diamond),
-            label: '文玩',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_awesome_outlined),
@@ -78,7 +78,7 @@ class MainShell extends StatelessWidget {
 /// 创建路由配置
 GoRouter createRouter() {
   return GoRouter(
-    initialLocation: RouteNames.todoList,
+    initialLocation: RouteNames.collectionList,
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -88,38 +88,7 @@ GoRouter createRouter() {
           );
         },
         branches: [
-          // Tab 0: 待办
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RouteNames.todoList,
-                builder: (context, state) => const TodoListPage(),
-                routes: [
-                  GoRoute(
-                    path: 'new',
-                    builder: (context, state) => const TodoFormPage(),
-                  ),
-                  GoRoute(
-                    path: ':id',
-                    builder: (context, state) {
-                      final id = int.parse(state.pathParameters['id']!);
-                      return TodoDetailPage(todoId: id);
-                    },
-                    routes: [
-                      GoRoute(
-                        path: 'edit',
-                        builder: (context, state) {
-                          final id = int.parse(state.pathParameters['id']!);
-                          return TodoFormPage(editId: id);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Tab 1: 文玩
+          // Tab 0: 盘串
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -142,6 +111,37 @@ GoRouter createRouter() {
                         builder: (context, state) {
                           final id = int.parse(state.pathParameters['id']!);
                           return AntiqueFormPage(editId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Tab 1: 待办
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.todoList,
+                builder: (context, state) => const TodoListPage(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const TodoFormPage(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = int.parse(state.pathParameters['id']!);
+                      return TodoDetailPage(todoId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = int.parse(state.pathParameters['id']!);
+                          return TodoFormPage(editId: id);
                         },
                       ),
                     ],

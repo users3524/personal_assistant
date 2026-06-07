@@ -100,7 +100,7 @@ class _TodoListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = todo.category == TodoCategory.life ? Colors.green : Colors.blue;
+    final color = todo.category == '生活' ? Colors.green : Colors.blue;
 
     return Dismissible(
       key: ValueKey(todo.id),
@@ -163,7 +163,7 @@ class _TodoListTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                todo.categoryLabel,
+                todo.category,
                 style: TextStyle(fontSize: 10, color: color),
               ),
             ),

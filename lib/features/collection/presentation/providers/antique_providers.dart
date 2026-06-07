@@ -24,7 +24,11 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     return repo.getAll();
   }
 
-  Future<void> refresh() async => ref.invalidateSelf();
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+    ref.invalidate(categoryCountProvider);
+    ref.invalidate(totalValuationProvider);
+  }
 
   Future<AntiqueRepository> _getRepo() async =>
       ref.read(antiqueRepositoryProvider.future);

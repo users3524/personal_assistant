@@ -29,7 +29,8 @@ class TodoRepositoryImpl implements TodoRepository {
   Future<void> delete(int id) => _dao.delete(id);
 
   @override
-  Future<List<TodoEntity>> getByCategory(TodoCategory category) =>
+  @override
+  Future<List<TodoEntity>> getByCategory(String category) =>
       _dao.getByCategory(category);
 
   @override
@@ -38,7 +39,7 @@ class TodoRepositoryImpl implements TodoRepository {
 
   @override
   Future<List<TodoEntity>> getByCategoryAndStatus(
-    TodoCategory category,
+    String category,
     TodoStatus status,
   ) =>
       _dao.getByCategoryAndStatus(category, status);

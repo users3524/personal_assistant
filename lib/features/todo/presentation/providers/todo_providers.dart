@@ -13,10 +13,11 @@ import '../../domain/repositories/todo_repository.dart';
 
 // ===== 分类切换状态 =====
 
-/// 当前选中的分类
-final selectedCategoryProvider = StateProvider<TodoCategory>((ref) {
-  return TodoCategory.life;
-});
+/// 当前选中的分类筛选（null = 全部）
+final selectedCategoryProvider = StateProvider<String?>((ref) => null);
+
+/// 排序方式：createdAt | dueDate
+final sortModeProvider = StateProvider<String>((ref) => 'createdAt');
 
 // ===== 待办列表 Provider（自动刷新） =====
 
@@ -35,6 +36,10 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
+    ref.invalidate(todayCompletedCountProvider);
+    ref.invalidate(todayTotalCountProvider);
+    ref.invalidate(weeklyCompletionRateProvider);
+    ref.invalidate(delayRateProvider);
   }
 
   Future<TodoRepository> _getRepo() async {
@@ -87,7 +92,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
 // ===== 分类待办列表 =====
 
 final todosByCategoryProvider =
-    FutureProvider.family<List<TodoEntity>, TodoCategory>((ref, category) {
+    FutureProvider.family<List<TodoEntity>, String>((ref, category) {
   return ref.watch(todoRepositoryProvider.future).then((repo) {
     return repo.getByCategory(category);
   });

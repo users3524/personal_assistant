@@ -102,7 +102,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             margin: const EdgeInsets.only(bottom: 8, right: 4),
             child: FloatingActionButton.extended(
               icon: const Icon(Icons.favorite_border),
-              label: const Text('盘玩打卡'),
+              label: const Text('打卡'),
               backgroundColor: Colors.pink,
               foregroundColor: Colors.white,
               onPressed: () => _addPattingCheckin(item),
@@ -129,17 +129,43 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       child: PageView.builder(
         itemCount: item.imagePaths.length,
         itemBuilder: (context, index) {
-          return InteractiveViewer(
-            maxScale: 3.0,
-            child: Image.file(
-              File(item.imagePaths[index]),
-              fit: BoxFit.contain,
-              width: double.infinity,
-              errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade200,
-                child: const Center(child: Icon(Icons.broken_image)),
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.file(
+                File(item.imagePaths[index]),
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(child: Icon(Icons.broken_image)),
+                ),
               ),
-            ),
+              // 全屏查看按钮
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _showFullScreenImage(context, item.imagePaths[index]),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                          SizedBox(width: 4),
+                          Text('全屏', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -570,123 +596,180 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
     final noteCtrl = TextEditingController();
-    // 预检查文件是否真实存在
     final fileExists = photoPath != null && File(photoPath).existsSync();
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('盘玩打卡'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 图片预览
-              if (fileExists)
-                SizedBox(
-                  height: 160,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(photoPath!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, e, __) => Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: Text('图片加载失败\n${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                            textAlign: TextAlign.center),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          // 打卡时间状态，默认当前
+          final selectedDate = ValueNotifier<DateTime>(DateTime.now());
+
+          return AlertDialog(
+            title: const Text('打卡'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 图片预览
+                  if (fileExists)
+                    SizedBox(
+                      height: 140,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(photoPath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, e, __) => Container(
+                            color: Colors.grey.shade200,
+                            alignment: Alignment.center,
+                            child: const Text('图片加载失败',
+                                style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (photoPath != null && !fileExists)
+                    Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Text('图片文件不存在', style: TextStyle(fontSize: 12, color: Colors.orange)),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.favorite_border, color: Colors.pink, size: 20),
+                            SizedBox(width: 6),
+                            Text('无照片，纯文字记录', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else if (photoPath != null && !fileExists)
-                Container(
-                  height: 90,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('图片文件不存在', style: TextStyle(fontSize: 12, color: Colors.orange)),
-                  ),
-                )
-              else
-                Container(
-                  height: 90,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.favorite_border, color: Colors.pink, size: 28),
-                        SizedBox(height: 4),
-                        Text('无照片，纯文字记录',
-                            style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
+                  const SizedBox(height: 12),
+
+                  // 打卡时间选择
+                  InkWell(
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: selectedDate.value,
+                        firstDate: item.acquiredDate,
+                        lastDate: now,
+                        helpText: '选择打卡日期',
+                      );
+                      if (picked == null) return;
+                      final time = await showTimePicker(
+                        context: ctx,
+                        initialTime: TimeOfDay.fromDateTime(selectedDate.value),
+                        helpText: '选择打卡时间',
+                      );
+                      if (time == null || !ctx.mounted) return;
+                      setDialogState(() {
+                        selectedDate.value = DateTime(
+                          picked.year, picked.month, picked.day,
+                          time.hour, time.minute,
+                        );
+                      });
+                    },
+                    child: ValueListenableBuilder<DateTime>(
+                      valueListenable: selectedDate,
+                      builder: (_, date, __) {
+                        final y = (date.year % 100).toString().padLeft(2, '0');
+                        final mo = date.month.toString().padLeft(2, '0');
+                        final d = date.day.toString().padLeft(2, '0');
+                        final h = date.hour.toString().padLeft(2, '0');
+                        final mi = date.minute.toString().padLeft(2, '0');
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 18, color: Colors.teal),
+                              const SizedBox(width: 8),
+                              Text('$y/$mo/$d $h:$mi',
+                                  style: const TextStyle(fontSize: 14)),
+                              const Spacer(),
+                              const Text('修改', style: TextStyle(fontSize: 12, color: Colors.teal)),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(
-                  hintText: '此刻的想法...',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                maxLines: 3,
-                autofocus: photoPath == null || !fileExists,
+                  const SizedBox(height: 12),
+
+                  // 备注
+                  TextField(
+                    controller: noteCtrl,
+                    decoration: const InputDecoration(
+                      hintText: '此刻的想法...',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    maxLines: 3,
+                    autofocus: photoPath == null || !fileExists,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final note = noteCtrl.text.trim();
+                  try {
+                    final repo = await ref.read(antiqueRepositoryProvider.future);
+                    await repo.addPattingLog(PattingLogEntity(
+                      itemId: widget.itemId,
+                      date: selectedDate.value,
+                      durationMinutes: 0,
+                      method: 'bare_hand',
+                      note: note.isEmpty ? null : note,
+                      photoPaths: (fileExists) ? [photoPath!] : [],
+                    ));
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    _refreshPage();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('打卡失败: $e')),
+                      );
+                    }
+                  }
+                },
+                style: FilledButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('打卡'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final note = noteCtrl.text.trim();
-              try {
-                final repo = await ref.read(antiqueRepositoryProvider.future);
-                await repo.addPattingLog(PattingLogEntity(
-                  itemId: widget.itemId,
-                  date: DateTime.now(),
-                  durationMinutes: 0,
-                  method: 'bare_hand',
-                  note: note.isEmpty ? null : note,
-                  photoPaths: (fileExists) ? [photoPath!] : [],
-                ));
-                // 先关对话框
-                if (ctx.mounted) Navigator.pop(ctx);
-                // 刷新页面数据（替换 future，不 invalidate provider）
-                _refreshPage();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),
-                  );
-                }
-              } catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('打卡失败: $e')),
-                  );
-                }
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.pink),
-            child: const Text('打卡'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

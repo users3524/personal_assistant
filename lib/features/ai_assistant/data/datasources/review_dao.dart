@@ -2,7 +2,6 @@
 library;
 
 import 'package:drift/drift.dart';
-import 'dart:convert';
 
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/review_entity.dart';
@@ -23,7 +22,7 @@ class ReviewDao {
       improvements: row.improvements,
       energyLevel: row.energyLevel,
       moodLevel: row.moodLevel,
-      completedTodoIds: _decodeIntList(row.completedTodoIds as String),
+      completedTodoIds: row.completedTodoIds.map((s) => int.tryParse(s) ?? 0).toList(),
       pattingMinutes: row.pattingMinutes,
       aiComment: row.aiComment,
       aiSuggestion: row.aiSuggestion,
@@ -51,15 +50,6 @@ class ReviewDao {
     );
   }
 
-  List<int> _decodeIntList(String json) {
-    try {
-      return (jsonDecode(json) as List).cast<int>();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  String _encodeIntList(List<int> list) => jsonEncode(list);
 
   // ===== 周报转换 =====
 

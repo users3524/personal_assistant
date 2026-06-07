@@ -17,6 +17,20 @@ const kPresetCategories = [
   '紫砂', '书画', '核桃', '葫芦', '杂项',
 ];
 
+/// 各分类的细分选项
+const kSubtypeMap = {
+  '松石': ['绿松石', '蓝松石', '菜籽黄', '水草纹', '铁线松'],
+  '南红': ['柿子红', '樱桃红', '玫瑰红', '火焰纹', '冰飘'],
+  '菩提': ['星月', '金刚', '凤眼', '菩提根', '莲花'],
+  '翡翠': ['玻璃种', '冰种', '糯种', '豆种', '油青'],
+  '和田玉': ['白玉', '青玉', '碧玉', '墨玉', '糖玉'],
+  '紫砂': ['紫泥', '朱泥', '段泥', '绿泥', '清水泥'],
+  '书画': ['水墨', '工笔', '书法', '油画', '版画'],
+  '核桃': ['狮子头', '虎头', '官帽', '鸡心', '楸子'],
+  '葫芦': ['大亚腰', '小亚腰', '压腰', '瓢葫芦', '天鹅'],
+  '杂项': [],
+};
+
 class AntiqueFormPage extends ConsumerStatefulWidget {
   final int? editId;
 
@@ -32,6 +46,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   late TextEditingController _priceCtrl;
   late TextEditingController _sellerCtrl;
   late TextEditingController _notesCtrl;
+  late TextEditingController _subtypeCtrl;
 
   String _category = kPresetCategories[0];
   String? _subtype;
@@ -51,6 +66,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _priceCtrl = TextEditingController();
     _sellerCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
+    _subtypeCtrl = TextEditingController();
     if (_isEditing) _loadExisting();
   }
 
@@ -66,6 +82,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _notesCtrl.text = item.notes ?? '';
         _category = item.category;
         _subtype = item.subtype;
+        _subtypeCtrl.text = item.subtype ?? '';
         _acquiredDate = item.acquiredDate;
         _condition = item.condition;
         _currentValuation = item.currentValuation;
@@ -81,6 +98,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _priceCtrl.dispose();
     _sellerCtrl.dispose();
     _notesCtrl.dispose();
+    _subtypeCtrl.dispose();
     super.dispose();
   }
 
@@ -256,8 +274,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                           return ChoiceChip(
                             label: Text(cat),
                             selected: selected,
-                            onSelected: (sel) =>
-                                setState(() => _category = cat),
+                            onSelected: (sel) {
+                              setState(() {
+                                _category = cat;
+                                _subtype = null;
+                                _subtypeCtrl.text = '';
+                              });
+                            },
                           );
                         }).toList(),
                         if (!kPresetCategories.contains(_category))
@@ -281,7 +304,11 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                             ),
                             onChanged: (v) {
                               if (v.trim().isNotEmpty) {
-                                setState(() => _category = v.trim());
+                                setState(() {
+                                  _category = v.trim();
+                                  _subtype = null;
+                                  _subtypeCtrl.text = '';
+                                });
                               }
                             },
                           ),
@@ -289,6 +316,45 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
+
+                    // 细分品类
+                    if (kSubtypeMap[_category] != null && kSubtypeMap[_category]!.isNotEmpty) ...[
+                      Text('细分品类', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          ...kSubtypeMap[_category]!.map((sub) {
+                            final selected = _subtype == sub;
+                            return ChoiceChip(
+                              label: Text(sub, style: const TextStyle(fontSize: 12)),
+                              selected: selected,
+                              onSelected: (sel) {
+                                setState(() {
+                                  _subtype = sel ? sub : null;
+                                  _subtypeCtrl.text = sel ? sub : '';
+                                });
+                              },
+                            );
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        decoration: const InputDecoration(
+                          hintText: '自定义细分品类',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        controller: _subtypeCtrl,
+                        onChanged: (v) {
+                          if (v.trim().isNotEmpty) setState(() => _subtype = v.trim());
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // 入手日期
                     Text('入手日期',

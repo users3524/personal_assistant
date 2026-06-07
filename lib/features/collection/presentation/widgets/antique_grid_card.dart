@@ -44,14 +44,15 @@ class AntiqueGridCard extends StatelessWidget {
                         ),
                         if (latestPhoto != null)
                           Positioned(
-                            top: 4, left: 4,
+                            top: 4, right: 4,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.pink.withValues(alpha: 0.85),
+                                color: Colors.black54,
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Text('最新', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                              child: Text('${DateTime.now().difference(item.acquiredDate).inDays}天',
+                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
                             ),
                           ),
                       ],
@@ -77,32 +78,38 @@ class AntiqueGridCard extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           item.category,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.primary),
                         ),
                       ),
+                      if (item.subtype != null && item.subtype!.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.subtype!,
+                            style: const TextStyle(fontSize: 10, color: Colors.orange),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 6),
+                      Text('${DateTime.now().difference(item.acquiredDate).inDays}天',
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                       const Spacer(),
                       if (item.currentValuation != null)
                         Text(
                           '¥${item.currentValuation!.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green.shade700,
-                          ),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade700),
                         ),
                     ],
                   ),

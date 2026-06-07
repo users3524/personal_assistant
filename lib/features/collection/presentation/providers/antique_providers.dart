@@ -13,6 +13,16 @@ import '../../domain/repositories/antique_repository.dart';
 // 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
 
+// 视图模式：grid / calendar
+enum CollectionViewMode { grid, calendar }
+
+final collectionViewModeProvider =
+    StateProvider<CollectionViewMode>((ref) => CollectionViewMode.grid);
+
+// 月历当前查看的月份
+final calendarMonthProvider =
+    StateProvider<DateTime>((ref) => DateTime.now());
+
 // ===== 列表 Provider（可刷新） =====
 
 final antiqueListProvider =
@@ -31,7 +41,12 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     ref.invalidateSelf();
     ref.invalidate(categoryCountProvider);
     ref.invalidate(totalValuationProvider);
+    ref.invalidate(pattingCalendarProvider);
+    ref.invalidate(dailyPickProvider);
   }
+
+  Future<AntiqueRepository> _getRepo() async =>
+      ref.read(antiqueRepositoryProvider.future);
 
   Future<void> sortBySortMode(String mode) async {
     final repo = await _getRepo();
@@ -79,9 +94,6 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     state = AsyncValue.data(sorted);
   }
 
-  Future<AntiqueRepository> _getRepo() async =>
-      ref.read(antiqueRepositoryProvider.future);
-
   Future<void> addItem(AntiqueEntity item) async {
     final repo = await _getRepo();
     await repo.create(item);
@@ -120,5 +132,64 @@ final totalValuationProvider = FutureProvider<double>((ref) {
 final latestPattingPhotosProvider = FutureProvider<Map<int, String>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) {
     return repo.getLatestPattingPhotos();
+  });
+});
+
+// ===== 月历打卡数据 =====
+
+/// 按月份返回 Map<day, List<PattingLogEntity>>（仅含照片的日志）
+final pattingCalendarProvider =
+    FutureProvider.family<Map<int, List<PattingLogEntity>>, DateTime>((ref, month) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final logs = await repo.getPattingLogsByMonth(month.year, month.month);
+    final result = <int, List<PattingLogEntity>>{};
+    for (final log in logs) {
+      if (log.photoPaths.isEmpty) continue;
+      final day = log.date.day;
+      result.putIfAbsent(day, () => []);
+      result[day]!.add(log);
+    }
+    return result;
+  });
+});
+
+/// 所有藏品的打卡频率计数（用于每日推荐）
+final pattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final freq = <int, int>{};
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      freq[item.id!] = logs.length;
+    }
+    return freq;
+  });
+});
+
+// ===== 每日翻牌推荐 =====
+
+final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final freq = await ref.watch(pattingFrequencyProvider.future);
+
+    // 按打卡频率排序
+    items.sort((a, b) {
+      final fa = freq[a.id] ?? 0;
+      final fb = freq[b.id] ?? 0;
+      return fb.compareTo(fa);
+    });
+
+    // 分组：核桃、手串、其他
+    final walnuts = items.where((i) => i.category == '核桃').toList();
+    final bracelets = items.where((i) => i.category == '手串').toList();
+
+    // 各取前 N 个
+    final picks = <AntiqueEntity>[];
+    picks.addAll(walnuts.take(2));
+    picks.addAll(bracelets.take(4));
+
+    return picks;
   });
 });

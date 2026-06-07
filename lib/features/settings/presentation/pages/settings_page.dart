@@ -9,6 +9,8 @@ import '../../../../core/ai/ai_provider.dart';
 import '../../../../core/database/backup_service.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
+import 'package:dio/dio.dart';
+import 'category_management_page.dart';
 
 // AI 供应商预设
 const _aiProviders = {
@@ -36,6 +38,11 @@ const _aiProviders = {
     'baseUrl': '',
     'models': [],
     'defaultModel': '',
+  },
+  '本地模型 (Ollama)': {
+    'baseUrl': 'http://localhost:11434/v1',
+    'models': ['qwen2.5:7b', 'qwen2.5:3b', 'phi3:mini', 'llama3.2:3b'],
+    'defaultModel': 'qwen2.5:7b',
   },
 };
 
@@ -240,6 +247,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   onTap: () => _showApiKeyEditor(),
                 ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                ListTile(
+                  leading: const Icon(Icons.wifi_tethering),
+                  title: const Text('检测连接'),
+                  subtitle: const Text('测试服务器是否可达，查看可用模型'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _testOllamaConnection(),
+                ),
               ],
             ),
           ),
@@ -271,6 +286,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
+          _sectionHeader('系统'),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('分类管理'),
+              subtitle: const Text('管理文玩类别和待办分类'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           _sectionHeader('数据'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -290,6 +321,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   subtitle: const Text('从 JSON 备份文件恢复数据'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _importBackup(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _sectionHeader('分类'),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.diamond),
+                  title: const Text('分类管理'),
+                  subtitle: const Text('管理文玩类别和待办分类'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CategoryManagementPage(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -469,6 +522,162 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  // ===== Ollama 连接检测 =====
+  Future<void> _testOllamaConnection() async {
+    // 始终检测本地 Ollama 服务
+    const ollamaBaseUrl = 'http://localhost:11434';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        title: Text('检测连接'),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 16),
+            Text('正在连接 Ollama 服务…'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final dio = Dio(BaseOptions(
+        baseUrl: ollamaBaseUrl,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 10),
+      ));
+
+      // 调用 Ollama 的 /api/tags 获取本地已下载的模型列表
+      final response = await dio.get('/api/tags');
+      final List<dynamic> models = response.data['models'] ?? [];
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关闭加载对话框
+
+      // 构建可用模型列表字符串
+      final modelNames = models.map((m) {
+        final name = m['name'] ?? m['model'] ?? '未知';
+        final size = m['size'] != null
+            ? ' (${_formatBytes(m['size'] as int)})'
+            : '';
+        return '  • $name$size';
+      }).join('\n');
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              const Text('连接成功！'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Ollama 服务运行正常。'),
+                const SizedBox(height: 12),
+                if (models.isNotEmpty) ...[
+                  const Text('已安装的模型：', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(modelNames, style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
+                  const SizedBox(height: 12),
+                  Text(
+                    '当前推荐模型：${_aiProviders["本地模型 (Ollama)"]!["defaultModel"]}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ] else ...[
+                  const Text('⚠️ 尚未安装任何模型。'),
+                  const SizedBox(height: 8),
+                  Text(
+                    '请在终端运行：\nollama pull qwen2.5:7b',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关闭加载对话框
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red.shade600),
+              const SizedBox(width: 8),
+              const Text('连接失败'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('无法连接到 Ollama 服务。'),
+              const SizedBox(height: 8),
+              Text('错误：${e.toString().replaceFirst(RegExp(r'^.+Exception: '), '')}'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('💡 排查方法：', style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text('1. 确保已安装 Ollama (ollama.com)'),
+                    Text('2. 启动 Ollama 桌面应用或运行 ollama serve'),
+                    Text('3. 在终端运行 ollama pull qwen2.5:7b 下载模型'),
+                    Text('4. 应用会自动连接 http://localhost:11434/v1'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   // ===== 备份导出 =====

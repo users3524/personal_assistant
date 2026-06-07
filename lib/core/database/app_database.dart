@@ -23,12 +23,14 @@ import '../../features/resume/data/datasources/skill_items_table.dart';
 import '../../features/resume/data/datasources/project_experiences_table.dart';
 import 'converters/string_list_converter.dart';
 import 'tables/user_preferences_table.dart';
+import 'tables/collection_categories_table.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
   tables: [
     UserPreferences,
+    CollectionCategories,
     Todos,
     AntiqueItems,
     ValuationRecords,
@@ -46,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +57,15 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(
           antiqueItems,
           antiqueItems.categoryMetadata,
+        );
+      }
+      if (from < 3) {
+        await m.createTable(collectionCategories);
+      }
+      if (from < 4) {
+        await m.addColumn(
+          userPreferences,
+          userPreferences.todoCategories,
         );
       }
     },

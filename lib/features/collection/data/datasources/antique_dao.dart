@@ -243,6 +243,16 @@ class AntiqueDao {
     return rows.map(_pattingToEntity).toList();
   }
 
+  Future<List<PattingLogEntity>> getPattingLogsByMonth(int year, int month) async {
+    final monthStart = DateTime(year, month, 1);
+    final monthEnd = DateTime(year, month + 1, 1);
+    final rows = await (_db.select(_db.pattingLogs)
+          ..where((t) => t.date.isBetweenValues(monthStart, monthEnd))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+    return rows.map(_pattingToEntity).toList();
+  }
+
   Future<PattingLogEntity> addPattingLog(PattingLogEntity log) async {
     final id = await _db.into(_db.pattingLogs).insert(
           PattingLogsCompanion(

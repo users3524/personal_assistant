@@ -60,6 +60,10 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
       _dao.getPattingLogsByDate(date);
 
   @override
+  Future<List<PattingLogEntity>> getPattingLogsByMonth(int year, int month) =>
+      _dao.getPattingLogsByMonth(year, month);
+
+  @override
   Future<PattingLogEntity> addPattingLog(PattingLogEntity log) =>
       _dao.addPattingLog(log);
 

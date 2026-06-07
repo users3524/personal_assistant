@@ -175,7 +175,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Consumer(builder: (ctx, ref, _) {
-                        final cats = ref.watch(todoCategoriesProvider);
+                        final cats = ref.watch(todoCategoriesProvider).valueOrNull ?? ['生活', '工作'];
                         return Row(
                           children: cats.map((cat) => Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -190,7 +190,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                         );
                       }),
                     ),
-                    if (!ref.watch(todoCategoriesProvider).contains(_category))
+                    if (!(ref.watch(todoCategoriesProvider).valueOrNull ?? ['生活', '工作']).contains(_category))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Chip(

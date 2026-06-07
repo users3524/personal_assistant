@@ -101,9 +101,6 @@ class AntiqueGridCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text('${DateTime.now().difference(item.acquiredDate).inDays}天',
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                      const Spacer(),
                       if (item.currentValuation != null)
                         Text(
                           '¥${item.currentValuation!.toStringAsFixed(0)}',

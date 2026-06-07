@@ -27,6 +27,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   DateTime _monthStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
   CalendarView _viewMode = CalendarView.week;
 
+  bool _showArchived = false;
+
   static DateTime _getWeekStart(DateTime date) {
     final weekday = date.weekday;
     return DateTime(date.year, date.month, date.day - (weekday - 1));
@@ -61,6 +63,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             tooltip: '管理分类',
             onPressed: () => _showCategoryManager(context),
           ),
+          // 归档切换
+          IconButton(
+            icon: Icon(_showArchived ? Icons.archive : Icons.archive_outlined),
+            tooltip: '归档',
+            onPressed: () => setState(() => _showArchived = !_showArchived),
+          ),
         ],
       ),
       body: Column(
@@ -74,6 +82,67 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           Expanded(
             child: todoListAsync.when(
               data: (todos) {
+                if (_showArchived) {
+                  // —— 归档视图：显示所有已完成/已取消的待办 ——
+                  final archived = todos
+                      .where((t) =>
+                          t.status == TodoStatus.done ||
+                          t.status == TodoStatus.cancelled)
+                      .toList()
+                    ..sort((a, b) {
+                      final aDate =
+                          a.completedAt ?? a.cancelledAt ?? a.createdAt;
+                      final bDate =
+                          b.completedAt ?? b.cancelledAt ?? b.createdAt;
+                      return bDate.compareTo(aDate);
+                    });
+                  if (archived.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.archive_outlined,
+                              size: 60,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.3)),
+                          const SizedBox(height: 12),
+                          const Text('没有已完成的待办',
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    );
+                  }
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_outline,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 6),
+                            Text('已归档',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )),
+                            const SizedBox(width: 8),
+                            Text('${archived.length}项',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(child: _buildTodoList(archived)),
+                    ],
+                  );
+                }
+                // —— 普通视图：选中日期的待办 ——
                 final dayTodos = _getTodosForDate(todos, _selectedDate);
                 if (dayTodos.isEmpty) {
                   return Center(
@@ -312,9 +381,15 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   List<TodoEntity> _getTodosForDate(
       List<TodoEntity> todos, DateTime date) {
     return todos.where((t) {
-      // 只显示未完成的 (不显示 cancelled 也不显示 done)
-      return t.status != TodoStatus.cancelled && t.status != TodoStatus.done &&
-          _isSameDay(t.createdAt, date);
+      // 已完成/已取消的待办：按 completedAt / cancelledAt 归入完成当天的日期
+      if (t.status == TodoStatus.done) {
+        return t.completedAt != null && _isSameDay(t.completedAt!, date);
+      }
+      if (t.status == TodoStatus.cancelled) {
+        return t.cancelledAt != null && _isSameDay(t.cancelledAt!, date);
+      }
+      // 活跃的待办（pending / inProgress）：按 createdAt 显示
+      return _isSameDay(t.createdAt, date);
     }).toList()
       ..sort((a, b) {
         if (a.isStarred && !b.isStarred) return -1;
@@ -466,7 +541,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
       context: context,
       builder: (ctx) => Consumer(
         builder: (ctx, ref, _) {
-          final cats = ref.watch(todoCategoriesProvider);
+          final cats = ref.watch(todoCategoriesProvider).valueOrNull ?? ['生活', '工作'];
           return AlertDialog(
             title: const Text('管理分类'),
             content: SizedBox(

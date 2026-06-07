@@ -47,7 +47,7 @@ class MainShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.diamond_outlined),
             selectedIcon: Icon(Icons.diamond),
-            label: '盘串',
+            label: '文玩包',
           ),
           NavigationDestination(
             icon: Icon(Icons.check_circle_outline),
@@ -88,7 +88,7 @@ GoRouter createRouter() {
           );
         },
         branches: [
-          // Tab 0: 盘串
+          // Tab 0: 文玩包
           StatefulShellBranch(
             routes: [
               GoRoute(

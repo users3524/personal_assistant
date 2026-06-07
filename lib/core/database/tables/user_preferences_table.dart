@@ -18,6 +18,7 @@ class UserPreferences extends Table {
   TextColumn get dailyReviewTime => text().withDefault(const Constant('21:00'))();
   TextColumn get weeklyReportDay => text().withDefault(const Constant('sunday'))();
   IntColumn get resumeTemplateId => integer().withDefault(const Constant(0))();
+  TextColumn get todoCategories => text().withDefault(const Constant('[]'))(); // JSON list
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

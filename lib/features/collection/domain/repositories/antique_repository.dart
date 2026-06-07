@@ -24,6 +24,7 @@ abstract class AntiqueRepository {
   // ===== 盘玩日志 =====
   Future<List<PattingLogEntity>> getPattingLogs(int itemId);
   Future<List<PattingLogEntity>> getPattingLogsByDate(DateTime date);
+  Future<List<PattingLogEntity>> getPattingLogsByMonth(int year, int month);
   Future<PattingLogEntity> addPattingLog(PattingLogEntity log);
   Future<PattingLogEntity> updatePattingLog(PattingLogEntity log);
   Future<void> deletePattingLog(int id);

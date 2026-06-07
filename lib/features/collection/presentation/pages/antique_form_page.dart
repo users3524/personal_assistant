@@ -7,27 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
 import 'dart:io';
 
+import '../../../../core/models/collection_category.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
-
-/// 预置分类
-const kPresetCategories = ['核桃', '手串', '把件'];
-
-/// 各分类的细分选项
-const kSubtypeMap = {
-  '核桃': ['白狮子', '苹果园', '鸡心', '官帽', '虎头', '四座楼', '南将石', '磨盘', '蛤蟆头', '满天星'],
-  '手串': ['百香籽', '牛骨', '南红', '紫金鼠', '星月', '金刚', '凤眼', '猴头', '紫檀', '木患子'],
-  '把件': ['葫芦', '贝壳', '折扇', '竹雕', '核雕', '玉牌', '铜件', '牙角'],
-};
-
-/// 各分类需要额外记录的字段
-const kCategoryFields = {
-  '核桃': ['边宽(mm)', '肚厚(mm)', '桩高(mm)', '重量(g)'],
-  '手串': ['尺寸(mm)', '串型', '重量(g)'],
-  '把件': ['长宽高(mm)', '重量(g)'],
-};
+import '../../../settings/presentation/providers/category_management_providers.dart'
+    show collectionCategoriesProvider;
 
 class AntiqueFormPage extends ConsumerStatefulWidget {
   final int? editId;
@@ -46,10 +33,12 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   late TextEditingController _notesCtrl;
   late TextEditingController _subtypeCtrl;
 
-  // 分类专属字段控制器 (按 kCategoryFields 的 key 索引)
+  // 分类专属字段控制器 (按分类字段名索引)
   final _metaCtrls = <String, TextEditingController>{};
 
-  String _category = kPresetCategories[0];
+  // 从 Provider 加载的分类数据
+  List<CollectionCategory> _categories = [];
+  String _category = '';
   String? _subtype;
   DateTime _acquiredDate = DateTime.now();
   AntiqueCondition _condition = AntiqueCondition.good;
@@ -60,6 +49,21 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
 
   bool get _isEditing => widget.editId != null;
 
+  /// 当前分类的分类模型
+  CollectionCategory? get _currentCategoryModel {
+    try {
+      return _categories.firstWhere((c) => c.name == _category);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 当前分类的细分列表
+  List<String> get _currentSubtypes => _currentCategoryModel?.subtypes ?? [];
+
+  /// 当前分类的专属字段
+  List<String> get _currentFields => _currentCategoryModel?.metadataFields ?? [];
+
   @override
   void initState() {
     super.initState();
@@ -68,15 +72,26 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _sellerCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
     _subtypeCtrl = TextEditingController();
-    if (_isEditing) _loadExisting();
-    // 初始化当前分类的专属字段控制器
-    _initMetaCtrls();
+    // 延迟加载分类数据
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCategories());
+  }
+
+  Future<void> _loadCategories() async {
+    final cats = ref.read(collectionCategoriesProvider);
+    if (!mounted) return;
+    setState(() {
+      _categories = cats;
+      if (_category.isEmpty && cats.isNotEmpty) {
+        _category = cats.first.name;
+      }
+      _initMetaCtrls();
+      if (_isEditing) _loadExisting();
+    });
   }
 
   void _initMetaCtrls() {
     _metaCtrls.clear();
-    final fields = kCategoryFields[_category] ?? [];
-    for (final f in fields) {
+    for (final f in _currentFields) {
       _metaCtrls[f] = TextEditingController();
     }
   }
@@ -192,7 +207,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       final now = DateTime.now();
 
       // 收集分类专属字段
-      final fields = kCategoryFields[_category] ?? [];
+      final fields = _currentFields;
       final metadata = <String, String>{};
       for (final f in fields) {
         final ctrl = _metaCtrls[f];
@@ -302,14 +317,14 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                       spacing: 8,
                       runSpacing: 4,
                       children: [
-                        ...kPresetCategories.map((cat) {
-                          final selected = _category == cat;
+                        ..._categories.map((cat) {
+                          final selected = _category == cat.name;
                           return ChoiceChip(
-                            label: Text(cat),
+                            label: Text(cat.name),
                             selected: selected,
                             onSelected: (sel) {
                               setState(() {
-                                _category = cat;
+                                _category = cat.name;
                                 _subtype = null;
                                 _subtypeCtrl.text = '';
                                 _initMetaCtrls();
@@ -317,7 +332,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                             },
                           );
                         }).toList(),
-                        if (!kPresetCategories.contains(_category))
+                        if (_categories.every((c) => c.name != _category))
                           ChoiceChip(
                             label: Text(_category),
                             selected: true,
@@ -353,14 +368,14 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     const SizedBox(height: 16),
 
                     // 细分品类
-                    if (kSubtypeMap[_category] != null && kSubtypeMap[_category]!.isNotEmpty) ...[
+                    if (_currentSubtypes.isNotEmpty) ...[
                       Text('细分品类', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
                         children: [
-                          ...kSubtypeMap[_category]!.map((sub) {
+                          ..._currentSubtypes.map((sub) {
                             final selected = _subtype == sub;
                             return ChoiceChip(
                               label: Text(sub, style: const TextStyle(fontSize: 12)),
@@ -392,10 +407,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     ],
 
                     // 分类专属字段
-                    if (kCategoryFields[_category] != null && kCategoryFields[_category]!.isNotEmpty) ...[
+                    if (_currentFields.isNotEmpty) ...[
                       Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      ...kCategoryFields[_category]!.map((field) {
+                      ..._currentFields.map((field) {
                         final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),

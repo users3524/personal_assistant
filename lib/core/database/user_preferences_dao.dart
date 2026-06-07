@@ -2,6 +2,7 @@
 library;
 
 import 'package:drift/drift.dart';
+import 'dart:convert';
 
 import '../../../../core/database/app_database.dart';
 
@@ -58,5 +59,23 @@ class UserPreferencesDao {
   Future<void> setDailyReviewTime(String time) async {
     await (_db.update(_db.userPreferences)..where((t) => t.id.equals(1)))
         .write(UserPreferencesCompanion(dailyReviewTime: Value(time)));
+  }
+
+  // ===== 待办分类持久化 =====
+
+  /// 获取持久化的待办分类列表
+  Future<List<String>> getTodoCategories() async {
+    final prefs = await getOrCreate();
+    final json = prefs.todoCategories;
+    final list = (jsonDecode(json) as List).cast<String>();
+    return list;
+  }
+
+  /// 保存待办分类列表
+  Future<void> setTodoCategories(List<String> categories) async {
+    await (_db.update(_db.userPreferences)..where((t) => t.id.equals(1)))
+        .write(UserPreferencesCompanion(
+          todoCategories: Value(jsonEncode(categories)),
+        ));
   }
 }

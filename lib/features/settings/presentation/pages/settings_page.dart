@@ -47,7 +47,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  // AI 配置控制器
   final _apiKeyCtrl = TextEditingController();
   final _baseUrlCtrl = TextEditingController();
   final _modelCtrl = TextEditingController();
@@ -55,12 +54,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _showApiKey = false;
   bool _showKeyInDialog = false;
 
-  // 从数据库加载的配置
   String _savedApiKey = '';
   String _savedBaseUrl = 'https://api.openai.com/v1';
   String _savedModel = 'gpt-4o-mini';
   String _savedProvider = 'OpenAI';
-  bool _isLoaded = false; // 标记是否已从数据库加载
   bool _notificationEnabled = true;
   bool _weeklyReminder = true;
 
@@ -80,31 +77,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _prefsDao = UserPreferencesDao(db);
       final prefs = await _prefsDao!.getOrCreate();
 
-      if (mounted) {
-        setState(() {
-          _savedApiKey = prefs.aiApiKey ?? '';
-          _savedBaseUrl = prefs.aiBaseUrl ?? 'https://api.openai.com/v1';
-          _savedModel = prefs.aiModel ?? 'gpt-4o-mini';
-          _savedProvider = prefs.aiProvider;
-          _selectedProvider = prefs.aiProvider;
-          _notificationEnabled = prefs.notificationEnabled;
-          _baseUrlCtrl.text = _savedBaseUrl;
-          _modelCtrl.text = _savedModel;
-          _isLoaded = true;
-        });
+      if (!mounted) return;
+      setState(() {
+        _savedApiKey = prefs.aiApiKey ?? '';
+        _savedBaseUrl = prefs.aiBaseUrl ?? 'https://api.openai.com/v1';
+        _savedModel = prefs.aiModel ?? 'gpt-4o-mini';
+        _savedProvider = prefs.aiProvider;
+        _selectedProvider = prefs.aiProvider;
+        _notificationEnabled = prefs.notificationEnabled;
+        _baseUrlCtrl.text = _savedBaseUrl;
+        _modelCtrl.text = _savedModel;
+      });
 
-        // 同步到 AI 配置 Provider
-        ref.read(aiConfigProvider.notifier).update(
-          provider: _savedProvider,
-          baseUrl: _savedBaseUrl,
-          model: _savedModel,
-          apiKey: _savedApiKey,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoaded = true);
-      }
+      ref.read(aiConfigProvider.notifier).update(
+            provider: _savedProvider,
+            baseUrl: _savedBaseUrl,
+            model: _savedModel,
+            apiKey: _savedApiKey,
+          );
+    } catch (_) {
+      // 数据库加载失败，使用默认内存配置
     }
   }
 
@@ -118,11 +110,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         apiKey: _savedApiKey,
       );
       ref.read(aiConfigProvider.notifier).update(
-        provider: _savedProvider,
-        baseUrl: _savedBaseUrl,
-        model: _savedModel,
-        apiKey: _savedApiKey,
-      );
+            provider: _savedProvider,
+            baseUrl: _savedBaseUrl,
+            model: _savedModel,
+            apiKey: _savedApiKey,
+          );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -148,7 +140,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          // ---- 外观 ----
           _sectionHeader('外观'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -192,13 +183,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 12),
 
-          // ---- AI 配置 ----
           _sectionHeader('AI 配置'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                // 供应商选择
                 ListTile(
                   leading: const Icon(Icons.cloud),
                   title: const Text('AI 平台'),
@@ -207,25 +196,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onTap: () => _showProviderPicker(),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-
-                // API 地址
                 ListTile(
                   leading: const Icon(Icons.dns),
                   title: const Text('API 地址'),
                   subtitle: Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
                   trailing: const Icon(Icons.edit),
                   onTap: () => _showTextEditor(
-                    'API 地址',
-                    _baseUrlCtrl,
-                    (v) {
-                      setState(() => _savedBaseUrl = v);
-                      _baseUrlCtrl.text = v;
-                    },
+                    'API 地址', _baseUrlCtrl,
+                    (v) { setState(() => _savedBaseUrl = v); _baseUrlCtrl.text = v; },
                   ),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-
-                // 模型
                 ListTile(
                   leading: const Icon(Icons.model_training),
                   title: const Text('模型'),
@@ -234,8 +215,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onTap: () => _showModelPicker(),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-
-                // API Key（支持明文/密文切换）
                 ListTile(
                   leading: const Icon(Icons.key),
                   title: const Text('API Key'),
@@ -244,19 +223,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ? '未配置'
                         : _showApiKey
                             ? _savedApiKey
-                        : _savedApiKey.length > 12
-                            ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
-                            : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
+                            : _savedApiKey.length > 12
+                                ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
+                                : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
                     style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(
-                          _showApiKey ? Icons.visibility_off : Icons.visibility,
-                          size: 20,
-                        ),
+                        icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility, size: 20),
                         onPressed: () => setState(() => _showApiKey = !_showApiKey),
                       ),
                       const Icon(Icons.edit, size: 20),
@@ -269,7 +245,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // ---- 通知 ----
           _sectionHeader('通知'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -282,9 +257,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onChanged: (v) {
                     setState(() => _notificationEnabled = v);
                     _prefsDao?.setNotificationEnabled(v);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(v ? '每日复盘提醒已开启' : '每日复盘提醒已关闭')),
-                    );
                   },
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
@@ -292,19 +264,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   title: const Text('每周周报提醒'),
                   subtitle: const Text('每周日 20:00'),
                   value: _weeklyReminder,
-                  onChanged: (v) {
-                    setState(() => _weeklyReminder = v);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(v ? '周报提醒已开启' : '周报提醒已关闭')),
-                    );
-                  },
+                  onChanged: (v) => setState(() => _weeklyReminder = v),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // ---- 数据 ----
           _sectionHeader('数据'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -313,7 +279,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ListTile(
                   leading: const Icon(Icons.upload_file),
                   title: const Text('导出备份'),
-                  subtitle: const Text('导出全部数据为加密文件'),
+                  subtitle: const Text('导出全部数据为 JSON 文件'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _exportBackup(),
                 ),
@@ -321,7 +287,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ListTile(
                   leading: const Icon(Icons.download),
                   title: const Text('导入备份'),
-                  subtitle: const Text('从备份文件恢复数据'),
+                  subtitle: const Text('从 JSON 备份文件恢复数据'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _importBackup(),
                 ),
@@ -330,7 +296,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // ---- 关于 ----
           _sectionHeader('关于'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -360,16 +325,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _sectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Text(title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          )),
+      child: Text(title, style: TextStyle(
+        fontSize: 13, fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.primary,
+      )),
     );
   }
 
-  // ===== AI 供应商选择 =====
   void _showProviderPicker() {
     showModalBottomSheet(
       context: context,
@@ -408,14 +370,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  // ===== 模型选择 =====
   void _showModelPicker() {
     final models = _aiProviders[_selectedProvider]?['models'] as List<String>? ?? [];
     if (models.isEmpty) {
-      // 自定义模型，直接编辑
-      _showTextEditor('模型名称', _modelCtrl, (v) {
-        setState(() => _savedModel = v);
-      });
+      _showTextEditor('模型名称', _modelCtrl, (v) => setState(() => _savedModel = v));
       return;
     }
     showModalBottomSheet(
@@ -433,10 +391,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 groupValue: _savedModel,
                 onChanged: (v) {
                   if (v == null) return;
-                  setState(() {
-                    _savedModel = v;
-                    _modelCtrl.text = v;
-                  });
+                  setState(() { _savedModel = v; _modelCtrl.text = v; });
                   _saveAIConfigToDb();
                   Navigator.pop(ctx);
                 },
@@ -447,7 +402,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  // ===== API Key 编辑器（支持明文/密文切换） =====
   void _showApiKeyEditor() {
     final ctrl = TextEditingController(text: _savedApiKey);
     setState(() => _showKeyInDialog = false);
@@ -460,12 +414,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Text('平台：', style: TextStyle(fontSize: 13)),
-                  Text(_selectedProvider, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                ],
-              ),
+              Row(children: [
+                const Text('平台：', style: TextStyle(fontSize: 13)),
+                Text(_selectedProvider, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ]),
               const SizedBox(height: 12),
               TextField(
                 controller: ctrl,
@@ -473,38 +425,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   hintText: '输入 API Key',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      _showKeyInDialog ? Icons.visibility_off : Icons.visibility,
-                    ),
+                    icon: Icon(_showKeyInDialog ? Icons.visibility_off : Icons.visibility),
                     onPressed: () => setDialogState(() => _showKeyInDialog = !_showKeyInDialog),
                   ),
                 ),
                 obscureText: !_showKeyInDialog,
-                maxLines: 1,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Key 将加密存储在本地设备上',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
+              Text('Key 存储在本地设备上', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _savedApiKey = ctrl.text.trim();
-                  _apiKeyCtrl.text = _savedApiKey;
-                });
+                setState(() { _savedApiKey = ctrl.text.trim(); });
                 _saveAIConfigToDb();
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('API Key 已保存')),
-                );
               },
               child: const Text('保存'),
             ),
@@ -514,7 +451,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  // ===== 通用文本编辑器 =====
   void _showTextEditor(String title, TextEditingController ctrl, Function(String) onSave) {
     showDialog(
       context: context,
@@ -522,22 +458,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: Text(title),
         content: TextField(
           controller: ctrl,
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            isDense: true,
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
         ),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              onSave(ctrl.text.trim());
-              _saveAIConfigToDb();
-              Navigator.pop(ctx);
-            },
+            onPressed: () { onSave(ctrl.text.trim()); _saveAIConfigToDb(); Navigator.pop(ctx); },
             child: const Text('保存'),
           ),
         ],
@@ -547,56 +473,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ===== 备份导出 =====
   void _exportBackup() async {
-    final passwordCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('导出备份'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('请输入加密密码（请牢记，恢复时需要）：'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passwordCtrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: '加密密码',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('导出'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && passwordCtrl.text.isNotEmpty && mounted) {
-      try {
-        final db = await ref.read(appDatabaseProvider.future);
-        final backupService = BackupService(db);
-        final path = await backupService.exportBackup(passwordCtrl.text);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('备份已导出到：$path')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('导出失败: $e')),
-          );
-        }
+    try {
+      final db = await ref.read(appDatabaseProvider.future);
+      final path = await BackupService(db).exportBackup();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 3)),
+        );
       }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败: $e')));
     }
   }
 
@@ -606,39 +492,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final db = await ref.read(appDatabaseProvider.future);
       final backupService = BackupService(db);
       final filePath = await backupService.pickBackupFile();
-
       if (filePath == null || !mounted) return;
 
-      final passwordCtrl = TextEditingController();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('导入备份'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('请输入备份密码以解密数据：'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passwordCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  hintText: '备份密码',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '⚠️ 导入将覆盖当前所有数据！',
-                style: TextStyle(color: Colors.red.shade700, fontSize: 12),
-              ),
-            ],
-          ),
+          content: const Text('确定要恢复数据吗？\n\n⚠️ 当前所有数据将被覆盖！'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -647,28 +509,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ],
         ),
       );
+      if (confirmed != true || !mounted) return;
 
-      if (confirmed == true && passwordCtrl.text.isNotEmpty && mounted) {
-        await backupService.importBackup(filePath, passwordCtrl.text);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('数据已恢复，请重新打开应用')),
-          );
-          // 刷新所有 Provider
-          ref.invalidate(appDatabaseProvider);
-          ref.invalidate(aiConfigProvider);
-        }
-      }
+      await backupService.importBackup(filePath);
+      ref.invalidate(appDatabaseProvider);
+      ref.invalidate(aiConfigProvider);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: $e')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));
     }
   }
 
-  // ===== 开源许可 =====
   void _showLicenses() {
     showLicensePage(
       context: context,

@@ -75,11 +75,26 @@ class BackupService {
     return result?.files.single.path;
   }
 
-  /// 收集所有数据（包含 API Key，用户自行决定分享范围）
+  /// 收集所有数据（图片路径内容内联为 Base64）
   Future<Map<String, dynamic>> _collectData() async {
     final data = <String, dynamic>{};
     data['version'] = 1;
     data['exportedAt'] = DateTime.now().toIso8601String();
+
+    // 辅助：将路径列表转为 Base64 列表
+    List<String>? encodePaths(List<String>? paths) {
+      if (paths == null || paths.isEmpty) return paths;
+      return paths.map((p) {
+        try {
+          final file = File(p);
+          if (file.existsSync()) {
+            final bytes = file.readAsBytesSync();
+            return 'base64:${base64Encode(bytes)}';
+          }
+        } catch (_) {}
+        return p; // 兜底保留原始路径
+      }).toList();
+    }
 
     data['user_preferences'] = (await _db.select(_db.userPreferences).get())
         .map((r) => _rowToMap(r))
@@ -88,14 +103,20 @@ class BackupService {
         .map((r) => _rowToMap(r))
         .toList();
     data['antique_items'] = (await _db.select(_db.antiqueItems).get())
-        .map((r) => _rowToMap(r))
-        .toList();
+        .map((r) {
+          final m = _rowToMap(r);
+          if (m['imagePaths'] is List) m['imagePaths'] = encodePaths(m['imagePaths'] as List<String>?);
+          return m;
+        }).toList();
     data['valuation_records'] = (await _db.select(_db.valuationRecords).get())
         .map((r) => _rowToMap(r))
         .toList();
     data['patting_logs'] = (await _db.select(_db.pattingLogs).get())
-        .map((r) => _rowToMap(r))
-        .toList();
+        .map((r) {
+          final m = _rowToMap(r);
+          if (m['photoPaths'] is List) m['photoPaths'] = encodePaths(m['photoPaths'] as List<String>?);
+          return m;
+        }).toList();
     data['daily_reviews'] = (await _db.select(_db.dailyReviews).get())
         .map((r) => _rowToMap(r))
         .toList();
@@ -176,14 +197,22 @@ class BackupService {
         final columns = <String>[];
         final values = <String>[];
         for (final entry in row.entries) {
-          // 跳过 imagePaths/photoPaths 中不存在的文件路径 — 设为空数组
           var val = entry.value;
+
+          // 解码 Base64 内联图片 → 写入文件 → 替换为文件路径
           if ((entry.key == 'imagePaths' || entry.key == 'photoPaths') && val is List) {
-            val = val.where((p) {
-              if (p is! String) return false;
-              return File(p).existsSync();
+            val = val.map((p) {
+              if (p is String && p.startsWith('base64:')) {
+                return _decodeAndSaveImage(p.substring(7));
+              }
+              return p;
             }).toList();
           }
+          // 跳过不可用的文件路径（不同设备的路径直接去掉）
+          if ((entry.key == 'imagePaths' || entry.key == 'photoPaths') && val is List) {
+            val = val.where((p) => p is String && p.isNotEmpty).toList();
+          }
+
           columns.add(toSnakeCase(entry.key));
           values.add(escapeValue(val));
         }
@@ -201,5 +230,20 @@ class BackupService {
 
   Map<String, dynamic> _rowToMap(DataClass row) {
     return row.toJson();
+  }
+
+  /// 将 Base64 解码并写入文件，返回文件路径
+  String _decodeAndSaveImage(String base64str) {
+    try {
+      final bytes = base64Decode(base64str);
+      final dir = Directory('${Directory.systemTemp.path}/personal_assistant_images');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final fileName = 'restored_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File('${dir.path}/$fileName');
+      file.writeAsBytesSync(bytes);
+      return file.path;
+    } catch (_) {
+      return '';
+    }
   }
 }

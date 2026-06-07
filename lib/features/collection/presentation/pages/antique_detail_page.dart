@@ -1144,75 +1144,90 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
     final leftDays = leftLog.date.difference(item.acquiredDate).inDays;
     final rightDays = rightLog.date.difference(item.acquiredDate).inDays;
-    final deltaDays = (rightDays - leftDays).abs();
 
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        pageBuilder: (_, __, ___) => Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
+        pageBuilder: (_, __, ___) => Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFF0D0D0D), Color(0xFF1A1A2E)],
+            ),
+          ),
+          child: SafeArea(
             child: Column(
               children: [
                 // 顶部导航
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.fromLTRB(4, 8, 12, 4),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
+                        icon: Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(18)),
+                          child: const Icon(Icons.close, color: Colors.white54, size: 20),
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      const Spacer(),
-                      Text(item.name, style: const TextStyle(color: Colors.white70, fontSize: 15)),
-                      const Spacer(),
+                      Expanded(
+                        child: Text(item.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1)),
+                      ),
                       const SizedBox(width: 48),
                     ],
                   ),
                 ),
-                // 双图并排
+                // 双图对比区
                 Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(child: _compareImageTile(leftLog.photoPaths.first, leftDays, leftLog.date, true)),
-                      Container(width: 2, color: Colors.white24),
-                      Expanded(child: _compareImageTile(rightLog.photoPaths.first, rightDays, rightLog.date, false)),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        Expanded(child: _compareImageTile(leftLog.photoPaths.first, leftDays, leftLog.date, true, leftLog.note)),
+                        // 分割线
+                        Container(width: 1,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.white30,
+                                Colors.white10,
+                                Colors.white30,
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                        Expanded(child: _compareImageTile(rightLog.photoPaths.first, rightDays, rightLog.date, false, rightLog.note)),
+                      ],
+                    ),
                   ),
                 ),
-                // 底部信息条
+                // 底部信息
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  color: const Color(0xFF1A1A1A),
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _compareStatBox('第${leftDays}天', leftLog.date),
-                          Column(
-                            children: [
-                              const Text('VS', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 2)),
-                              const SizedBox(height: 4),
-                              Text('${deltaDays}天变化', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                            ],
+                          Expanded(child: _dayBadge('第${leftDays}天', Colors.tealAccent, leftLog.date)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(20)),
+                            child: const Text('⋯',
+                              style: TextStyle(color: Colors.white24, fontSize: 22, letterSpacing: 4)),
                           ),
-                          _compareStatBox('第${rightDays}天', rightLog.date),
+                          Expanded(child: _dayBadge('第${rightDays}天', Colors.orangeAccent, rightLog.date)),
                         ],
                       ),
-                      if (leftLog.note != null && leftLog.note!.isNotEmpty ||
-                          rightLog.note != null && rightLog.note!.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        const Divider(color: Colors.white12, height: 1),
-                        const SizedBox(height: 8),
-                        if (leftLog.note != null && leftLog.note!.isNotEmpty)
-                          _compareNote(leftLog.note!, true),
-                        if (rightLog.note != null && rightLog.note!.isNotEmpty) ...[
-                          if (leftLog.note != null && leftLog.note!.isNotEmpty)
-                            const SizedBox(height: 6),
-                          _compareNote(rightLog.note!, false),
-                        ],
-                      ],
                     ],
                   ),
                 ),
@@ -1224,7 +1239,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  Widget _compareImageTile(String path, int days, DateTime date, bool isLeft) {
+  Widget _compareImageTile(String path, int days, DateTime date, bool isLeft, String? note) {
     final y = (date.year % 100).toString().padLeft(2, '0');
     final mo = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
@@ -1233,61 +1248,69 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        InteractiveViewer(maxScale: 4, child: Image.file(File(path), fit: BoxFit.contain)),
-        // 顶部标签
-        Positioned(
-          top: 8, left: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: Text(
-              isLeft ? '之前' : '之后',
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        Positioned.fill(
+          child: InteractiveViewer(
+            maxScale: 4,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: note != null && note.isNotEmpty ? 56 : 0),
+              child: Image.file(File(path), fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white24, size: 40))),
             ),
           ),
         ),
-        // 底部日期
-        Positioned(
-          bottom: 8, left: 8,
-          child: Text('$y/$mo/$d', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        // 顶标签
+        Positioned(top: 8, left: 0, right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withValues(alpha: 0.25)),
+              ),
+              child: Text(isLeft ? '之前' : '之后',
+                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1)),
+            ),
+          ),
         ),
+        // 底部备注
+        if (note != null && note.isNotEmpty)
+          Positioned(bottom: 8, left: 6, right: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8)),
+              child: Text(note,
+                style: const TextStyle(color: Colors.white54, fontSize: 10, height: 1.3),
+                maxLines: 2, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        // 右下日期
+        Positioned(bottom: note != null && note.isNotEmpty ? 40 : 8, right: 8,
+          child: Text('$y/$mo/$d', style: const TextStyle(color: Colors.white30, fontSize: 10))),
       ],
     );
   }
 
-  Widget _compareStatBox(String label, DateTime date) {
+  Widget _dayBadge(String label, Color color, DateTime date) {
     final y = (date.year % 100).toString().padLeft(2, '0');
     final mo = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 2),
-        Text('$y/$mo/$d', style: const TextStyle(color: Colors.white38, fontSize: 11)),
-      ],
-    );
-  }
-
-  Widget _compareNote(String note, bool isLeft) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 4, height: 4,
-          margin: const EdgeInsets.only(top: 6, right: 8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isLeft ? Colors.tealAccent : Colors.orangeAccent,
-          ),
-        ),
-        Expanded(
-          child: Text(note, style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text('$y/$mo/$d', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
     );
   }
 
@@ -1355,17 +1378,22 @@ class _CompareSelectDialog extends StatefulWidget {
   State<_CompareSelectDialog> createState() => _CompareSelectDialogState();
 }
 
-class _CompareSelectDialogState extends State<_CompareSelectDialog> {
+class _CompareSelectDialogState extends State<_CompareSelectDialog>
+    with SingleTickerProviderStateMixin {
   late String _leftKey;
   late String _rightKey;
-
   Map<String, _CompareEntry> _entries = {};
+  late AnimationController _pulseCtrl;
 
   @override
   void initState() {
     super.initState();
     _leftKey = widget.initialLeft;
     _rightKey = widget.initialRight;
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
     for (final log in widget.logs) {
       final k = '${log.date.toIso8601String()}|${log.photoPaths.first}';
       final days = log.date.difference(widget.item.acquiredDate).inDays;
@@ -1375,13 +1403,17 @@ class _CompareSelectDialogState extends State<_CompareSelectDialog> {
       final h = log.date.hour.toString().padLeft(2, '0');
       final mi = log.date.minute.toString().padLeft(2, '0');
       _entries[k] = _CompareEntry(
-        key: k,
-        path: log.photoPaths.first,
+        key: k, path: log.photoPaths.first,
         dayLabel: days == 0 ? '入手当天' : '第${days}天',
-        dateStr: '$y/$mo/$d $h:$mi',
-        note: log.note,
+        dateStr: '$y/$mo/$d $h:$mi', note: log.note,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -1389,188 +1421,281 @@ class _CompareSelectDialogState extends State<_CompareSelectDialog> {
     final entries = _entries.values.toList();
     final leftEntry = _entries[_leftKey];
     final rightEntry = _entries[_rightKey];
+    final lDays = leftEntry?.dayLabel == '入手当天' ? 0 : int.tryParse(leftEntry?.dayLabel.replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0;
+    final rDays = rightEntry?.dayLabel == '入手当天' ? 0 : int.tryParse(rightEntry?.dayLabel.replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0;
 
-    return AlertDialog(
-      title: const Text('选择对比记录'),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      content: SizedBox(
-        width: double.maxFinite,
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white12),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 已选预览区
+            // 顶部标题
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.white10)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4, height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.tealAccent.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(2)),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text('时光对比',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 30, height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(15)),
+                      child: const Icon(Icons.close, color: Colors.white54, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 预览区
             if (leftEntry != null && rightEntry != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _miniCard(leftEntry, Colors.teal, '之前'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Container(
-                            width: 36, height: 36,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black87,
-                            ),
-                            child: const Center(
-                              child: Text('VS', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
-                            ),
-                          ),
-                        ),
-                        _miniCard(rightEntry, Colors.orange, '之后'),
+              AnimatedBuilder(
+                animation: _pulseCtrl,
+                builder: (_, child) => Container(
+                  margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.tealAccent.withValues(alpha: 0.05 + _pulseCtrl.value * 0.03),
+                        Colors.orangeAccent.withValues(alpha: 0.05 + _pulseCtrl.value * 0.03),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Builder(builder: (_) {
-                      final lDays = leftEntry.dayLabel == '入手当天' ? 0 : int.parse(leftEntry.dayLabel.replaceAll(RegExp(r'[^0-9]'), ''));
-                      final rDays = rightEntry.dayLabel == '入手当天' ? 0 : int.parse(rightEntry.dayLabel.replaceAll(RegExp(r'[^0-9]'), ''));
-                      return Text(
-                        '${(rDays - lDays).abs()} 天的变化',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
-                      );
-                    }),
-                  ],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(child: _previewCard(leftEntry, const Color(0xFF00BCD4), '左')),
+                          const SizedBox(width: 16),
+                          Expanded(child: _previewCard(rightEntry, const Color(0xFFFF9800), '右')),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(20)),
+                        child: Text(
+                          '${(rDays - lDays).abs()} 天间距',
+                          style: const TextStyle(color: Colors.white60, fontSize: 12, letterSpacing: 1),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            const SizedBox(height: 16),
-            // 记录列表
-            const Text('左右滑动切换选择', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
+            // 记录卡片选择器
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  _sectionDot(const Color(0xFF00BCD4)),
+                  const SizedBox(width: 6),
+                  const Text('轻触选择', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+                  const Spacer(),
+                  _sectionDot(const Color(0xFFFF9800)),
+                  const SizedBox(width: 6),
+                  const Text('再次轻触交换', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
-              height: 80,
+              height: 100,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: entries.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (ctx, i) {
                   final e = entries[i];
                   final isLeft = e.key == _leftKey;
                   final isRight = e.key == _rightKey;
-                  final isSelected = isLeft || isRight;
                   return GestureDetector(
                     onTap: () => setState(() {
                       if (isLeft) { _leftKey = _rightKey; _rightKey = e.key; }
                       else if (isRight) { _rightKey = _leftKey; _leftKey = e.key; }
-                      else { if (_leftKey == widget.initialLeft && _rightKey == widget.initialRight) { _leftKey = e.key; } else { _rightKey = e.key; } }
+                      else {
+                        if (_leftKey == widget.initialLeft && _rightKey == widget.initialRight) { _leftKey = e.key; }
+                        else { _rightKey = e.key; }
+                      }
                     }),
-                    child: Container(
-                      width: 60,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 72,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected
-                              ? (isLeft ? Colors.teal : Colors.orange)
-                              : Colors.grey.shade300,
-                          width: isSelected ? 2 : 1,
-                        ),
+                          color: isLeft ? const Color(0xFF00BCD4)
+                               : isRight ? const Color(0xFFFF9800)
+                               : Colors.white12,
+                          width: isLeft || isRight ? 2 : 1),
+                        boxShadow: (isLeft || isRight) ? [
+                          BoxShadow(color: (isLeft ? Colors.tealAccent : Colors.orangeAccent).withValues(alpha: 0.2), blurRadius: 8),
+                        ] : null,
                       ),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(isSelected ? 6 : 7)),
-                              child: Image.file(File(e.path), fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(File(e.path), fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(color: Colors.white10)),
+                            // 底部时间标签
+                            Positioned(
+                              left: 0, right: 0, bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black54],
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(e.dayLabel, textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                                        color: (isLeft || isRight) ? Colors.white : Colors.white60)),
+                                    Text(e.dateStr, textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 8, color: (isLeft || isRight) ? Colors.white70 : Colors.white38)),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isLeft ? Colors.teal : (isRight ? Colors.orange : Colors.grey.shade100),
-                            ),
-                            child: Text(
-                              e.dayLabel,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : Colors.grey.shade600,
+                            // 选中角标
+                            if (isLeft)
+                              Positioned(top: 3, left: 3,
+                                child: Container(
+                                  width: 18, height: 18,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF00BCD4), shape: BoxShape.circle),
+                                  child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 10),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
+                            if (isRight)
+                              Positioned(top: 3, right: 3,
+                                child: Container(
+                                  width: 18, height: 18,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFF9800), shape: BoxShape.circle),
+                                  child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 10),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );
                 },
               ),
             ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                '点左边设为「之前」  点右边设为「之后」',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+            const SizedBox(height: 20),
+            // 操作按钮
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white38,
+                        side: const BorderSide(color: Colors.white12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('取消', style: TextStyle(letterSpacing: 1)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: _leftKey == _rightKey ? null
+                          : () => Navigator.pop(context, {'left': _leftKey, 'right': _rightKey}),
+                      icon: const Icon(Icons.compare_arrows, size: 20),
+                      label: const Text('开始对比', style: TextStyle(letterSpacing: 1)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF00BCD4),
+                        disabledBackgroundColor: Colors.white10,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+    );
+  }
+
+  Widget _previewCard(_CompareEntry e, Color color, String side) {
+    return Column(
+      children: [
+        Container(
+          height: 80,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: Image.file(File(e.path), fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.white10)),
+          ),
         ),
-        FilledButton.icon(
-          onPressed: _leftKey == _rightKey
-              ? null
-              : () => Navigator.pop(context, {'left': _leftKey, 'right': _rightKey}),
-          icon: const Icon(Icons.compare_arrows, size: 18),
-          label: const Text('开始对比'),
-        ),
+        const SizedBox(height: 8),
+        Text(e.dayLabel, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(e.dateStr, style: const TextStyle(color: Colors.white38, fontSize: 10)),
       ],
     );
   }
 
-  Widget _miniCard(_CompareEntry e, Color color, String role) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Image.file(File(e.path), height: 50, width: double.infinity, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(height: 50, color: Colors.grey.shade200),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(e.dayLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
-            Text(e.dateStr, style: const TextStyle(fontSize: 9, color: Colors.grey)),
-          ],
-        ),
-      ),
-    );
+  Widget _sectionDot(Color color) {
+    return Container(width: 6, height: 6,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle));
   }
 }
 
 class _CompareEntry {
-  final String key;
-  final String path;
-  final String dayLabel;
-  final String dateStr;
+  final String key, path, dayLabel, dateStr;
   final String? note;
-
   const _CompareEntry({
-    required this.key,
-    required this.path,
-    required this.dayLabel,
-    required this.dateStr,
-    this.note,
+    required this.key, required this.path,
+    required this.dayLabel, required this.dateStr, this.note,
   });
 }

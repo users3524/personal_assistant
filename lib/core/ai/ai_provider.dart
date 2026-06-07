@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ai/ai_service.dart';
 import '../../core/ai/openai_service.dart';
+import '../../core/ai/offline_review_generator.dart';
 import '../database/app_database_provider.dart';
 import '../database/user_preferences_dao.dart';
 
@@ -16,9 +17,9 @@ class AIConfig {
   final String apiKey;
 
   const AIConfig({
-    this.provider = 'OpenAI',
-    this.baseUrl = 'https://api.openai.com/v1',
-    this.model = 'gpt-4o-mini',
+    this.provider = '离线模式',
+    this.baseUrl = '',
+    this.model = '',
     this.apiKey = '',
   });
 
@@ -36,9 +37,8 @@ class AIConfig {
       );
 
   /// 是否已配置可用的 AI 服务
-  /// Ollama 本地模型不需要 API Key
   bool get isConfigured =>
-      provider == '本地模型 (Ollama)' || apiKey.isNotEmpty;
+      provider == '离线模式' || apiKey.isNotEmpty;
 }
 
 /// AI 配置 Provider（可读写，启动时自动加载数据库配置）
@@ -92,6 +92,12 @@ class AIConfigNotifier extends StateNotifier<AIConfig> {
 final aiServiceProvider = Provider<AIService?>((ref) {
   final config = ref.watch(aiConfigProvider);
   if (!config.isConfigured) return null;
+
+  // 离线模式：使用模板引擎生成，无需网络和 API Key
+  if (config.provider == '离线模式') {
+    return OfflineReviewGenerator();
+  }
+
   return OpenAIService(
     baseUrl: config.baseUrl,
     apiKey: config.apiKey,

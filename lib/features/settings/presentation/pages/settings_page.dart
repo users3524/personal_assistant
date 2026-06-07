@@ -16,6 +16,11 @@ import '../../../../features/collection/presentation/providers/antique_providers
 
 // AI 供应商预设
 const _aiProviders = {
+  '离线模式': {
+    'baseUrl': '',
+    'models': [],
+    'defaultModel': '',
+  },
   'OpenAI': {
     'baseUrl': 'https://api.openai.com/v1',
     'models': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
@@ -41,11 +46,6 @@ const _aiProviders = {
     'models': [],
     'defaultModel': '',
   },
-  '本地模型 (Ollama)': {
-    'baseUrl': '',
-    'models': ['qwen2.5:7b', 'qwen2.5:3b', 'phi3:mini', 'llama3.2:3b'],
-    'defaultModel': 'qwen2.5:7b',
-  },
 };
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -59,14 +59,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _apiKeyCtrl = TextEditingController();
   final _baseUrlCtrl = TextEditingController();
   final _modelCtrl = TextEditingController();
-  String _selectedProvider = 'OpenAI';
+  String _selectedProvider = '离线模式';
   bool _showApiKey = false;
   bool _showKeyInDialog = false;
 
   String _savedApiKey = '';
-  String _savedBaseUrl = 'https://api.openai.com/v1';
-  String _savedModel = 'gpt-4o-mini';
-  String _savedProvider = 'OpenAI';
+  String _savedBaseUrl = '';
+  String _savedModel = '';
+  String _savedProvider = '离线模式';
   bool _notificationEnabled = true;
   bool _weeklyReminder = true;
 
@@ -80,7 +80,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _loadSettings();
   }
 
-  bool get _isOllama => _selectedProvider == '本地模型 (Ollama)';
+  bool get _isOffline => _selectedProvider == '离线模式';
 
   Future<void> _loadSettings() async {
     try {
@@ -197,50 +197,57 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _sectionHeader('AI 配置'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.cloud),
-                  title: const Text('AI 平台'),
-                  subtitle: Text(_selectedProvider),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showProviderPicker(),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.dns),
-                  title: const Text('API 地址'),
-                  subtitle: _isOllama
-                      ? Text(_savedBaseUrl.isEmpty
-                          ? '需填写电脑局域网 IP（如 192.168.1.100:11434）'
-                          : _savedBaseUrl,
-                          style: TextStyle(
-                            color: _savedBaseUrl.isEmpty ? Colors.orange : null,
-                            fontSize: 12,
-                          ))
-                      : Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
-                  trailing: const Icon(Icons.edit),
-                  onTap: () => _showTextEditor(
-                    'API 地址', _baseUrlCtrl,
-                    (v) { setState(() => _savedBaseUrl = v); _baseUrlCtrl.text = v; },
-                  ),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.model_training),
-                  title: const Text('模型'),
-                  subtitle: Text(_savedModel.isEmpty ? '未设置' : _savedModel),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showModelPicker(),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                _isOllama
-                    ? const ListTile(
-                        leading: Icon(Icons.key_off),
-                        title: Text('API Key'),
-                        subtitle: Text('本地模型无需 API Key', style: TextStyle(color: Colors.green)),
-                      )
-                    : ListTile(
+            child: _isOffline
+                // 离线模式：简洁展示
+                ? Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.cloud),
+                        title: const Text('AI 平台'),
+                        subtitle: Text(_selectedProvider),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _showProviderPicker(),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      const ListTile(
+                        leading: Icon(Icons.wifi_off, color: Colors.green),
+                        title: Text('离线模式已启用'),
+                        subtitle: Text('无需网络，App 内置模板引擎即时生成日报/周报', style: TextStyle(fontSize: 12)),
+                        trailing: Icon(Icons.check_circle, color: Colors.green),
+                      ),
+                    ],
+                  )
+                // 在线模式：完整配置
+                : Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.cloud),
+                        title: const Text('AI 平台'),
+                        subtitle: Text(_selectedProvider),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _showProviderPicker(),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.dns),
+                        title: const Text('API 地址'),
+                        subtitle: Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
+                        trailing: const Icon(Icons.edit),
+                        onTap: () => _showTextEditor(
+                          'API 地址', _baseUrlCtrl,
+                          (v) { setState(() => _savedBaseUrl = v); _baseUrlCtrl.text = v; },
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.model_training),
+                        title: const Text('模型'),
+                        subtitle: Text(_savedModel.isEmpty ? '未设置' : _savedModel),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _showModelPicker(),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
                         leading: const Icon(Icons.key),
                         title: const Text('API Key'),
                         subtitle: Text(
@@ -265,16 +272,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                         onTap: () => _showApiKeyEditor(),
                       ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.wifi_tethering),
-                  title: const Text('检测连接'),
-                  subtitle: const Text('测试服务器是否可达，查看可用模型'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _testOllamaConnection(),
-                ),
-              ],
-            ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.wifi_tethering),
+                        title: const Text('检测连接'),
+                        subtitle: const Text('测试服务器是否可达'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _testOllamaConnection(),
+                      ),
+                    ],
+                  ),
           ),
           const SizedBox(height: 16),
 
@@ -467,7 +474,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             ..._aiProviders.keys.map((provider) => RadioListTile<String>(
                   title: Text(provider),
-                  subtitle: Text(_aiProviders[provider]!['baseUrl']!.toString()),
+                  subtitle: provider == '离线模式'
+                      ? const Text('App 内置模板引擎，无需网络')
+                      : Text(_aiProviders[provider]!['baseUrl']!.toString()),
                   value: provider,
                   groupValue: _selectedProvider,
                   onChanged: (v) {

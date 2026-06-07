@@ -87,6 +87,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 onSelected: (value) => _handleAction(context, item, value),
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                  const PopupMenuItem(value: 'compare', child: Text('对比')),
                   const PopupMenuItem(value: 'delete', child: Text('删除')),
                 ],
               ),
@@ -833,6 +834,238 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   // ===== 操作 =====
 
+  /// 选择两个打卡记录进行对比
+  Future<void> _showComparePicker(BuildContext context, AntiqueEntity item) async {
+    final logs = await _logsFuture;
+    // 筛出有照片的记录
+    final withPhotos = logs.where((l) => l.photoPaths.isNotEmpty).toList();
+    if (withPhotos.length < 2) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('需要至少两条带照片的打卡记录才能对比')),
+        );
+      }
+      return;
+    }
+    // 按日期升序排列
+    withPhotos.sort((a, b) => a.date.compareTo(b.date));
+
+    String? leftKey;
+    String? rightKey;
+    // key = "${log.date.toIso8601String()}|${log.photoPaths.first}"
+    for (final log in withPhotos) {
+      final k = '${log.date.toIso8601String()}|${log.photoPaths.first}';
+      leftKey ??= k;
+      if (rightKey == null && k != leftKey) rightKey = k;
+    }
+
+    if (!mounted) return;
+    // 弹选择+对比对话框
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => _CompareSelectDialog(
+        logs: withPhotos,
+        item: item,
+        initialLeft: leftKey!,
+        initialRight: rightKey!,
+      ),
+    );
+
+    if (result != null && mounted) {
+      _showCompareResult(context, item, result['left']!, result['right']!, withPhotos);
+    }
+  }
+
+  /// 全屏对比结果
+  void _showCompareResult(
+    BuildContext context,
+    AntiqueEntity item,
+    String leftKey,
+    String rightKey,
+    List<PattingLogEntity> logs,
+  ) {
+    PattingLogEntity? findLog(String key) {
+      for (final l in logs) {
+        if ('${l.date.toIso8601String()}|${l.photoPaths.first}' == key) return l;
+      }
+      return null;
+    }
+
+    final leftLog = findLog(leftKey);
+    final rightLog = findLog(rightKey);
+    if (leftLog == null || rightLog == null) return;
+
+    final leftDays = leftLog.date.difference(item.acquiredDate).inDays;
+    final rightDays = rightLog.date.difference(item.acquiredDate).inDays;
+    final leftLabel = leftDays == 0 ? '入手当天' : '入手${leftDays}天';
+    final rightLabel = rightDays == 0 ? '入手当天' : '入手${rightDays}天';
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: const Text('对比', style: TextStyle(color: Colors.white, fontSize: 16)),
+            centerTitle: true,
+          ),
+          body: Column(
+            children: [
+              // 上图：左右并排图片
+              Expanded(
+                child: Row(
+                  children: [
+                    // 左侧
+                    Expanded(
+                      child: _compareImageTile(leftLog.photoPaths.first, leftLabel, leftLog.date),
+                    ),
+                    // 分割线
+                    Container(width: 1, color: Colors.white30),
+                    // 右侧
+                    Expanded(
+                      child: _compareImageTile(rightLog.photoPaths.first, rightLabel, rightLog.date),
+                    ),
+                  ],
+                ),
+              ),
+              // 下图：信息对比卡片
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(item.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _compareStatBox('${leftDays}天', leftLabel, Colors.teal),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text('VS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.grey)),
+                        ),
+                        Expanded(
+                          child: _compareStatBox('${rightDays}天', rightLabel, Colors.orange),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // 盘玩天数差值
+                    Center(
+                      child: Text(
+                        '${(rightDays - leftDays).abs()} 天的变化',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    if (leftLog.note != null && leftLog.note!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _compareNoteRow('当时', leftLabel, leftLog.note!),
+                    ],
+                    if (rightLog.note != null && rightLog.note!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _compareNoteRow('现在', rightLabel, rightLog.note!),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _compareImageTile(String path, String label, DateTime date) {
+    final y = (date.year % 100).toString().padLeft(2, '0');
+    final mo = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final h = date.hour.toString().padLeft(2, '0');
+    final mi = date.minute.toString().padLeft(2, '0');
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        InteractiveViewer(
+          maxScale: 3,
+          child: Image.file(File(path), fit: BoxFit.contain),
+        ),
+        Positioned(
+          bottom: 8, left: 8, right: 8,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 2),
+              Text('$y/$mo/$d $h:$mi', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _compareStatBox(String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.7))),
+        ],
+      ),
+    );
+  }
+
+  Widget _compareNoteRow(String prefix, String label, String note) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$prefix ', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+          Expanded(
+            child: Text(note, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleAction(
     BuildContext context,
     AntiqueEntity item,
@@ -844,6 +1077,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         break;
       case 'delete':
         _confirmDelete(context, item);
+        break;
+      case 'compare':
+        _showComparePicker(context, item);
         break;
     }
   }
@@ -872,5 +1108,156 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       await ref.read(antiqueListProvider.notifier).deleteItem(item.id!);
       if (mounted) context.pop();
     }
+  }
+}
+
+// ===== 对比选择对话框 =====
+
+class _CompareSelectDialog extends StatefulWidget {
+  final List<PattingLogEntity> logs;
+  final AntiqueEntity item;
+  final String initialLeft;
+  final String initialRight;
+
+  const _CompareSelectDialog({
+    required this.logs,
+    required this.item,
+    required this.initialLeft,
+    required this.initialRight,
+  });
+
+  @override
+  State<_CompareSelectDialog> createState() => _CompareSelectDialogState();
+}
+
+class _CompareSelectDialogState extends State<_CompareSelectDialog> {
+  late String _leftKey;
+  late String _rightKey;
+
+  Map<String, String> _keyMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _leftKey = widget.initialLeft;
+    _rightKey = widget.initialRight;
+    for (final log in widget.logs) {
+      final k = '${log.date.toIso8601String()}|${log.photoPaths.first}';
+      final days = log.date.difference(widget.item.acquiredDate).inDays;
+      final label = days == 0 ? '入手当天' : '入手${days}天';
+      final y = (log.date.year % 100).toString().padLeft(2, '0');
+      final mo = log.date.month.toString().padLeft(2, '0');
+      final d = log.date.day.toString().padLeft(2, '0');
+      final h = log.date.hour.toString().padLeft(2, '0');
+      final mi = log.date.minute.toString().padLeft(2, '0');
+      _keyMap[k] = '$label  $y/$mo/$d $h:$mi';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final leftLabel = _keyMap[_leftKey] ?? '';
+    final rightLabel = _keyMap[_rightKey] ?? '';
+
+    return AlertDialog(
+      title: const Text('选择对比记录'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 左记录选择
+          DropdownButtonFormField<String>(
+            value: _leftKey,
+            decoration: const InputDecoration(
+              labelText: '左侧（之前）',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: _keyMap.entries.map((e) => DropdownMenuItem(
+              value: e.key,
+              child: Text(e.value, style: const TextStyle(fontSize: 13)),
+            )).toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _leftKey = v);
+            },
+          ),
+          const SizedBox(height: 12),
+          // 分割
+          Row(
+            children: const [
+              Expanded(child: Divider()),
+              Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('VS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+              Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 右记录选择
+          DropdownButtonFormField<String>(
+            value: _rightKey,
+            decoration: const InputDecoration(
+              labelText: '右侧（之后）',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: _keyMap.entries.map((e) => DropdownMenuItem(
+              value: e.key,
+              child: Text(e.value, style: const TextStyle(fontSize: 13)),
+            )).toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _rightKey = v);
+            },
+          ),
+          const SizedBox(height: 16),
+          // 预览 — 两张小图并排
+          if (_leftKey != _rightKey)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 120,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Image.file(
+                        File(_leftKey.split('|').last),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Icon(Icons.broken_image)),
+                      ),
+                    ),
+                    Container(width: 2, color: Colors.white),
+                    Expanded(
+                      child: Image.file(
+                        File(_rightKey.split('|').last),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Icon(Icons.broken_image)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_leftKey != _rightKey)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(leftLabel, style: const TextStyle(fontSize: 11, color: Colors.teal)),
+            ),
+          if (_leftKey != _rightKey)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(rightLabel, style: const TextStyle(fontSize: 11, color: Colors.orange)),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _leftKey == _rightKey
+              ? null
+              : () => Navigator.pop(context, {'left': _leftKey, 'right': _rightKey}),
+          child: const Text('开始对比'),
+        ),
+      ],
+    );
   }
 }

@@ -378,12 +378,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                   final hasReview = reviewDays.contains(dayNum);
 
                   return GestureDetector(
-                    onTap: () {
-                      setState(() => _selectedDate = date);
-                      if (hasReview) {
-                        _showReviewEntry(context, date);
-                      }
-                    },
+                    onTap: () => setState(() => _selectedDate = date),
                     child: Container(
                       height: 42,
                       alignment: Alignment.center,

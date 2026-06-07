@@ -8,6 +8,10 @@
 
 name: 构建 APK 并发布 Release
 
+# 显式授权：允许创建 Release 和上传附件
+permissions:
+  contents: write
+
 on:
   push:
     tags:
@@ -47,7 +51,7 @@ jobs:
 
       # 5. 运行 drift 代码生成
       - name: 生成代码
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       # 6. 构建 debug APK
       #    后续如需 release 签名，在 secrets 里配 KEY_STORE_* 并加 signingConfigs

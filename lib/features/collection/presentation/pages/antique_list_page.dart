@@ -117,8 +117,14 @@ class AntiqueListPage extends ConsumerWidget {
     WidgetRef ref,
     List<AntiqueEntity> items,
   ) {
+    final photosAsync = ref.watch(latestPattingPhotosProvider);
+    final photos = photosAsync.valueOrNull ?? {};
+
     return RefreshIndicator(
-      onRefresh: () => ref.read(antiqueListProvider.notifier).refresh(),
+      onRefresh: () async {
+        ref.invalidate(latestPattingPhotosProvider);
+        await ref.read(antiqueListProvider.notifier).refresh();
+      },
       child: GridView.builder(
         padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -130,8 +136,10 @@ class AntiqueListPage extends ConsumerWidget {
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
+          final latestPhoto = photos[item.id];
           return AntiqueGridCard(
             item: item,
+            latestPhoto: latestPhoto,
             onTap: () => context.push('/collection/${item.id}'),
           );
         },

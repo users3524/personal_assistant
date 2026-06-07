@@ -250,6 +250,22 @@ class AntiqueDao {
     );
   }
 
+  /// 批量获取每个藏品最新一条有照片的打卡记录的第一张图路径
+  /// 返回 Map<itemId, photoPath> — 没有打卡照片的 item 不出现在结果中
+  Future<Map<int, String>> getLatestPattingPhotos() async {
+    final query = _db.select(_db.pattingLogs)
+      ..orderBy([(t) => OrderingTerm.desc(t.date)]);
+    final allLogs = await query.get();
+    final result = <int, String>{};
+    for (final row in allLogs) {
+      if (result.containsKey(row.itemId)) continue; // 已取到最新
+      if (row.photoPaths.isNotEmpty) {
+        result[row.itemId] = row.photoPaths.first;
+      }
+    }
+    return result;
+  }
+
   // ===== 统计 =====
 
   Future<Map<String, int>> countByCategory() async {

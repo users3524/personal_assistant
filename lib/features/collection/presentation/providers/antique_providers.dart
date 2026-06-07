@@ -114,3 +114,11 @@ final totalValuationProvider = FutureProvider<double>((ref) {
     return repo.totalValuation();
   });
 });
+
+// ===== 最新打卡照片（列表页封面） =====
+
+final latestPattingPhotosProvider = FutureProvider<Map<int, String>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.getLatestPattingPhotos();
+  });
+});

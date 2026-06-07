@@ -9,16 +9,20 @@ import '../../domain/entities/antique_entity.dart';
 
 class AntiqueGridCard extends StatelessWidget {
   final AntiqueEntity item;
+  final String? latestPhoto;
   final VoidCallback onTap;
 
   const AntiqueGridCard({
     super.key,
     required this.item,
+    this.latestPhoto,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final coverPath = latestPhoto ?? (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
+
     return GestureDetector(
       onTap: onTap,
       child: Card(
@@ -26,14 +30,31 @@ class AntiqueGridCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 封面图
+            // 封面图 — 优先最新打卡照片
             Expanded(
-              child: item.imagePaths.isNotEmpty
-                  ? Image.file(
-                      File(item.imagePaths.first),
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (_, __, ___) => _buildPlaceholder(),
+              child: coverPath != null
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          File(coverPath),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                        ),
+                        if (latestPhoto != null)
+                          Positioned(
+                            top: 4, left: 4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.pink.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('最新', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                      ],
                     )
                   : _buildPlaceholder(),
             ),

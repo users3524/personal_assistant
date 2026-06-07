@@ -64,6 +64,10 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
       _dao.addPattingLog(log);
 
   @override
+  Future<Map<int, String>> getLatestPattingPhotos() =>
+      _dao.getLatestPattingPhotos();
+
+  @override
   Future<Map<String, int>> countByCategory() => _dao.countByCategory();
 
   @override

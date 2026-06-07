@@ -193,7 +193,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   }
 
   Widget _buildPickCard(BuildContext context, AntiqueEntity item) {
-    final cover = item.imagePaths.isNotEmpty ? item.imagePaths.first : null;
+    final photosAsync = ref.watch(latestPattingPhotosProvider);
+    final latestPhoto = photosAsync.valueOrNull?[item.id];
+    final cover = latestPhoto ?? (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
 
     return GestureDetector(
       onTap: () => context.push('/collection/${item.id}'),

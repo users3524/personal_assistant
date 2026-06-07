@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/database/app_database_provider.dart';
 import '../core/database/user_preferences_dao.dart';
+import '../core/notification_service.dart';
 import '../l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
@@ -36,6 +37,10 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
       default:
         ref.read(themeModeProvider.notifier).state = ThemeMode.system;
     }
+  } catch (_) {}
+  // 初始化通知服务
+  try {
+    await NotificationService().init();
   } catch (_) {}
   return true;
 });

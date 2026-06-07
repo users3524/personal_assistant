@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 import '../../../../features/collection/presentation/providers/antique_providers.dart'
     show dailyPickConfigProvider;
 import '../../../../core/database/app_settings_persistence.dart';
+import '../../../../core/notification_service.dart';
 import 'category_management_page.dart';
 
 // AI 供应商预设
@@ -104,6 +105,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _appSettings.setNotificationHintShown();
       _showNotificationHint();
     }
+
+    // 初始化通知服务并调度
+    final notif = NotificationService();
+    await notif.init();
+    await _updateNotifications();
+  }
+
+  Future<void> _updateNotifications() async {
+    final notif = NotificationService();
+    await notif.updateFromSettings(
+      dailyEnabled: _notificationEnabled,
+      dailyHour: _notificationTime.hour,
+      dailyMinute: _notificationTime.minute,
+      weeklyEnabled: _weeklyReminder,
+      weeklyHour: _weeklyTime.hour,
+      weeklyMinute: _weeklyTime.minute,
+    );
   }
 
   void _showNotificationHint() {
@@ -311,6 +329,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onChanged: (v) {
                     setState(() => _notificationEnabled = v);
                     _prefsDao?.setNotificationEnabled(v);
+                    _updateNotifications();
                   },
                 ),
                 if (_notificationEnabled)
@@ -326,7 +345,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   title: const Text('每周周报提醒'),
                   subtitle: Text('每周日 ${_weeklyTime.format(context)}'),
                   value: _weeklyReminder,
-                  onChanged: (v) => setState(() => _weeklyReminder = v),
+                  onChanged: (v) {
+                    setState(() => _weeklyReminder = v);
+                    _updateNotifications();
+                  },
                 ),
                 if (_weeklyReminder)
                   ListTile(
@@ -662,6 +684,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _prefsDao?.setWeeklyReminder(true);
         }
       });
+      _updateNotifications();
     }
   }
 

@@ -2,6 +2,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -417,16 +418,76 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  // ===== 盘玩打卡（修复拍照后灰屏、打卡后刷新） =====
+  // ===== 盘玩打卡 =====
 
-  /// 将 XFile 保存到应用私有目录（解决 content:// URI 无法被 File() 读取）
-  Future<String> _saveImageToAppDir(XFile photo) async {
+  void _addPattingCheckin(AntiqueEntity item) {
+    final picker = ImagePicker();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('记录此刻', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.teal),
+              title: const Text('拍照'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                _pickAndShowCheckin(item, picker, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('从相册选择'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                _pickAndShowCheckin(item, picker, ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 统一入口：打开相机/相册 → 读字节 → 立刻弹对话框
+  Future<void> _pickAndShowCheckin(
+    AntiqueEntity item,
+    ImagePicker picker,
+    ImageSource source,
+  ) async {
+    try {
+      final photo = await picker.pickImage(source: source, maxWidth: 1024);
+      if (photo == null || !mounted) return;
+
+      // 立刻把图片读到内存 — Image.memory 不需要文件路径，不会灰屏
+      final bytes = await photo.readAsBytes();
+      if (!mounted) return;
+      _showCheckinDialog(item, bytes);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('图片读取失败: $e')),
+        );
+        // 即使图片失败也允许纯文字打卡
+        if (mounted) _showCheckinDialog(item, null);
+      }
+    }
+  }
+
+  /// 将 bytes 写入本地文件，返回路径（仅在保存打卡记录时调用）
+  Future<String> _saveImageToAppDir(Uint8List bytes) async {
     final dir = await getApplicationDocumentsDirectory();
     final imgDir = Directory('${dir.path}/patting_images');
     if (!await imgDir.exists()) await imgDir.create(recursive: true);
     final fileName = 'patting_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final dest = File('${imgDir.path}/$fileName');
-    final bytes = await photo.readAsBytes();
     await dest.writeAsBytes(bytes);
     return dest.path;
   }
@@ -460,64 +521,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  void _addPattingCheckin(AntiqueEntity item) {
-    final picker = ImagePicker();
-
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('记录此刻', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.teal),
-              title: const Text('拍照'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                try {
-                  final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1024);
-                  if (photo != null && mounted) {
-                    // 先保存到本地，再弹对话框（避免对话框内异步加载卡死）
-                    final savedPath = await _saveImageToAppDir(photo);
-                    if (mounted) _showCheckinDialog(item, savedPath);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('拍照失败: $e')));
-                  }
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.blue),
-              title: const Text('从相册选择'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                try {
-                  final photo = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
-                  if (photo != null && mounted) {
-                    final savedPath = await _saveImageToAppDir(photo);
-                    if (mounted) _showCheckinDialog(item, savedPath);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('选择失败: $e')));
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
+  void _showCheckinDialog(AntiqueEntity item, Uint8List? imageBytes) {
     final noteCtrl = TextEditingController();
 
     showDialog(
@@ -529,12 +533,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 图片预览 — 不再异步加载，传入时已保存好
-              if (photoPath != null && photoPath.isNotEmpty)
+              // 图片预览 — 用 Image.memory，彻底避免 content:// URI 问题
+              if (imageBytes != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(photoPath),
+                  child: Image.memory(
+                    imageBytes,
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -574,7 +578,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   isDense: true,
                 ),
                 maxLines: 3,
-                autofocus: photoPath == null,
+                autofocus: imageBytes == null,
               ),
             ],
           ),
@@ -588,6 +592,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             onPressed: () async {
               final note = noteCtrl.text.trim();
               try {
+                // 到保存时才把图片写入文件
+                String? savedPath;
+                if (imageBytes != null) {
+                  savedPath = await _saveImageToAppDir(imageBytes);
+                }
+
                 final repo = await ref.read(antiqueRepositoryProvider.future);
                 await repo.addPattingLog(PattingLogEntity(
                   itemId: widget.itemId,
@@ -595,7 +605,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   durationMinutes: 0,
                   method: 'bare_hand',
                   note: note.isEmpty ? null : note,
-                  photoPaths: (photoPath != null && photoPath.isNotEmpty) ? [photoPath] : [],
+                  photoPaths: savedPath != null ? [savedPath] : [],
                 ));
                 if (ctx.mounted) Navigator.pop(ctx);
                 ref.invalidate(antiqueRepositoryProvider);

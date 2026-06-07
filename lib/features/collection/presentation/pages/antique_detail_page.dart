@@ -22,12 +22,31 @@ class AntiqueDetailPage extends ConsumerStatefulWidget {
 }
 
 class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
+  late Future<AntiqueEntity?> _itemFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _itemFuture = _loadItem();
+  }
+
+  Future<AntiqueEntity?> _loadItem() {
+    return ref
+        .read(antiqueRepositoryProvider.future)
+        .then((r) => r.getById(widget.itemId));
+  }
+
+  void _refreshPage() {
+    if (!mounted) return;
+    setState(() {
+      _itemFuture = _loadItem();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<AntiqueEntity?>(
-      future: ref
-          .read(antiqueRepositoryProvider.future)
-          .then((r) => r.getById(widget.itemId)),
+      future: _itemFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -623,12 +642,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   note: note.isEmpty ? null : note,
                   photoPaths: (fileExists) ? [photoPath!] : [],
                 ));
+                // 先关对话框
                 if (ctx.mounted) Navigator.pop(ctx);
-                ref.invalidate(antiqueRepositoryProvider);
-                ref.invalidate(antiqueListProvider);
-                ref.invalidate(categoryCountProvider);
-                ref.invalidate(totalValuationProvider);
-                if (mounted) setState(() {});
+                // 刷新页面数据（替换 future，不 invalidate provider）
+                _refreshPage();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),

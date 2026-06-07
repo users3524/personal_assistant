@@ -213,15 +213,20 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   Widget _buildCalendarGrid() {
     final today = DateTime.now();
+    final now = DateTime(today.year, today.month, today.day);
+    final monthlyReviews = ref.watch(dailyListByMonthProvider(now.month));
+    final reviewDays = monthlyReviews.valueOrNull
+        ?.map((r) => r.date.day)
+        .toSet() ?? <int>{};
 
     if (_viewMode == CalendarView.week) {
-      return _buildWeekGrid(today);
+      return _buildWeekGrid(today, reviewDays);
     } else {
-      return _buildMonthGrid(today);
+      return _buildMonthGrid(today, reviewDays);
     }
   }
 
-  Widget _buildWeekGrid(DateTime today) {
+  Widget _buildWeekGrid(DateTime today, Set<int> reviewDays) {
     final weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
     return Padding(
@@ -254,35 +259,55 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
               final isToday = _isSameDay(date, today);
               final isSelected = _isSameDay(date, _selectedDate);
               final isWeekend = index >= 5;
+              final hasReview = reviewDays.contains(date.day);
 
               return GestureDetector(
                 onTap: () => setState(() => _selectedDate = date),
                 child: Container(
                   width: 38,
-                  height: 38,
+                  height: 42,
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : isToday
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.1)
-                            : null,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: isToday ? FontWeight.bold : null,
-                      color: isSelected
-                          ? Colors.white
-                          : isWeekend
-                              ? Colors.grey
-                              : null,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 34,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : isToday
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.1)
+                                  : null,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isToday ? FontWeight.bold : null,
+                            color: isSelected
+                                ? Colors.white
+                                : isWeekend
+                                    ? Colors.grey
+                                    : null,
+                          ),
+                        ),
+                      ),
+                      if (hasReview)
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Colors.teal,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               );
@@ -293,7 +318,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     );
   }
 
-  Widget _buildMonthGrid(DateTime today) {
+  Widget _buildMonthGrid(DateTime today, Set<int> reviewDays) {
     final firstDay = DateTime(_monthStart.year, _monthStart.month, 1);
     final lastDay = DateTime(_monthStart.year, _monthStart.month + 1, 0);
     // DateTime.weekday: Mon=1 .. Sun=7, 转为 Mon=0 .. Sun=6
@@ -336,11 +361,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                   final isToday = _isSameDay(date, today);
                   final isSelected = _isSameDay(date, _selectedDate);
                   final isWeekend = colIndex >= 5;
+                  final hasReview = reviewDays.contains(dayNum);
 
                   return GestureDetector(
                     onTap: () => setState(() => _selectedDate = date),
                     child: Container(
-                      height: 38,
+                      height: 42,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: isSelected
@@ -353,15 +379,30 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                                 : null,
                         shape: BoxShape.circle,
                       ),
-                      child: Text(
-                        '$dayNum',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isToday ? FontWeight.bold : null,
-                          color: isSelected
-                              ? Colors.white
-                              : (isWeekend ? Colors.grey : null),
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$dayNum',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isToday ? FontWeight.bold : null,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isWeekend ? Colors.grey : null),
+                            ),
+                          ),
+                          if (hasReview)
+                            Container(
+                              width: 5,
+                              height: 5,
+                              margin: const EdgeInsets.only(top: 1),
+                              decoration: const BoxDecoration(
+                                color: Colors.teal,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   );
@@ -563,7 +604,14 @@ class _DailyReviewCard extends ConsumerWidget {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => context.push('/review/daily/new'),
+            onTap: () {
+              if (hasReviewed) {
+                // 已复盘 → 查看历史记录
+                context.push('/review/daily/${today.toIso8601String().split('T')[0]}');
+              } else {
+                context.push('/review/daily/new');
+              }
+            },
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(

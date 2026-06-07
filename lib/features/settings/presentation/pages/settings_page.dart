@@ -6,11 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ai/ai_provider.dart';
 import '../../../../core/database/backup_service.dart';
-import '../../../../core/database/backup_service.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
 import 'package:dio/dio.dart';
-import 'category_management_page.dart';
 import '../../../../features/collection/presentation/providers/antique_providers.dart'
     show dailyPickConfigProvider;
 
@@ -69,6 +67,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _savedProvider = '离线模式';
   bool _notificationEnabled = true;
   bool _weeklyReminder = true;
+  TimeOfDay _notificationTime = const TimeOfDay(hour: 21, minute: 0);
+  TimeOfDay _weeklyTime = const TimeOfDay(hour: 20, minute: 0);
 
   UserPreferencesDao? _prefsDao;
 
@@ -96,6 +96,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _savedProvider = prefs.aiProvider;
         _selectedProvider = prefs.aiProvider;
         _notificationEnabled = prefs.notificationEnabled;
+        // 加载通知时间
+        final dailyTime = prefs.dailyReviewTime;
+        if (dailyTime.isNotEmpty && dailyTime.contains(':')) {
+          final parts = dailyTime.split(':');
+          _notificationTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 21,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+        // 周报时间存在提醒中就用默认的每周日，时间复用 weeklyReportDay 中的时间格式
+        _weeklyReminder = prefs.weeklyReportDay == 'sunday';
         _baseUrlCtrl.text = _savedBaseUrl;
         _modelCtrl.text = _savedModel;
       });
@@ -149,18 +160,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          _sectionHeader('外观'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: ListTile(
-              leading: const Icon(Icons.brightness_auto, color: Colors.blueGrey),
-              title: const Text('主题'),
-              subtitle: const Text('跟随系统', style: TextStyle(color: Colors.green)),
-              trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
-            ),
-          ),
-          const SizedBox(height: 12),
-
           _sectionHeader('AI 配置'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -259,37 +258,43 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 SwitchListTile(
                   title: const Text('每日复盘提醒'),
-                  subtitle: const Text('默认 21:00'),
+                  subtitle: Text('每日 ${_notificationTime.format(context)}'),
                   value: _notificationEnabled,
                   onChanged: (v) {
                     setState(() => _notificationEnabled = v);
                     _prefsDao?.setNotificationEnabled(v);
                   },
                 ),
+                if (_notificationEnabled)
+                  ListTile(
+                    leading: const Icon(Icons.access_time),
+                    title: const Text('提醒时间'),
+                    subtitle: Text(_notificationTime.format(context)),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _pickTime(context, true),
+                  ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 SwitchListTile(
                   title: const Text('每周周报提醒'),
-                  subtitle: const Text('每周日 20:00'),
+                  subtitle: Text('每周日 ${_weeklyTime.format(context)}'),
                   value: _weeklyReminder,
                   onChanged: (v) => setState(() => _weeklyReminder = v),
                 ),
+                if (_weeklyReminder)
+                  ListTile(
+                    leading: const Icon(Icons.access_time),
+                    title: const Text('提醒时间'),
+                    subtitle: Text(_weeklyTime.format(context)),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _pickTime(context, false),
+                  ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('关于通知'),
+                  subtitle: Text('提醒需要 App 在后台运行权限，请在系统设置中允许通知', style: TextStyle(fontSize: 12)),
+                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          _sectionHeader('系统'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: ListTile(
-              leading: const Icon(Icons.category),
-              title: const Text('分类管理'),
-              subtitle: const Text('管理文玩类别和待办分类'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
-              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -364,28 +369,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   subtitle: const Text('从 JSON 备份文件恢复数据'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _importBackup(),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          _sectionHeader('分类'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.diamond),
-                  title: const Text('分类管理'),
-                  subtitle: const Text('管理文玩类别和待办分类'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CategoryManagementPage(),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -571,6 +554,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  // ===== 通知时间选择 =====
+  Future<void> _pickTime(BuildContext context, bool isDaily) async {
+    final initial = isDaily ? _notificationTime : _weeklyTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isDaily) {
+          _notificationTime = picked;
+          _prefsDao?.setDailyReviewTime('${picked.hour}:${picked.minute.toString().padLeft(2, '0')}');
+        } else {
+          _weeklyTime = picked;
+          _prefsDao?.setWeeklyReminder(true);
+        }
+      });
+    }
   }
 
   // ===== Ollama 连接检测 =====

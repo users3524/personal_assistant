@@ -61,6 +61,18 @@ class UserPreferencesDao {
         .write(UserPreferencesCompanion(dailyReviewTime: Value(time)));
   }
 
+  /// 更新每周周报提醒开关
+  Future<void> setWeeklyReminder(bool enabled) async {
+    await (_db.update(_db.userPreferences)..where((t) => t.id.equals(1)))
+        .write(UserPreferencesCompanion(weeklyReportDay: Value(enabled ? 'sunday' : '')));
+  }
+
+  /// 更新每周周报提醒时间
+  Future<void> setWeeklyReportTime(String time) async {
+    await (_db.update(_db.userPreferences)..where((t) => t.id.equals(1)))
+        .write(UserPreferencesCompanion(weeklyReportDay: Value(time)));
+  }
+
   // ===== 待办分类持久化 =====
 
   /// 获取持久化的待办分类列表

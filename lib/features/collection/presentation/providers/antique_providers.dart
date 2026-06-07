@@ -252,14 +252,24 @@ class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
 final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
-    final freq = await ref.watch(pattingFrequencyProvider.future);
     final config = ref.watch(dailyPickConfigProvider);
+    final now = DateTime.now();
+    final monthAgo = DateTime(now.year, now.month - 1, now.day);
 
-    // 按打卡频率排序
+    // 统计最近一个月（从今天往前推 30 天）每件藏品的打卡次数
+    final freq = <int, int>{};
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      final recentLogs = logs.where((l) => l.date.isAfter(monthAgo)).length;
+      freq[item.id!] = recentLogs;
+    }
+
+    // 按打卡频率升序排列（最少的排前面）
     items.sort((a, b) {
       final fa = freq[a.id] ?? 0;
       final fb = freq[b.id] ?? 0;
-      return fb.compareTo(fa);
+      return fa.compareTo(fb); // 升序：最少优先
     });
 
     // 按配置取每个类别指定数量

@@ -140,7 +140,11 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                 }
                 // —— 普通视图：选中日期的待办 ——
                 final dayTodos = _getTodosForDate(todos, _selectedDate);
-                if (dayTodos.isEmpty) {
+                // 今天额外显示过期待办
+                final isToday = _isSameDay(_selectedDate, DateTime.now());
+                final overdueTodos = isToday ? _getOverdueTodos(todos) : <TodoEntity>[];
+
+                if (dayTodos.isEmpty && overdueTodos.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -158,7 +162,9 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                     ),
                   );
                 }
-                return _buildTodoList(dayTodos);
+                // 合并过期待办和当日待办
+                final allTodos = [...overdueTodos, ...dayTodos];
+                return _buildTodoList(allTodos, isToday);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(child: Text('加载失败: $err')),
@@ -450,7 +456,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
       });
   }
 
-  Widget _buildTodoList(List<TodoEntity> todos) {
+  Widget _buildTodoList(List<TodoEntity> todos, [bool showOverdue = false]) {
     return RefreshIndicator(
       onRefresh: () => ref.read(todoListProvider.notifier).refresh(),
       child: ListView.builder(
@@ -521,6 +527,11 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         ),
         subtitle: Row(
           children: [
+            if (todo.isOverdue)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Icon(Icons.warning_amber, size: 14, color: Colors.red),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -534,12 +545,16 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             ),
             if (todo.dueDate != null) ...[
               const SizedBox(width: 8),
-              Icon(Icons.access_time, size: 12, color: Colors.grey),
+              Icon(Icons.access_time, size: 12,
+                  color: todo.isOverdue ? Colors.red : Colors.grey),
               const SizedBox(width: 2),
               Text(
                 '${todo.dueDate!.month}/${todo.dueDate!.day}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11,
+                    color: todo.isOverdue ? Colors.red : Colors.grey),
               ),
+              if (todo.isOverdue)
+                Text(' 已过期', style: TextStyle(fontSize: 10, color: Colors.red.shade400)),
             ],
             if (todo.priority >= 4)
               const Padding(
@@ -666,6 +681,13 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  /// 获取过期待办（pending 且 dueDate 早于今天）
+  List<TodoEntity> _getOverdueTodos(List<TodoEntity> todos) {
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
+    return todos.where((t) => t.isOverdue && t.dueDate!.isBefore(todayStart)).toList();
   }
 }
 

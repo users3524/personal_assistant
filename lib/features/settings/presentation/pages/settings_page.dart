@@ -381,26 +381,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
                   ),
                 ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                Consumer(builder: (context, ref, _) {
-                  return ListTile(
-                    leading: const Icon(Icons.grid_view),
-                    title: const Text('盘串网格列数'),
-                    subtitle: Text('当前 ${_gridColumns} 列'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [2, 3, 4].map((n) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: ChoiceChip(
-                          label: Text('$n', style: const TextStyle(fontSize: 12)),
-                          selected: _gridColumns == n,
-                          onSelected: (_) => _setGridColumns(n),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      )).toList(),
-                    ),
-                  );
-                }),
               ],
             ),
           ),
@@ -457,6 +437,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   )),
                   const SizedBox(height: 8),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.grid_view),
+                    title: const Text('盘串网格列数'),
+                    subtitle: Text('当前 ${_gridColumns} 列'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [2, 3, 4].map((n) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: ChoiceChip(
+                          label: Text('$n', style: const TextStyle(fontSize: 12)),
+                          selected: _gridColumns == n,
+                          onSelected: (_) => _setGridColumns(n),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )).toList(),
+                    ),
+                  ),
                 ],
               );
             }),

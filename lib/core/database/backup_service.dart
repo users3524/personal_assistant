@@ -15,19 +15,30 @@ class BackupService {
 
   BackupService(this._db);
 
-  /// 导出全部数据为 JSON 文件，返回文件路径
+  /// 导出全部数据为 JSON 文件，保存到应用文档目录（默认）
   Future<String> exportBackup() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return exportBackupTo(dir.path);
+  }
+
+  /// 导出到指定目录，返回实际文件路径
+  Future<String> exportBackupTo(String dirPath) async {
     final data = await _collectData();
     final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
-    final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now()
         .toIso8601String()
         .split('.')
         .first
         .replaceAll(':', '-');
-    final filePath = '${dir.path}/backup_$timestamp.json';
+    final fileName = 'backup_$timestamp.json';
+    final filePath = '$dirPath${Platform.pathSeparator}$fileName';
     await File(filePath).writeAsString(jsonStr);
     return filePath;
+  }
+
+  /// 让用户选择导出目录
+  Future<String?> pickExportDirectory() async {
+    return FilePicker.platform.getDirectoryPath();
   }
 
   /// 导入备份 — 从 JSON 文件恢复数据

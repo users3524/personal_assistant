@@ -475,10 +475,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _exportBackup() async {
     try {
       final db = await ref.read(appDatabaseProvider.future);
-      final path = await BackupService(db).exportBackup();
+      final backupService = BackupService(db);
+
+      // 让用户选择：存到默认目录 or 自定义目录
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('导出备份'),
+          content: const Text('选择保存位置：'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'default'),
+              child: const Text('默认位置'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'custom'),
+              child: const Text('选择目录'),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !mounted) return;
+
+      String path;
+      if (choice == 'custom') {
+        final dirPath = await backupService.pickExportDirectory();
+        if (dirPath == null || !mounted) return;
+        path = await backupService.exportBackupTo(dirPath);
+      } else {
+        path = await backupService.exportBackup();
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 3)),
+          SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 4)),
         );
       }
     } catch (e) {

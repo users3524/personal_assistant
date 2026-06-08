@@ -113,7 +113,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _initMetaCtrls();
         if (item.categoryMetadata != null) {
           for (final e in item.categoryMetadata!.entries) {
-            _metaCtrls[e.key]?.text = e.value;
+            if (_category == '核桃' && !e.key.contains('重量') && e.value.contains(',')) {
+              final parts = e.value.split(',');
+              _metaCtrls['左${e.key}']?.text = parts[0].trim();
+              _metaCtrls['右${e.key}']?.text = parts.length > 1 ? parts[1].trim() : '';
+            } else {
+              _metaCtrls[e.key]?.text = e.value;
+            }
           }
         }
         _acquiredDate = item.acquiredDate;
@@ -209,10 +215,29 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       // 收集分类专属字段
       final fields = _currentFields;
       final metadata = <String, String>{};
-      for (final f in fields) {
-        final ctrl = _metaCtrls[f];
-        if (ctrl != null && ctrl.text.trim().isNotEmpty) {
-          metadata[f] = ctrl.text.trim();
+      if (_category == '核桃') {
+        for (final f in fields.where((f) => !f.contains('重量'))) {
+          final leftCtrl = _metaCtrls['左$f'];
+          final rightCtrl = _metaCtrls['右$f'];
+          final left = leftCtrl?.text.trim() ?? '';
+          final right = rightCtrl?.text.trim() ?? '';
+          if (left.isNotEmpty || right.isNotEmpty) {
+            metadata[f] = '$left,$right';
+          }
+        }
+        // 重量单独处理
+        for (final f in fields.where((f) => f.contains('重量'))) {
+          final ctrl = _metaCtrls[f];
+          if (ctrl != null && ctrl.text.trim().isNotEmpty) {
+            metadata[f] = ctrl.text.trim();
+          }
+        }
+      } else {
+        for (final f in fields) {
+          final ctrl = _metaCtrls[f];
+          if (ctrl != null && ctrl.text.trim().isNotEmpty) {
+            metadata[f] = ctrl.text.trim();
+          }
         }
       }
 
@@ -252,6 +277,12 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
           note: null,
           photoPaths: _imagePaths,
         ));
+      }
+
+      // 如果分类不在预设列表中，自动添加
+      final catNotifier = ref.read(collectionCategoriesProvider.notifier);
+      if (!catNotifier.state.any((c) => c.name == _category)) {
+        catNotifier.add(CollectionCategory(name: _category, sortOrder: catNotifier.state.length));
       }
 
       // 刷新列表
@@ -410,25 +441,73 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     if (_currentFields.isNotEmpty) ...[
                       Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      ..._currentFields.map((field) {
-                        final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
-                        return Padding(
+                      if (_category == '核桃') ...[
+                        // 核桃专用：每个字段显示左右双输入
+                        ..._currentFields.where((f) => !f.contains('重量')).map((field) {
+                          final leftCtrl = _metaCtrls['左$field'] ??= TextEditingController();
+                          final rightCtrl = _metaCtrls['右$field'] ??= TextEditingController();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: leftCtrl,
+                                    decoration: InputDecoration(
+                                      hintText: '左$field',
+                                      border: const OutlineInputBorder(), isDense: true,
+                                      prefixText: '左 ',
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: rightCtrl,
+                                    decoration: InputDecoration(
+                                      hintText: '右$field',
+                                      border: const OutlineInputBorder(), isDense: true,
+                                      prefixText: '右 ',
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        // 重量字段单行
+                        ..._currentFields.where((f) => f.contains('重量')).map((field) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: TextField(
                             controller: _metaCtrls[field],
-                            decoration: InputDecoration(
-                              hintText: field,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            ),
-                            keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-                            inputFormatters: isNumeric
-                                ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
-                                : null,
+                            decoration: InputDecoration(hintText: field, border: const OutlineInputBorder(), isDense: true),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                           ),
-                        );
-                      }),
+                        )),
+                      ] else ...[
+                        // 非核桃：正常单行
+                        ..._currentFields.map((field) {
+                          final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: TextField(
+                              controller: _metaCtrls[field],
+                              decoration: InputDecoration(hintText: field, border: const OutlineInputBorder(), isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                              keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+                              inputFormatters: isNumeric
+                                  ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))] : null,
+                            ),
+                          );
+                        }),
+                      ],
                       const SizedBox(height: 16),
                     ],
 

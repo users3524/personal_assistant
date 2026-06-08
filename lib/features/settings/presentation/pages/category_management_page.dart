@@ -159,6 +159,15 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
               label: Text(st, style: const TextStyle(fontSize: 11)),
               deleteIcon: const Icon(Icons.close, size: 14),
               onDeleted: () {
+                // 检查是否有藏品使用此子类型
+                final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
+                final count = antiqueItems.where((i) => i.category == cat.name && i.subtype == st).length;
+                if (count > 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('「$st」有 $count 件藏品正在使用，不能删除')),
+                  );
+                  return;
+                }
                 ref.read(collectionCategoriesProvider.notifier).update(
                   cat.name,
                   cat.copyWith(subtypes: cat.subtypes.where((s) => s != st).toList()),

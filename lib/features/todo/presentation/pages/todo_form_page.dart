@@ -105,6 +105,13 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         await notifier.addTodo(todo);
       }
 
+      // 如果分类不在预设列表中，自动添加
+      final catsNotifier = ref.read(todoCategoriesProvider.notifier);
+      final currentCats = ref.read(todoCategoriesProvider).valueOrNull ?? [];
+      if (!currentCats.contains(_category)) {
+        catsNotifier.add(_category);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_isEditing ? '已更新' : '已创建')),

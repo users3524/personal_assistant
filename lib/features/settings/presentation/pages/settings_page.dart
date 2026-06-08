@@ -14,6 +14,7 @@ import '../../../../features/collection/presentation/providers/antique_providers
 import '../../../../core/database/app_settings_persistence.dart';
 import '../../../../core/notification_service.dart';
 import 'category_management_page.dart';
+import '../providers/category_management_providers.dart';
 
 // AI 供应商预设
 const _aiProviders = {
@@ -929,6 +930,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await backupService.importBackup(filePath);
       ref.invalidate(appDatabaseProvider);
       ref.invalidate(aiConfigProvider);
+      // 刷新分类 — 从数据库重新加载
+      ref.invalidate(collectionCategoriesProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));

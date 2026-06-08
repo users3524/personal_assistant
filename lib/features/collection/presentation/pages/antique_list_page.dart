@@ -182,7 +182,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      ref.read(dailyPickRefreshCounter.notifier).state++;
+                      ref.invalidate(dailyPickProvider);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -442,27 +442,48 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.emoji_events, size: 18, color: Colors.amber),
-              const SizedBox(width: 6),
-              Text('🏆 趣味排行',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _buildRankTab('💰 财富榜', 0),
+              _buildRankTab('💆 侍寝榜', 1),
+              _buildRankTab('📏 尺度榜', 2),
+            ]),
           ),
         ),
         const SizedBox(height: 8),
-        // 财富榜
-        _buildWealthRank(context, items),
-        const SizedBox(height: 8),
-        // 侍寝榜
-        _buildPattingRank(context, items),
-        const SizedBox(height: 8),
-        // 尺度榜
-        _buildSizeRank(context, items),
+        // 用 tabIndex 切换
+        _buildRankContent(context, items, month),
       ],
     );
+  }
+
+  int _rankTabIndex = 0;
+  Widget _buildRankTab(String label, int index) {
+    final selected = _rankTabIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _rankTabIndex = index);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Colors.amber.shade100 : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.bold : null)),
+      ),
+    );
+  }
+
+  Widget _buildRankContent(BuildContext context, List<AntiqueEntity> items, DateTime month) {
+    switch (_rankTabIndex) {
+      case 1: return _buildPattingRank(context, items);
+      case 2: return _buildSizeRank(context, items);
+      default: return _buildWealthRank(context, items);
+    }
   }
 
   Widget _buildWealthRank(BuildContext context, List<AntiqueEntity> items) {
@@ -503,70 +524,29 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   }
 
   Widget _buildSizeRank(BuildContext context, List<AntiqueEntity> items) {
-    // 核桃按边宽、手串按尺寸分别排行
-    final walnuts = items.where((i) => i.category == '核桃').toList();
-    final bracelets = items.where((i) => i.category == '手串').toList();
-
-    if (walnuts.isEmpty && bracelets.isEmpty) return const SizedBox.shrink();
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.straighten, size: 16, color: Colors.brown),
-              const SizedBox(width: 6),
-              Text('📏 尺度榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.brown.shade700)),
-              const Spacer(),
-              Text('按尺寸大小排序', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ]),
-            const SizedBox(height: 8),
-            if (walnuts.isNotEmpty) ...[
-              Text('🥜 核桃', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.brown)),
-              _buildSizeList(context, walnuts, '边宽'),
-            ],
-            if (walnuts.isNotEmpty && bracelets.isNotEmpty) const SizedBox(height: 8),
-            if (bracelets.isNotEmpty) ...[
-              Text('📿 手串', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
-              _buildSizeList(context, bracelets, '尺寸'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSizeList(BuildContext context, List<AntiqueEntity> items, String fieldKey) {
-    // 从 categoryMetadata 中提取尺寸信息
+    // 提取所有有尺寸数据的藏品
     final withSize = items.where((i) =>
         i.categoryMetadata != null &&
-        i.categoryMetadata!.keys.any((k) => k.contains(fieldKey))).toList();
-    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, fieldKey)
-        .compareTo(_extractSize(a.categoryMetadata!, fieldKey)));
+        i.categoryMetadata!.keys.any((k) => k.contains('边宽') || k.contains('尺寸'))).toList();
+    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, _sizeKey(b.category!))
+        .compareTo(_extractSize(a.categoryMetadata!, _sizeKey(a.category!))));
 
-    if (withSize.isEmpty) return const Padding(
-      padding: EdgeInsets.all(8),
-      child: Text('暂无尺寸数据', style: TextStyle(fontSize: 11, color: Colors.grey)),
-    );
+    if (withSize.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      children: withSize.take(5).map((item) {
-        final size = _extractSize(item.categoryMetadata!, fieldKey);
-        return ListTile(
-          dense: true,
-          leading: Text('${withSize.indexOf(item) + 1}.',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          title: Text(item.name, style: const TextStyle(fontSize: 13)),
-          trailing: Text(size > 0 ? '$size mm' : '',
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-        );
-      }).toList(),
+    return _buildRankCard(
+      title: '📏 尺度榜',
+      subtitle: '按尺寸大小排序',
+      items: withSize.take(5).toList(),
+      label: (i) {
+        final key = _sizeKey(i.category);
+        final size = _extractSize(i.categoryMetadata!, key);
+        return size > 0 ? '$size mm' : '';
+      },
+      icon: Icons.straighten,
     );
   }
+
+  String _sizeKey(String category) => category == '核桃' ? '边宽' : '尺寸';
 
   double _extractSize(Map<String, String> metadata, String fieldKey) {
     for (final entry in metadata.entries) {

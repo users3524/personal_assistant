@@ -163,11 +163,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
-            ),
-            Positioned(bottom: 8, right: 8,
-              child: _fullscreenButton(context, images[0]),
+            GestureDetector(
+              onTap: () => _showFullScreenImage(context, images[0]),
+              child: Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
+                errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
+              ),
             ),
             // 显示照片来源标签
             Positioned(top: 8, left: 8,
@@ -196,11 +196,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
-                    errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
-                  ),
-                  Positioned(bottom: 8, right: 8,
-                    child: _fullscreenButton(context, images[index]),
+                  GestureDetector(
+                    onTap: () => _showFullScreenImage(context, images[index]),
+                    child: Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
+                      errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
+                    ),
                   ),
                   Positioned(top: 8, left: 8,
                     child: Container(
@@ -724,18 +724,18 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                   return GestureDetector(
                                     onTap: () => _showFullScreenImage(context, path),
                                     child: Container(
-                                      width: 56,
-                                      height: 56,
+                                      width: 80,
+                                      height: 80,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(color: Colors.grey.shade300),
                                       ),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(5),
+                                        borderRadius: BorderRadius.circular(7),
                                         child: Image.file(
                                           File(path),
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey, size: 20),
+                                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey, size: 28),
                                         ),
                                       ),
                                     ),
@@ -772,38 +772,23 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     return dest.path;
   }
 
-  /// 全屏查看图片
+  /// 全屏查看图片 — 点击图片进入，再次点击任意位置退出
   void _showFullScreenImage(BuildContext context, String path) {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        pageBuilder: (_, __, ___) => Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              Center(
+        pageBuilder: (_, __, ___) => GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            body: SafeArea(
+              child: Center(
                 child: InteractiveViewer(
                   maxScale: 4,
                   child: Image.file(File(path), fit: BoxFit.contain),
                 ),
               ),
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 8,
-                right: 12,
-                child: Material(
-                  color: Colors.white24,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(Icons.close, color: Colors.white, size: 24),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

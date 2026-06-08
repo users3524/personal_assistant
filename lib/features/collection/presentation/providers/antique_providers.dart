@@ -262,11 +262,7 @@ class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
 
 // ===== 每日翻牌推荐（按配置） =====
 
-/// 刷新计数器 — 用于换一换功能
-final dailyPickRefreshCounter = StateProvider<int>((ref) => 0);
-
 final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
-  ref.watch(dailyPickRefreshCounter); // 监听刷新
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
     final config = ref.watch(dailyPickConfigProvider);

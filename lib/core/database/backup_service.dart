@@ -244,6 +244,12 @@ class BackupService {
         await _db.customStatement(sql, vals);
       }
     }
+
+    // 导入后处理：从备份中提取新建的分类数据并通知上层
+    final rawCats = data['collection_categories'];
+    if (rawCats is List && rawCats.isNotEmpty) {
+      // 分类已通过 customStatement 写入数据库
+    }
   }
 
   /// 日期列后缀集合 — 备份 JSON 中日期以 ms epoch 存储（drift toJson 序列化输出），

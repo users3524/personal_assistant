@@ -1287,168 +1287,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        pageBuilder: (_, __, ___) => Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Color(0xFF0D0D0D), Color(0xFF1A1A2E)],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                // 顶部导航
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white10,
-                            borderRadius: BorderRadius.circular(18)),
-                          child: const Icon(Icons.close, color: Colors.white54, size: 20),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                        child: Text(item.name,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1)),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
-                // 双图对比区
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        Expanded(child: _compareImageTile(leftLog.photoPaths.first, leftDays, leftLog.date, true, leftLog.note)),
-                        // 分割线
-                        Container(width: 1,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.white30,
-                                Colors.white10,
-                                Colors.white30,
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
-                        ),
-                        Expanded(child: _compareImageTile(rightLog.photoPaths.first, rightDays, rightLog.date, false, rightLog.note)),
-                      ],
-                    ),
-                  ),
-                ),
-                // 底部信息
-                Container(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: _dayBadge('第${leftDays}天', Colors.tealAccent, leftLog.date)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(20)),
-                            child: const Text('⋯',
-                              style: TextStyle(color: Colors.white24, fontSize: 22, letterSpacing: 4)),
-                          ),
-                          Expanded(child: _dayBadge('第${rightDays}天', Colors.orangeAccent, rightLog.date)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+        pageBuilder: (_, __, ___) => _CompareResultPage(
+          leftLog: leftLog,
+          rightLog: rightLog,
+          item: item,
+          leftDays: leftDays,
+          rightDays: rightDays,
         ),
-      ),
-    );
-  }
-
-  Widget _compareImageTile(String path, int days, DateTime date, bool isLeft, String? note) {
-    final y = (date.year % 100).toString().padLeft(2, '0');
-    final mo = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    final color = isLeft ? Colors.tealAccent : Colors.orangeAccent;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Positioned.fill(
-          child: InteractiveViewer(
-            maxScale: 4,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: note != null && note.isNotEmpty ? 56 : 0),
-              child: Image.file(File(path), fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white24, size: 40))),
-            ),
-          ),
-        ),
-        // 顶标签
-        Positioned(top: 8, left: 0, right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withValues(alpha: 0.25)),
-              ),
-              child: Text(isLeft ? '之前' : '之后',
-                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1)),
-            ),
-          ),
-        ),
-        // 底部备注
-        if (note != null && note.isNotEmpty)
-          Positioned(bottom: 8, left: 6, right: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8)),
-              child: Text(note,
-                style: const TextStyle(color: Colors.white54, fontSize: 10, height: 1.3),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
-            ),
-          ),
-        // 右下日期
-        Positioned(bottom: note != null && note.isNotEmpty ? 40 : 8, right: 8,
-          child: Text('$y/$mo/$d', style: const TextStyle(color: Colors.white30, fontSize: 10))),
-      ],
-    );
-  }
-
-  Widget _dayBadge(String label, Color color, DateTime date) {
-    final y = (date.year % 100).toString().padLeft(2, '0');
-    final mo = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text('$y/$mo/$d', style: const TextStyle(color: Colors.white38, fontSize: 11)),
-        ],
       ),
     );
   }
@@ -1495,6 +1340,163 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       await ref.read(antiqueListProvider.notifier).deleteItem(item.id!);
       if (mounted) context.pop();
     }
+  }
+}
+
+// ===== 对比结果页 =====
+
+class _CompareResultPage extends StatefulWidget {
+  final PattingLogEntity leftLog;
+  final PattingLogEntity rightLog;
+  final AntiqueEntity item;
+  final int leftDays;
+  final int rightDays;
+
+  const _CompareResultPage({
+    required this.leftLog, required this.rightLog,
+    required this.item, required this.leftDays, required this.rightDays,
+  });
+
+  @override
+  State<_CompareResultPage> createState() => _CompareResultPageState();
+}
+
+class _CompareResultPageState extends State<_CompareResultPage> {
+  int _styleIndex = 0;
+  static const _styles = [
+    {'name': '暗夜', 'colors': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)]},
+    {'name': '暖木', 'colors': [Color(0xFF2D1F15), Color(0xFF4A3728)]},
+    {'name': '素白', 'colors': [Color(0xFFF5F0EB), Color(0xFFE8E0D5)]},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final l = widget.leftLog;
+    final r = widget.rightLog;
+    final s = _styles[_styleIndex];
+    final colors = s['colors'] as List<Color>;
+    final isDark = _styleIndex != 2;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 顶部导航 + 风格切换
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 12, 2),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black12,
+                        borderRadius: BorderRadius.circular(16)),
+                      child: Icon(Icons.close, color: isDark ? Colors.white54 : Colors.black54, size: 18),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  // 风格选择 chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: _styles.asMap().entries.map((e) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: ChoiceChip(
+                        label: Text(e.value['name'] as String, style: TextStyle(fontSize: 11, color: _styleIndex == e.key ? null : (isDark ? Colors.white54 : Colors.black54))),
+                        selected: _styleIndex == e.key,
+                        onSelected: (_) => setState(() => _styleIndex = e.key),
+                        visualDensity: VisualDensity.compact,
+                        selectedColor: isDark ? Colors.teal.withValues(alpha: 0.4) : Colors.teal.withValues(alpha: 0.15),
+                      ),
+                    )).toList()),
+                  ),
+                  const Spacer(),
+                  Text(widget.item.name, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
+            // 双图对比区
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Row(
+                  children: [
+                    Expanded(child: _compareImageTile(l.photoPaths.first, widget.leftDays, l.date, true, l.note)),
+                    Container(width: 1, color: isDark ? Colors.white30 : Colors.black26),
+                    Expanded(child: _compareImageTile(r.photoPaths.first, widget.rightDays, r.date, false, r.note)),
+                  ],
+                ),
+              ),
+            ),
+            // 底部信息 + 保存
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Row(
+                children: [
+                  Expanded(child: _compareDayBadge(widget.leftDays, l.date, isDark)),
+                  const Text(' vs ', style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Expanded(child: _compareDayBadge(widget.rightDays, r.date, isDark)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _compareDayBadge(int days, DateTime date, bool isDark) {
+    final y = (date.year % 100).toString().padLeft(2, '0');
+    final mo = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return Column(
+      children: [
+        Text(days == 0 ? '入手当天' : '第$days天',
+            style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text('$y/$mo/$d', style: TextStyle(color: isDark ? Colors.white30 : Colors.black38, fontSize: 11)),
+      ],
+    );
+  }
+
+  static Widget _compareImageTile(String path, int days, DateTime date, bool isLeft, String? note) {
+    final y = (date.year % 100).toString().padLeft(2, '0');
+    final mo = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final color = isLeft ? Colors.tealAccent : Colors.orangeAccent;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: InteractiveViewer(
+            maxScale: 4,
+            child: Image.file(File(path), fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white24, size: 40))),
+          ),
+        ),
+        Positioned(top: 6, left: 0, right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+              child: Text(isLeft ? '之前' : '之后', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+        if (note != null && note.isNotEmpty)
+          Positioned(bottom: 6, left: 4, right: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+              child: Text(note, style: const TextStyle(color: Colors.white54, fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -1783,7 +1785,7 @@ class _CompareSelectDialogState extends State<_CompareSelectDialog>
                       onPressed: _leftKey == _rightKey ? null
                           : () => Navigator.pop(context, {'left': _leftKey, 'right': _rightKey}),
                       icon: const Icon(Icons.compare_arrows, size: 20),
-                      label: const Text('开始对比', style: TextStyle(letterSpacing: 1)),
+                      label: const Text('对比', style: TextStyle(letterSpacing: 1)),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF00BCD4),
                         disabledBackgroundColor: Colors.white10,

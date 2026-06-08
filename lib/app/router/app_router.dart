@@ -18,10 +18,9 @@ import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.da
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
 import '../../features/resume/presentation/pages/resume_home_page.dart';
-import '../../features/resume/presentation/pages/resume_preview_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 
-/// 主壳 - 底部导航
+/// 主壳 - 底部导航（带切换动画）
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -32,38 +31,85 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      (icon: Icons.diamond_outlined, selectedIcon: Icons.diamond, label: '盘串'),
+      (icon: Icons.check_circle_outline, selectedIcon: Icons.check_circle, label: '待办'),
+      (icon: Icons.description_outlined, selectedIcon: Icons.description, label: '简历'),
+    ];
+
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.diamond_outlined),
-            selectedIcon: Icon(Icons.diamond),
-            label: '盘串',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(items.length, (index) {
+                final isSelected = navigationShell.currentIndex == index;
+                final item = items[index];
+
+                return Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      navigationShell.goBranch(
+                        index,
+                        initialLocation: index == navigationShell.currentIndex,
+                      );
+                    },
+                    child: AnimatedPadding(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) =>
+                                ScaleTransition(scale: animation, child: child),
+                            child: Icon(
+                              isSelected ? item.selectedIcon : item.icon,
+                              key: ValueKey('${index}_$isSelected'),
+                              size: isSelected ? 28 : 24,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeInOut,
+                            style: TextStyle(
+                              fontSize: isSelected ? 13 : 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                            child: Text(item.label),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
-            label: '待办',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description),
-            label: '简历',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '设置',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -97,7 +143,8 @@ GoRouter createRouter() {
                     path: ':id',
                     builder: (context, state) {
                       final id = int.parse(state.pathParameters['id']!);
-                      return AntiqueDetailPage(itemId: id);
+                      final highlightLogId = int.tryParse(state.uri.queryParameters['highlightLog'] ?? '');
+                      return AntiqueDetailPage(itemId: id, highlightLogId: highlightLogId);
                     },
                     routes: [
                       GoRoute(
@@ -150,31 +197,15 @@ GoRouter createRouter() {
               GoRoute(
                 path: RouteNames.resumeHome,
                 builder: (context, state) => const ResumeHomePage(),
-                routes: [
-                  GoRoute(
-                    path: 'preview',
-                    builder: (context, state) =>
-                        const ResumePreviewPage(),
-                  ),
-                  GoRoute(
-                    path: 'templates',
-                    builder: (context, state) =>
-                        const ResumePreviewPage(),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Tab 3: 设置
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RouteNames.settings,
-                builder: (context, state) => const SettingsPage(),
               ),
             ],
           ),
         ],
+      ),
+      // 设置页面（全屏，不显示底部导航）
+      GoRoute(
+        path: RouteNames.settings,
+        builder: (context, state) => const SettingsPage(),
       ),
       // 复盘页面（全屏，不显示底部导航）
       GoRoute(

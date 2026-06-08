@@ -22,6 +22,9 @@ class ReviewRepositoryImpl implements ReviewRepository {
       _dao.getDailyByDate(date);
 
   @override
+  Future<List<DailyReviewEntity>> getAllDaily() => _dao.getAllDaily();
+
+  @override
   Future<List<DailyReviewEntity>> getDailyByMonth(int year, int month) =>
       _dao.getDailyByMonth(year, month);
 

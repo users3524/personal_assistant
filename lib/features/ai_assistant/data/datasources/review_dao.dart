@@ -101,6 +101,13 @@ class ReviewDao {
     return row != null ? _dailyToEntity(row) : null;
   }
 
+  Future<List<DailyReviewEntity>> getAllDaily() async {
+    final rows = await (_db.select(_db.dailyReviews)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+    return rows.map(_dailyToEntity).toList();
+  }
+
   Future<List<DailyReviewEntity>> getDailyByMonth(
     int year,
     int month,

@@ -7,6 +7,7 @@ abstract class ReviewRepository {
   // ===== 日报 =====
   Future<DailyReviewEntity> createDaily(DailyReviewEntity review);
   Future<DailyReviewEntity?> getDailyByDate(DateTime date);
+  Future<List<DailyReviewEntity>> getAllDaily();
   Future<List<DailyReviewEntity>> getDailyByMonth(int year, int month);
   Future<List<DailyReviewEntity>> getDailyByWeek(int year, int weekNumber);
   Future<DailyReviewEntity> updateDaily(DailyReviewEntity review);

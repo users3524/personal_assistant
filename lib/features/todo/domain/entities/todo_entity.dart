@@ -84,12 +84,21 @@ class TodoEntity {
     );
   }
 
-  /// 是否已过期（未完成且截止日期已过）
-  bool get isOverdue =>
-      dueDate != null &&
-      status != TodoStatus.done &&
-      status != TodoStatus.cancelled &&
-      dueDate!.isBefore(DateTime.now());
+  /// 是否已过期（未完成且截止日期已过，或无截止日期时开始时间已过）
+  bool get isOverdue {
+    if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
+    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    if (dueDate != null) {
+      final dueDateStart = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+      return dueDateStart.isBefore(todayStart);
+    }
+    // 没有截止日期时，按开始时间判断：开始时间在今天之前即为逾期
+    if (startedAt != null) {
+      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      return startDay.isBefore(todayStart);
+    }
+    return false;
+  }
 
   /// 是否在进行中
   bool get isInProgress => status == TodoStatus.inProgress;

@@ -87,6 +87,7 @@ personal_assistant/
 ## 📄 文档
 
 - [完整开发计划](docs/PLAN.md)
+- [待实现功能](docs/TODO.md)
 - [架构设计](docs/ARCHITECTURE.md)
 - [待办模块规格](docs/SPEC_TODO.md)
 - [文玩模块规格](docs/SPEC_COLLECTION.md)

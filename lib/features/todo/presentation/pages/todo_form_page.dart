@@ -40,7 +40,8 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   String _category = '生活';
   int _priority = 3;
   DateTime? _dueDate;
-  DateTime _createDate = DateTime.now();
+  late DateTime _startedAt;
+  DateTime? _originalCreatedAt; // 编辑时保留原创建时间
   bool _isLoading = false;
 
   bool get _isEditing => widget.editId != null;
@@ -50,6 +51,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
     super.initState();
     _titleController = TextEditingController();
     _descController = TextEditingController();
+    _startedAt = DateTime.now();
     if (_isEditing) {
       _loadExisting();
     }
@@ -66,7 +68,8 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         _category = todo.category;
         _priority = todo.priority;
         _dueDate = todo.dueDate;
-        _createDate = todo.createdAt;
+        _startedAt = todo.startedAt ?? todo.createdAt;
+        _originalCreatedAt = todo.createdAt;
       });
     }
     setState(() => _isLoading = false);
@@ -94,7 +97,8 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         category: _category,
         priority: _priority,
         dueDate: _dueDate,
-        createdAt: _createDate,
+        startedAt: _startedAt,
+        createdAt: _originalCreatedAt ?? now,
         updatedAt: now,
       );
 
@@ -244,12 +248,12 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 创建日期
-                    Text('创建日期',
+                    // 开始时间（必填）
+                    Text('开始时间 *',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     InkWell(
-                      onTap: _pickCreateDate,
+                      onTap: _pickStartedAt,
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -259,10 +263,10 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.edit_calendar, size: 20),
+                            const Icon(Icons.play_circle_outline, size: 20),
                             const SizedBox(width: 12),
                             Text(
-                              '${_createDate.year}-${_createDate.month.toString().padLeft(2, '0')}-${_createDate.day.toString().padLeft(2, '0')}',
+                              '${_startedAt.year}-${_startedAt.month.toString().padLeft(2, '0')}-${_startedAt.day.toString().padLeft(2, '0')}',
                               style: const TextStyle(fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -373,14 +377,14 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
     }
   }
 
-  Future<void> _pickCreateDate() async {
+  Future<void> _pickStartedAt() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _createDate,
+      initialDate: _startedAt,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date != null) setState(() => _createDate = date);
+    if (date != null) setState(() => _startedAt = date);
   }
 
   Future<void> _pickDate() async {

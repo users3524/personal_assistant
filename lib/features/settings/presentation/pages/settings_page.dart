@@ -855,6 +855,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _exportBackup() async {
     try {
       final db = await ref.read(appDatabaseProvider.future);
+      // 导出前同步分类数据到 SQLite（确保导出的 JSON 包含完整分类）
+      try {
+        await ref.read(collectionCategoriesProvider.notifier).syncToDb(db);
+      } catch (_) {}
       final backupService = BackupService(db);
 
       // 让用户选择：存到默认目录 or 自定义位置
@@ -933,17 +937,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       // 刷新分类：从 SQLite 同步到 AppSettingsPersistence
       try {
         final db = await ref.read(appDatabaseProvider.future);
-        final rows = await (db.select(db.collectionCategories).get());
-        final catsJson = rows.map((r) => {
-          'name': r.name,
-          'subtypes': (r.subtypes is String ? (r.subtypes as String).split(',') : r.subtypes) as List<dynamic>,
-          'metadataFields': (r.metadataFields is String ? (r.metadataFields as String).split(',') : r.metadataFields) as List<dynamic>,
-          'sortOrder': r.sortOrder,
-        }).toList();
-        await AppSettingsPersistence().setCollectionCategories(
-          catsJson.cast<Map<String, dynamic>>(),
-        );
-        ref.read(collectionCategoriesProvider.notifier).reload();
+        await ref.read(collectionCategoriesProvider.notifier).restoreFromDb(db);
       } catch (_) {}
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
     } catch (e) {

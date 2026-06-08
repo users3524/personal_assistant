@@ -58,7 +58,12 @@ final weeklyListByYearProvider = FutureProvider<List<WeeklyReportEntity>>((ref) 
   });
 });
 
-// ===== 统计 Provider =====
+/// 全部日报记录（用于历史查看）
+final allDailyReviewsProvider = FutureProvider<List<DailyReviewEntity>>((ref) {
+  return ref.watch(reviewRepositoryProvider.future).then((repo) {
+    return repo.getAllDaily();
+  });
+});
 
 final monthlyAvgMoodProvider = FutureProvider<double>((ref) {
   final now = DateTime.now();

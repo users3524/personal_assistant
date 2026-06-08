@@ -109,18 +109,20 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _category = item.category;
         _subtype = item.subtype;
         _subtypeCtrl.text = item.subtype ?? '';
-        // 回填分类专属字段
-        _initMetaCtrls();
-        if (item.categoryMetadata != null) {
+        // 回填分类专属字段 — 直接从 item.categoryMetadata 构建控制器，不依赖分类模型
+        _metaCtrls.clear();
+        if (item.categoryMetadata != null && item.categoryMetadata!.isNotEmpty) {
           for (final e in item.categoryMetadata!.entries) {
             if (_category == '核桃' && e.value.contains(',')) {
               final parts = e.value.split(',');
-              _metaCtrls['左${e.key}']?.text = parts[0].trim();
-              _metaCtrls['右${e.key}']?.text = parts.length > 1 ? parts[1].trim() : '';
+              _metaCtrls['左${e.key}'] = TextEditingController(text: parts[0].trim());
+              _metaCtrls['右${e.key}'] = TextEditingController(text: parts.length > 1 ? parts[1].trim() : '');
             } else {
-              _metaCtrls[e.key]?.text = e.value;
+              _metaCtrls[e.key] = TextEditingController(text: e.value);
             }
           }
+        } else {
+          _initMetaCtrls();
         }
         _acquiredDate = item.acquiredDate;
         _condition = item.condition;

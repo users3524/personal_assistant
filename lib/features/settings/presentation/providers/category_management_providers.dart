@@ -106,6 +106,38 @@ class CollectionCategoriesNotifier extends StateNotifier<List<CollectionCategory
     } catch (_) {}
   }
 
+  /// 同步到 SQLite 数据库（导出前确保数据完整）
+  Future<void> syncToDb(AppDatabase db) async {
+    await db.delete(db.collectionCategories).go();
+    for (final cat in state) {
+      await db.customStatement(
+        'INSERT INTO collection_categories (name, subtypes, metadata_fields, sort_order) VALUES (?, ?, ?, ?)',
+        [cat.name, jsonEncode(cat.subtypes), jsonEncode(cat.metadataFields), cat.sortOrder],
+      );
+    }
+  }
+
+  /// 从 SQLite 数据库恢复（导入后同步到持久化）
+  Future<void> restoreFromDb(AppDatabase db) async {
+    final rows = await db.select(db.collectionCategories).get();
+    if (rows.isEmpty) return;
+    state = rows.map((r) => CollectionCategory(
+      name: r.name,
+      subtypes: _parseJsonList(r.subtypes),
+      metadataFields: _parseJsonList(r.metadataFields),
+      sortOrder: r.sortOrder,
+    )).toList();
+    _persist();
+  }
+
+  List<String> _parseJsonList(String json) {
+    try {
+      return (jsonDecode(json) as List).cast<String>();
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// 获取某分类的子类型列表
   List<String> subtypesOf(String category) =>
       state.where((c) => c.name == category).firstOrNull?.subtypes ?? [];

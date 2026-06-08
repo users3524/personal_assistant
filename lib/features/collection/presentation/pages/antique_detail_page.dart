@@ -2,8 +2,10 @@
 library;
 
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,8 +17,9 @@ import '../providers/antique_providers.dart';
 
 class AntiqueDetailPage extends ConsumerStatefulWidget {
   final int itemId;
+  final int? highlightLogId;
 
-  const AntiqueDetailPage({super.key, required this.itemId});
+  const AntiqueDetailPage({super.key, required this.itemId, this.highlightLogId});
 
   @override
   ConsumerState<AntiqueDetailPage> createState() => _AntiqueDetailPageState();
@@ -166,7 +169,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           children: [
             GestureDetector(
               onTap: () => _showFullScreenImage(context, images[0]),
-              onLongPress: () => _saveImage(context, images[0]),
+              onLongPress: () => _showImageActions(context, images[0]),
               child: Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
                 errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
               ),
@@ -200,7 +203,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 children: [
                   GestureDetector(
                     onTap: () => _showFullScreenImage(context, images[index]),
-                    onLongPress: () => _saveImage(context, images[index]),
+                    onLongPress: () => _showImageActions(context, images[index]),
                     child: Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
                       errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
                     ),
@@ -367,24 +370,71 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 const Divider(height: 16),
                 Text('详细参数', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
-                ...item.categoryMetadata!.entries.map((e) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
+                // 核桃品类三列显示（行名 | 左参数 | 右参数）
+                if (item.category == '核桃') ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.brown.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
                       children: [
-                        SizedBox(
-                          width: 72,
-                          child: Text(e.key,
-                              style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                        // 表头
+                        Row(
+                          children: [
+                            const SizedBox(width: 72, child: Text('参数', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                            Expanded(child: Center(child: Text('左', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.teal)))),
+                            Expanded(child: Center(child: Text('右', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)))),
+                          ],
                         ),
-                        Expanded(
-                          child: Text(e.value,
-                              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-                        ),
+                        const Divider(height: 8),
+                        ...item.categoryMetadata!.entries.map((e) {
+                          final parts = e.value.split(',');
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 72,
+                                  child: Text(e.key, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                ),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(parts.isNotEmpty ? parts[0].trim() : '', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.teal.shade700)),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(parts.length > 1 ? parts[1].trim() : '', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.orange.shade700)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
-                  );
-                }),
+                  ),
+                ] else ...[
+                  // 非核桃品类正常显示
+                  ...item.categoryMetadata!.entries.map((e) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 72,
+                            child: Text(e.key, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                          ),
+                          Expanded(
+                            child: Text(e.value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ],
             ],
           ),
@@ -726,7 +776,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                 children: log.photoPaths.map((path) {
                                   return GestureDetector(
                                     onTap: () => _showFullScreenImage(context, path),
-                                    onLongPress: () => _saveImage(context, path),
+                                    onLongPress: () => _showImageActions(context, path),
                                     child: Container(
                                       width: 150,
                                       height: 150,
@@ -755,7 +805,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 ],
               ),
             );
-          }).toList(),
+        }).toList(),
         );
       },
     );
@@ -783,7 +833,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         opaque: false,
         pageBuilder: (_, __, ___) => GestureDetector(
           onTap: () => Navigator.of(context).pop(),
-          onLongPress: () => _saveImage(context, path),
+          onLongPress: () => _showImageActions(context, path),
           child: Scaffold(
             backgroundColor: Colors.black,
             body: SafeArea(
@@ -800,11 +850,64 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  /// 保存图片到相册（通过分享）
-  Future<void> _saveImage(BuildContext context, String path) async {
+  /// 长按图片弹出操作菜单（分享 / 保存到相册）
+  void _showImageActions(BuildContext context, String path) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('分享'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _shareImage(context, path);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: const Text('保存到相册'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _saveImageToGallery(context, path);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 分享图片
+  Future<void> _shareImage(BuildContext context, String path) async {
     try {
       final file = XFile(path);
-      await Share.shareXFiles([file], text: '保存图片');
+      await Share.shareXFiles([file], text: '分享图片');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 保存图片到持久化目录（在应用文档内，更新后不丢失）
+  Future<void> _saveImageToGallery(BuildContext context, String path) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final saveDir = Directory('${dir.path}/saved_photos');
+      if (!await saveDir.exists()) await saveDir.create(recursive: true);
+      final fileName = 'saved_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final dest = File('${saveDir.path}/$fileName');
+      await File(path).copy(dest.path);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已保存到: ${dest.path}'), duration: const Duration(seconds: 3)),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1345,11 +1448,13 @@ class _CompareDialogState extends State<_CompareDialog> {
   late String _leftKey;
   late String _rightKey;
   int _colorStyle = 0;
+  final _compareKey = GlobalKey();
+  bool _savingImage = false;
 
   static const _styles = [
-    {'name': '暗夜', 'bg': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)]},
-    {'name': '暖木', 'bg': [Color(0xFF2D1F15), Color(0xFF4A3728)]},
-    {'name': '素白', 'bg': [Color(0xFFF5F0EB), Color(0xFFE8E0D5)]},
+    {'name': '暗夜', 'bg': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)], 'text': Colors.white70, 'subtext': Colors.white38, 'badgeBg': Colors.white24},
+    {'name': '暖木', 'bg': [Color(0xFF2D1F15), Color(0xFF4A3728)], 'text': Color(0xFFE8D5C4), 'subtext': Color(0xFFB8A08E), 'badgeBg': Color(0x55FFFFFF)},
+    {'name': '素白', 'bg': [Color(0xFFF5F0EB), Color(0xFFE8E0D5)], 'text': Colors.black87, 'subtext': Colors.black54, 'badgeBg': Colors.black12},
   ];
 
   PattingLogEntity? get _leftLog => _findLog(_leftKey);
@@ -1373,7 +1478,9 @@ class _CompareDialogState extends State<_CompareDialog> {
   Widget build(BuildContext context) {
     final s = _styles[_colorStyle];
     final colors = s['bg'] as List<Color>;
-    final isDark = _colorStyle != 2;
+    final textColor = s['text'] as Color;
+    final subtextColor = s['subtext'] as Color;
+    final badgeBg = s['badgeBg'] as Color;
     final leftLog = _leftLog;
     final rightLog = _rightLog;
 
@@ -1393,14 +1500,14 @@ class _CompareDialogState extends State<_CompareDialog> {
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
               child: Row(
                 children: [
-                  Text('时光对比', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('时光对比', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                   const Spacer(),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(children: _styles.asMap().entries.map((e) => Padding(
                       padding: const EdgeInsets.only(left: 4),
                       child: ChoiceChip(
-                        label: Text(e.value['name'] as String, style: TextStyle(fontSize: 10, color: _colorStyle == e.key ? null : (isDark ? Colors.white54 : Colors.black54))),
+                        label: Text(e.value['name'] as String, style: TextStyle(fontSize: 10, color: _colorStyle == e.key ? null : subtextColor.withValues(alpha: 0.7))),
                         selected: _colorStyle == e.key,
                         onSelected: (_) => setState(() => _colorStyle = e.key),
                         visualDensity: VisualDensity.compact,
@@ -1411,18 +1518,21 @@ class _CompareDialogState extends State<_CompareDialog> {
                 ],
               ),
             ),
-            // 双图对比
+            // 双图对比 (RepaintBoundary 用于截图保存整张对比图)
             if (leftLog != null && rightLog != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: SizedBox(
-                  height: 300,
-                  child: Row(
-                    children: [
-                      Expanded(child: _tile(leftLog!, widget.item, isDark, true)),
-                      Container(width: 1, color: isDark ? Colors.white24 : Colors.black12),
-                      Expanded(child: _tile(rightLog!, widget.item, isDark, false)),
-                    ],
+                child: RepaintBoundary(
+                  key: _compareKey,
+                  child: SizedBox(
+                    height: 300,
+                    child: Row(
+                      children: [
+                        Expanded(child: _tile(leftLog!, widget.item, textColor, subtextColor, badgeBg, true)),
+                        Container(width: 1, color: badgeBg),
+                        Expanded(child: _tile(rightLog!, widget.item, textColor, subtextColor, badgeBg, false)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1445,13 +1555,12 @@ class _CompareDialogState extends State<_CompareDialog> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.save_alt, size: 18),
-                          label: const Text('保存图片'),
-                          style: OutlinedButton.styleFrom(foregroundColor: isDark ? Colors.white70 : Colors.black54),
-                          onPressed: () {
-                            if (leftLog != null) _saveCompareImage(context, leftLog!);
-                            if (rightLog != null) _saveCompareImage(context, rightLog!);
-                          },
+                          icon: _savingImage
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.save_alt, size: 18),
+                          label: Text(_savingImage ? '保存中...' : '保存对比图'),
+                          style: OutlinedButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.8)),
+                          onPressed: _savingImage ? null : _saveCompareImage,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1537,7 +1646,7 @@ class _CompareDialogState extends State<_CompareDialog> {
     );
   }
 
-  Widget _tile(PattingLogEntity log, AntiqueEntity item, bool isDark, bool isLeft) {
+  Widget _tile(PattingLogEntity log, AntiqueEntity item, Color textColor, Color subtextColor, Color badgeBg, bool isLeft) {
     final days = log.date.difference(item.acquiredDate).inDays;
     final color = isLeft ? Colors.tealAccent : Colors.orangeAccent;
     final y = (log.date.year % 100).toString().padLeft(2, '0');
@@ -1556,15 +1665,19 @@ class _CompareDialogState extends State<_CompareDialog> {
         Positioned(top: 4, left: 0, right: 0,
           child: Center(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-              child: Text(isLeft ? '之前' : '之后', style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w600)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)),
+              child: Text(isLeft ? '之前' : '之后', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
             ),
           ),
         ),
-        Positioned(bottom: 2, left: 2, right: 2,
-          child: Text('$y/$mo/$d  第${days}天', textAlign: TextAlign.center,
-            style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 9)),
+        Positioned(bottom: 4, left: 4, right: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(6)),
+            child: Text('$y/$mo/$d  第${days}天', textAlign: TextAlign.center,
+              style: TextStyle(color: subtextColor, fontSize: 12, fontWeight: FontWeight.w500)),
+          ),
         ),
         if (log.note != null && log.note!.isNotEmpty)
           Positioned(bottom: 16, left: 4, right: 4,
@@ -1578,14 +1691,28 @@ class _CompareDialogState extends State<_CompareDialog> {
     );
   }
 
-  Future<void> _saveCompareImage(BuildContext context, PattingLogEntity log) async {
+  Future<void> _saveCompareImage() async {
+    if (_savingImage) return;
+    setState(() => _savingImage = true);
     try {
-      final file = XFile(log.photoPaths.first);
-      await Share.shareXFiles([file], text: '保存对比图片');
+      final boundary = _compareKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('无法获取对比区域');
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('图像编码失败');
+
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/compare_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      final xFile = XFile(file.path);
+      await Share.shareXFiles([xFile], text: '时光对比图');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _savingImage = false);
     }
   }
 }

@@ -4,8 +4,6 @@ library;
 export '../../data/repositories/antique_repository_impl.dart'
     show antiqueRepositoryProvider;
 
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/antique_repository_impl.dart';
@@ -13,7 +11,6 @@ import '../../domain/entities/antique_entity.dart';
 import '../../domain/repositories/antique_repository.dart';
 import '../../../../core/database/app_settings_persistence.dart';
 import 'dart:math';
-import 'dart:io';
 
 // 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
@@ -45,17 +42,66 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
   @override
   Future<List<AntiqueEntity>> build() async {
     final repo = await ref.watch(antiqueRepositoryProvider.future);
-    return repo.getAll();
+    final items = await repo.getAll();
+    // Apply current sort mode on initial load
+    final sortMode = ref.watch(antiqueSortModeProvider);
+    if (sortMode.isNotEmpty) {
+      return _applySort(items, sortMode, repo);
+    }
+    return items;
   }
 
   Future<void> refresh() async {
-    ref.invalidateSelf();
+    // Don't invalidate self — instead keep the current sort and re-fetch
+    final repo = await ref.watch(antiqueRepositoryProvider.future);
+    final items = await repo.getAll();
+    final sortMode = ref.watch(antiqueSortModeProvider);
+    if (sortMode.isNotEmpty) {
+      state = AsyncValue.data(await _applySort(items, sortMode, repo));
+    } else {
+      state = AsyncValue.data(items);
+    }
     ref.invalidate(categoryCountProvider);
     ref.invalidate(totalValuationProvider);
     ref.invalidate(pattingCalendarProvider);
-    // 不要 invalidate dailyPickProvider — 翻牌推荐只在用户点击换一换时刷新
     ref.invalidate(pattingFrequencyProvider);
     ref.invalidate(monthlyPattingFrequencyProvider);
+  }
+
+  /// Apply sort algorithm, return sorted list
+  Future<List<AntiqueEntity>> _applySort(List<AntiqueEntity> items, String mode, repo) async {
+    switch (mode) {
+      case 'acquired_asc':
+        items..sort((a, b) => a.acquiredDate.compareTo(b.acquiredDate));
+        break;
+      case 'acquired_desc':
+        items..sort((a, b) => b.acquiredDate.compareTo(a.acquiredDate));
+        break;
+      case 'price_asc':
+        items..sort((a, b) => (a.acquiredPrice ?? 0).compareTo(b.acquiredPrice ?? 0));
+        break;
+      case 'price_desc':
+        items..sort((a, b) => (b.acquiredPrice ?? 0).compareTo(a.acquiredPrice ?? 0));
+        break;
+      case 'patting':
+        final pattingMap = <int, DateTime>{};
+        for (final item in items) {
+          final logs = await repo.getPattingLogs(item.id!);
+          if (logs.isNotEmpty) {
+            pattingMap[item.id!] = logs.first.date;
+          }
+        }
+        items.sort((a, b) {
+          final logA = pattingMap[a.id];
+          final logB = pattingMap[b.id];
+          if (logA == null && logB == null) return 0;
+          if (logA == null) return 1;
+          if (logB == null) return -1;
+          return logB.compareTo(logA);
+        });
+        break;
+    }
+    return items;
   }
 
   Future<AntiqueRepository> _getRepo() async =>

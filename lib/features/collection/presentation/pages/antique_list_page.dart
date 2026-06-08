@@ -31,6 +31,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('文玩包'),
+        leading: IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () => context.push('/settings'),
+        ),
         actions: [
           // 月历切换
           IconButton(
@@ -323,6 +327,15 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final now = DateTime(today.year, today.month, today.day);
     final monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
+    // 建立 itemId → itemName 映射
+    final itemsAsync = ref.watch(antiqueListProvider);
+    final itemNames = <int, String>{};
+    if (itemsAsync.valueOrNull != null) {
+      for (final item in itemsAsync.valueOrNull!) {
+        if (item.id != null) itemNames[item.id!] = item.name;
+      }
+    }
+
     return Column(
       children: [
         // 月历头部导航
@@ -384,7 +397,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                     final hasPhoto = logs.any((l) => l.photoPaths.isNotEmpty);
 
                     return GestureDetector(
-                      onTap: () => hasPhoto ? _showDayPhotos(context, date, logs) : null,
+                      onTap: () => hasPhoto ? _onDayTap(context, date, logs) : null,
                       child: Container(
                         height: 72,
                         margin: const EdgeInsets.all(1),
@@ -407,13 +420,37 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                 )),
                             if (hasPhoto && logs.first.photoPaths.isNotEmpty)
                               Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Image.file(
-                                    File(logs.first.photoPaths.first),
-                                    fit: BoxFit.cover, width: double.infinity,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 16, color: Colors.grey),
-                                  ),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.file(
+                                        File(logs.first.photoPaths.first),
+                                        fit: BoxFit.cover, width: double.infinity,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 16, color: Colors.grey),
+                                      ),
+                                    ),
+                                    // 物品名称叠加
+                                    Positioned(
+                                      bottom: 0, left: 0, right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: const BorderRadius.only(
+                                            bottomLeft: Radius.circular(4),
+                                            bottomRight: Radius.circular(4),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          itemNames[logs.first.itemId] ?? '',
+                                          style: const TextStyle(color: Colors.white, fontSize: 8),
+                                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               )
                             else if (logs.isNotEmpty)
@@ -448,7 +485,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             child: Row(children: [
               _buildRankTab('💰 财富榜', 0),
               _buildRankTab('💆 侍寝榜', 1),
-              _buildRankTab('📏 尺度榜', 2),
+              _buildRankTab('🥜 核桃榜', 2),
+              _buildRankTab('🏆 老炮榜', 3),
+              _buildRankTab('📈 潜力榜', 4),
             ]),
           ),
         ),
@@ -482,6 +521,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     switch (_rankTabIndex) {
       case 1: return _buildPattingRank(context, items);
       case 2: return _buildSizeRank(context, items);
+      case 3: return _buildVeteranRank(context, items);
+      case 4: return _buildPotentialRank(context, items);
       default: return _buildWealthRank(context, items);
     }
   }
@@ -490,7 +531,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final ranked = List<AntiqueEntity>.from(items)
       ..sort((a, b) => (b.currentValuation ?? b.acquiredPrice ?? 0)
           .compareTo(a.currentValuation ?? a.acquiredPrice ?? 0));
-    final top = ranked.where((i) => (i.currentValuation ?? i.acquiredPrice ?? 0) > 0).take(5).toList();
+    final top = ranked.where((i) => (i.currentValuation ?? i.acquiredPrice ?? 0) > 0).take(10).toList();
     if (top.isEmpty) return const SizedBox.shrink();
 
     return _buildRankCard(
@@ -509,7 +550,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         final freq = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)
           ..sort((a, b) => (freq[b.id] ?? 0).compareTo(freq[a.id] ?? 0));
-        final top = ranked.where((i) => (freq[i.id] ?? 0) > 0).take(5).toList();
+        final top = ranked.where((i) => (freq[i.id] ?? 0) > 0).take(10).toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -524,29 +565,45 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   }
 
   Widget _buildSizeRank(BuildContext context, List<AntiqueEntity> items) {
-    // 提取所有有尺寸数据的藏品
-    final withSize = items.where((i) =>
+    // 只考虑核桃品类
+    final walnutItems = items.where((i) => i.category == '核桃').toList();
+    final withSize = walnutItems.where((i) =>
         i.categoryMetadata != null &&
         i.categoryMetadata!.keys.any((k) => k.contains('边宽') || k.contains('尺寸'))).toList();
-    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, _sizeKey(b.category!))
-        .compareTo(_extractSize(a.categoryMetadata!, _sizeKey(a.category!))));
+    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, '边宽')
+        .compareTo(_extractSize(a.categoryMetadata!, '边宽')));
 
-    if (withSize.isEmpty) return const SizedBox.shrink();
+    if (withSize.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
+                const SizedBox(width: 8),
+                Text('暂无核桃尺寸数据，请在藏品详情中添加尺寸信息',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return _buildRankCard(
-      title: '📏 尺度榜',
-      subtitle: '按尺寸大小排序',
+      title: '🥜 核桃榜',
+      subtitle: '按边宽尺寸排序（仅核桃）',
       items: withSize.take(5).toList(),
       label: (i) {
-        final key = _sizeKey(i.category);
-        final size = _extractSize(i.categoryMetadata!, key);
+        final size = _extractSize(i.categoryMetadata!, '边宽');
         return size > 0 ? '$size mm' : '';
       },
       icon: Icons.straighten,
     );
   }
 
-  String _sizeKey(String category) => category == '核桃' ? '边宽' : '尺寸';
 
   double _extractSize(Map<String, String> metadata, String fieldKey) {
     for (final entry in metadata.entries) {
@@ -555,6 +612,48 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       }
     }
     return 0;
+  }
+
+  Widget _buildVeteranRank(BuildContext context, List<AntiqueEntity> items) {
+    final ranked = List<AntiqueEntity>.from(items)
+      ..sort((a, b) => a.acquiredDate.compareTo(b.acquiredDate));
+    final top = ranked.take(5).toList();
+    if (top.isEmpty) return const SizedBox.shrink();
+
+    return _buildRankCard(
+      title: '🏆 老炮榜',
+      subtitle: '按入手时间排序（最久远）',
+      items: top,
+      label: (i) {
+        final days = DateTime.now().difference(i.acquiredDate).inDays;
+        return '${days ~/ 365}年${(days % 365) ~/ 30}月';
+      },
+      icon: Icons.hourglass_bottom,
+    );
+  }
+
+  Widget _buildPotentialRank(BuildContext context, List<AntiqueEntity> items) {
+    final withPrice = items.where((i) =>
+        i.acquiredPrice != null && i.acquiredPrice! > 0 &&
+        i.currentValuation != null && i.currentValuation! > 0).toList();
+    withPrice.sort((a, b) {
+      final aRate = (b.currentValuation! - b.acquiredPrice!) / b.acquiredPrice!;
+      final bRate = (a.currentValuation! - a.acquiredPrice!) / a.acquiredPrice!;
+      return aRate.compareTo(bRate);
+    });
+    final top = withPrice.take(5).toList();
+    if (top.isEmpty) return const SizedBox.shrink();
+
+    return _buildRankCard(
+      title: '📈 潜力榜',
+      subtitle: '按升值幅度排序',
+      items: top,
+      label: (i) {
+        final rate = ((i.currentValuation! - i.acquiredPrice!) / i.acquiredPrice! * 100);
+        return '${rate.toStringAsFixed(0)}%';
+      },
+      icon: Icons.trending_up,
+    );
   }
 
   Widget _buildRankCard({
@@ -582,39 +681,50 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             ]),
             const SizedBox(height: 10),
-            // 阶梯式排行：前三有图片（1中2左3右），4-5只有文字
+            // 前三名阶梯展示：2左 1中 3右
             if (top3.isNotEmpty)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // 第2名（左）
                   if (top3.length >= 2)
-                    Expanded(child: _buildPodiumItem(top3[1], 2, label, false)),
+                    Expanded(child: _buildPodiumItem(top3[1], 2, label)),
                   const SizedBox(width: 6),
                   // 第1名（中）
-                  Expanded(child: _buildPodiumItem(top3[0], 1, label, true)),
+                  Expanded(child: _buildPodiumItem(top3[0], 1, label)),
                   const SizedBox(width: 6),
                   // 第3名（右）
                   if (top3.length >= 3)
-                    Expanded(child: _buildPodiumItem(top3[2], 3, label, false)),
-                  // 只有1或2人时的占位
+                    Expanded(child: _buildPodiumItem(top3[2], 3, label)),
                   if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
                 ],
               ),
-            // 4-5名简单文字
+            // 4-10名列表
             if (rest.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              ...rest.map((item) => ListTile(
-                dense: true,
-                leading: Text('${rest.indexOf(item) + 4}.',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                title: Text(item.name, style: const TextStyle(fontSize: 12)),
-                subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
-                trailing: Text(label(item),
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
-                contentPadding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-              )),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              ...rest.asMap().entries.map((entry) {
+                final rank = entry.key + 4;
+                final item = entry.value;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                  title: Text(item.name, style: const TextStyle(fontSize: 12)),
+                  subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(label(item), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.green)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+                    ],
+                  ),
+                  onTap: () => context.push('/collection/${item.id}'),
+                );
+              }),
             ],
           ],
         ),
@@ -622,81 +732,89 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildPodiumItem(AntiqueEntity item, int rank, String Function(AntiqueEntity) label, bool isFirst) {
-    final colors = [Colors.amber.shade200, Colors.grey.shade300, Colors.brown.shade200];
+  Widget _buildPodiumItem(AntiqueEntity item, int rank, String Function(AntiqueEntity) label) {
     final medals = ['🥇', '🥈', '🥉'];
+    final colors = [Colors.amber.shade200, Colors.grey.shade300, Colors.brown.shade200];
     final cover = item.imagePaths.isNotEmpty ? item.imagePaths.first : null;
     final photosAsync = ref.watch(latestPattingPhotosProvider);
     final latestPhoto = photosAsync.valueOrNull?[item.id];
     final displayImage = latestPhoto ?? cover;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 图片
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: isFirst ? 90 : 70,
-            height: isFirst ? 72 : 56,
-            color: colors[rank - 1].withValues(alpha: 0.3),
-            child: displayImage != null
-                ? Image.file(File(displayImage), fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]))
-                : Icon(rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]),
+    return GestureDetector(
+      onTap: () => context.push('/collection/${item.id}'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 50x50 图片
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: rank == 1 ? 56 : 50,
+              height: 50,
+              color: colors[rank - 1].withValues(alpha: 0.3),
+              child: displayImage != null
+                  ? Image.file(File(displayImage), width: 50, height: 50, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]))
+                  : Icon(rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]),
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(medals[rank - 1], style: const TextStyle(fontSize: 16)),
-        Text(item.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
-            textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(label(item), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-      ],
+          const SizedBox(height: 3),
+          Text(medals[rank - 1], style: const TextStyle(fontSize: 14)),
+          Text(item.name,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+              textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label(item),
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+        ],
+      ),
     );
   }
 
-  void _showDayPhotos(BuildContext context, DateTime date, List<PattingLogEntity> logs) {
-    final photos = logs
-        .expand((l) => l.photoPaths)
-        .where((p) => p.isNotEmpty)
-        .toList();
-
+  void _onDayTap(BuildContext context, DateTime date, List<PattingLogEntity> logs) {
+    if (logs.isEmpty) return;
+    // 只有一条记录 → 直接跳转
+    if (logs.length == 1) {
+      final log = logs.first;
+      context.push('/collection/${log.itemId}?highlightLog=${log.id ?? ''}');
+      return;
+    }
+    // 多条记录 → 底部弹出打卡列表，点击照片再跳转
+    final dateStr = '${date.month}月${date.day}日';
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${date.month}月${date.day}日 打卡记录',
+            Text('$dateStr 打卡记录',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (photos.isEmpty)
-              const Text('当天有打卡但无照片', style: TextStyle(color: Colors.grey))
-            else
-              SizedBox(
-                height: 200,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: photos.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(photos[i]),
-                        width: 150, height: 200, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 150, height: 200,
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.broken_image, color: Colors.grey),
-                        )),
-                  ),
-                ),
-              ),
             const SizedBox(height: 8),
-            Text('共 ${logs.length} 条记录',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            ...logs.take(10).map((log) {
+              final days = log.date.difference(DateTime(log.date.year, log.date.month, log.date.day)).inDays;
+              final dayLabel = days == 0 ? '入手当天' : '第$days天';
+              return ListTile(
+                dense: true,
+                leading: log.photoPaths.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(File(log.photoPaths.first),
+                            width: 40, height: 40, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 24, color: Colors.grey)),
+                      )
+                    : const Icon(Icons.touch_app, color: Colors.grey),
+                title: Text(dayLabel, style: const TextStyle(fontSize: 13)),
+                subtitle: Text(log.note ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.chevron_right, size: 16),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push('/collection/${log.itemId}?highlightLog=${log.id ?? ''}');
+                },
+              );
+            }),
           ],
         ),
       ),

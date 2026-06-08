@@ -46,6 +46,10 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('待办清单'),
+        leading: IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () => context.push('/settings'),
+        ),
         centerTitle: true,
         actions: [
           // 视图切换
@@ -288,101 +292,15 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   }
 
   Widget _buildMonthGrid(DateTime today, Set<int> reviewDays) {
-    final firstDay = DateTime(_monthStart.year, _monthStart.month, 1);
-    final lastDay = DateTime(_monthStart.year, _monthStart.month + 1, 0);
-    // DateTime.weekday: Mon=1 .. Sun=7, 转为 Mon=0 .. Sun=6
-    final startWeekday = firstDay.weekday - 1;
-    final daysInMonth = lastDay.day;
-    final totalCells = startWeekday + daysInMonth;
-    final rows = (totalCells + 6) ~/ 7;
-
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          // 星期标签
-          Row(
-            children: ['一', '二', '三', '四', '五', '六', '日'].map((d) {
-              return Expanded(
-                child: Center(
-                  child: Text(d,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: (d == '六' || d == '日')
-                              ? Colors.grey
-                              : null)),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 4),
-          // 日期网格 - 使用 Table 确保完全对齐
-          Table(
-            children: List.generate(rows, (weekIndex) {
-              return TableRow(
-                children: List.generate(7, (colIndex) {
-                  final dayNum = weekIndex * 7 + colIndex - startWeekday + 1;
-                  if (dayNum < 1 || dayNum > daysInMonth) {
-                    return const SizedBox(height: 38);
-                  }
-                  final date = DateTime(
-                      _monthStart.year, _monthStart.month, dayNum);
-                  final isToday = _isSameDay(date, today);
-                  final isSelected = _isSameDay(date, _selectedDate);
-                  final isWeekend = colIndex >= 5;
-                  final hasReview = reviewDays.contains(dayNum);
-
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedDate = date),
-                    child: Container(
-                      height: 42,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : isToday
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.1)
-                                : null,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$dayNum',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isToday ? FontWeight.bold : null,
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isWeekend ? Colors.grey : null),
-                            ),
-                          ),
-                          if (hasReview)
-                            Container(
-                              width: 5,
-                              height: 5,
-                              margin: const EdgeInsets.only(top: 1),
-                              decoration: const BoxDecoration(
-                                color: Colors.teal,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              );
-            }),
-          ),
-        ],
-      ),
+    return _MonthGrid(
+      monthStart: _monthStart,
+      selectedDate: _selectedDate,
+      today: today,
+      reviewDays: reviewDays,
+      onDateSelected: (date) => setState(() => _selectedDate = date),
     );
   }
+
 
   // ===== 待办列表 =====
 
@@ -634,11 +552,9 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  /// 获取过期待办（pending 且 dueDate 早于今天）
+  /// 获取过期待办（pending 且已过期）
   List<TodoEntity> _getOverdueTodos(List<TodoEntity> todos) {
-    final today = DateTime.now();
-    final todayStart = DateTime(today.year, today.month, today.day);
-    return todos.where((t) => t.isOverdue && t.dueDate!.isBefore(todayStart)).toList();
+    return todos.where((t) => t.isOverdue).toList();
   }
 
   /// 计算逾期天数
@@ -656,11 +572,19 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
       for (final t in allTodos) {
-        if (t.status == TodoStatus.pending && t.dueDate != null && t.dueDate!.isBefore(todayStart)) {
-          await repo.update(t.copyWith(
-            dueDate: todayStart,
-            updatedAt: today,
-          ));
+        if (t.status == TodoStatus.pending && t.isOverdue) {
+          if (t.dueDate != null) {
+            await repo.update(t.copyWith(
+              dueDate: todayStart,
+              updatedAt: today,
+            ));
+          } else if (t.startedAt != null) {
+            // 无截止日期但开始时间已过期的，将开始时间顺延到今天
+            await repo.update(t.copyWith(
+              startedAt: todayStart,
+              updatedAt: today,
+            ));
+          }
         }
       }
       ref.read(todoListProvider.notifier).refresh();
@@ -669,31 +593,78 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   void _showHistoryView(BuildContext context) {
     final weeklyReports = ref.watch(weeklyListByYearProvider);
+    final allMonthlyReviews = ref.watch(allDailyReviewsProvider);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: weeklyReports.when(
-          data: (reports) => reports.isEmpty
-              ? const Center(child: Text('暂无周报记录'))
-              : ListView.builder(
-                  itemCount: reports.length,
-                  itemBuilder: (_, i) {
-                    final r = reports[i];
-                    return ListTile(
-                      leading: const Icon(Icons.article),
-                      title: Text('第${r.weekNumber}周'),
-                      subtitle: Text(r.overview.length > 30 ? '${r.overview.substring(0, 30)}…' : r.overview),
-                      trailing: Text(r.createdAt.toString().split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        context.push('/review/weekly/${r.id}');
-                      },
-                    );
-                  },
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              const TabBar(
+                tabs: [
+                  Tab(text: '日报记录'),
+                  Tab(text: '周报记录'),
+                ],
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    // 日报记录
+                    allMonthlyReviews.when(
+                      data: (reviews) => reviews.isEmpty
+                          ? const Center(child: Text('暂无日报记录'))
+                          : ListView.builder(
+                              itemCount: reviews.length,
+                              itemBuilder: (_, i) {
+                                final r = reviews[i];
+                                return ListTile(
+                                  leading: const Icon(Icons.article_outlined),
+                                  title: Text('${r.date.year}年${r.date.month}月${r.date.day}日'),
+                                  subtitle: Text(r.summary.length > 40 ? '${r.summary.substring(0, 40)}…' : r.summary,
+                                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  trailing: Text('能量 ${r.energyLevel} · 情绪 ${r.moodLevel}',
+                                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    final dateStr = r.date.toIso8601String().split('T')[0];
+                                    context.push('/review/daily/$dateStr');
+                                  },
+                                );
+                              },
+                            ),
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (_, __) => const Center(child: Text('加载失败')),
+                    ),
+                    // 周报记录
+                    weeklyReports.when(
+                      data: (reports) => reports.isEmpty
+                          ? const Center(child: Text('暂无周报记录'))
+                          : ListView.builder(
+                              itemCount: reports.length,
+                              itemBuilder: (_, i) {
+                                final r = reports[i];
+                                return ListTile(
+                                  leading: const Icon(Icons.article),
+                                  title: Text('第${r.weekNumber}周'),
+                                  subtitle: Text(r.overview.length > 30 ? '${r.overview.substring(0, 30)}…' : r.overview),
+                                  trailing: Text(r.createdAt.toString().split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    context.push('/review/weekly/${r.id}');
+                                  },
+                                );
+                              },
+                            ),
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (_, __) => const Center(child: Text('加载失败')),
+                    ),
+                  ],
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Center(child: Text('加载失败')),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -852,5 +823,113 @@ class _ArchivePage extends ConsumerWidget {
         error: (err, _) => Center(child: Text('加载失败: $err')),
       ),
     );
+  }
+}
+
+/// 月视图日历网格控件 — 独立 Widget 减少重建范围，提升性能
+class _MonthGrid extends StatelessWidget {
+  final DateTime monthStart;
+  final DateTime selectedDate;
+  final DateTime today;
+  final Set<int> reviewDays;
+  final ValueChanged<DateTime> onDateSelected;
+
+  const _MonthGrid({
+    required this.monthStart,
+    required this.selectedDate,
+    required this.today,
+    required this.reviewDays,
+    required this.onDateSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final firstDay = DateTime(monthStart.year, monthStart.month, 1);
+    final lastDay = DateTime(monthStart.year, monthStart.month + 1, 0);
+    final startWeekday = firstDay.weekday - 1;
+    final daysInMonth = lastDay.day;
+    final totalCells = startWeekday + daysInMonth;
+    final rows = (totalCells + 6) ~/ 7;
+
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          Row(
+            children: ['一', '二', '三', '四', '五', '六', '日'].map((d) {
+              return Expanded(
+                child: Center(
+                  child: Text(d,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: (d == '六' || d == '日') ? Colors.grey : null)),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 4),
+          Table(
+            children: List.generate(rows, (weekIndex) {
+              return TableRow(
+                children: List.generate(7, (colIndex) {
+                  final dayNum = weekIndex * 7 + colIndex - startWeekday + 1;
+                  if (dayNum < 1 || dayNum > daysInMonth) {
+                    return const SizedBox(height: 38);
+                  }
+                  final date = DateTime(monthStart.year, monthStart.month, dayNum);
+                  final isToday = _isSameDay(date, today);
+                  final isSelected = _isSameDay(date, selectedDate);
+                  final isWeekend = colIndex >= 5;
+                  final hasReview = reviewDays.contains(dayNum);
+
+                  return GestureDetector(
+                    onTap: () => onDateSelected(date),
+                    child: Container(
+                      height: 42,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : isToday
+                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                                : null,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$dayNum',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isToday ? FontWeight.bold : null,
+                              color: isSelected ? Colors.white : (isWeekend ? Colors.grey : null),
+                            ),
+                          ),
+                          if (hasReview)
+                            Container(
+                              width: 5,
+                              height: 5,
+                              margin: const EdgeInsets.only(top: 1),
+                              decoration: const BoxDecoration(
+                                color: Colors.teal,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

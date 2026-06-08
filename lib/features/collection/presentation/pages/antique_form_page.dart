@@ -113,7 +113,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _initMetaCtrls();
         if (item.categoryMetadata != null) {
           for (final e in item.categoryMetadata!.entries) {
-            if (_category == '核桃' && !e.key.contains('重量') && e.value.contains(',')) {
+            if (_category == '核桃' && e.value.contains(',')) {
               final parts = e.value.split(',');
               _metaCtrls['左${e.key}']?.text = parts[0].trim();
               _metaCtrls['右${e.key}']?.text = parts.length > 1 ? parts[1].trim() : '';
@@ -216,20 +216,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       final fields = _currentFields;
       final metadata = <String, String>{};
       if (_category == '核桃') {
-        for (final f in fields.where((f) => !f.contains('重量'))) {
+        for (final f in fields) {
           final leftCtrl = _metaCtrls['左$f'];
           final rightCtrl = _metaCtrls['右$f'];
           final left = leftCtrl?.text.trim() ?? '';
           final right = rightCtrl?.text.trim() ?? '';
           if (left.isNotEmpty || right.isNotEmpty) {
             metadata[f] = '$left,$right';
-          }
-        }
-        // 重量单独处理
-        for (final f in fields.where((f) => f.contains('重量'))) {
-          final ctrl = _metaCtrls[f];
-          if (ctrl != null && ctrl.text.trim().isNotEmpty) {
-            metadata[f] = ctrl.text.trim();
           }
         }
       } else {
@@ -442,8 +435,8 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                       Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       if (_category == '核桃') ...[
-                        // 核桃专用：每个字段显示左右双输入
-                        ..._currentFields.where((f) => !f.contains('重量')).map((field) {
+                        // 核桃专用：每个字段显示左右双输入（包括重量）
+                        ..._currentFields.map((field) {
                           final leftCtrl = _metaCtrls['左$field'] ??= TextEditingController();
                           final rightCtrl = _metaCtrls['右$field'] ??= TextEditingController();
                           return Padding(
@@ -481,16 +474,6 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                             ),
                           );
                         }),
-                        // 重量字段单行
-                        ..._currentFields.where((f) => f.contains('重量')).map((field) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: TextField(
-                            controller: _metaCtrls[field],
-                            decoration: InputDecoration(hintText: field, border: const OutlineInputBorder(), isDense: true),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-                          ),
-                        )),
                       ] else ...[
                         // 非核桃：正常单行
                         ..._currentFields.map((field) {

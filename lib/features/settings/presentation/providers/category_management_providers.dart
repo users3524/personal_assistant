@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/collection_category.dart';
 import '../../../../core/database/app_settings_persistence.dart';
+import '../../../../core/database/app_database.dart' hide CollectionCategory, CollectionCategoriesCompanion;
 
 /// 默认初始分类
 final List<CollectionCategory> _defaultCategories = [
@@ -69,6 +70,23 @@ class CollectionCategoriesNotifier extends StateNotifier<List<CollectionCategory
   void remove(String name) {
     if (state.length <= 1) return;
     state = state.where((c) => c.name != name).toList();
+    _persist();
+  }
+
+  /// 从数据库导入后同步内存状态 — 检查数据库中的分类，没有则新建
+  Future<void> reloadFromDb(AppDatabase db) async {
+    final dbRows = await db.select(db.collectionCategories).get();
+    final existingNames = state.map((c) => c.name).toSet();
+    for (final row in dbRows) {
+      if (!existingNames.contains(row.name)) {
+        final subtypes = (jsonDecode(row.subtypes) as List).cast<String>();
+        final fields = (jsonDecode(row.metadataFields) as List).cast<String>();
+        state = [...state, CollectionCategory(
+          name: row.name, subtypes: subtypes,
+          metadataFields: fields, sortOrder: row.sortOrder,
+        )];
+      }
+    }
     _persist();
   }
 

@@ -13,6 +13,7 @@ import '../../domain/entities/antique_entity.dart';
 import '../../domain/repositories/antique_repository.dart';
 import '../../../../core/database/app_settings_persistence.dart';
 import 'dart:math';
+import 'dart:io';
 
 // 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
@@ -287,7 +288,7 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
 
     // 按配置取每个类别指定数量（从最低频的 2 倍 N 中随机选取）
     final picks = <AntiqueEntity>[];
-    final rand = Random(DateTime.now().millisecondsSinceEpoch ~/ 60000);
+    final rand = Random(DateTime.now().microsecondsSinceEpoch);
     for (final entry in config.counts.entries) {
       final pool = items.where((i) => i.category == entry.key).toList();
       // 取最低频的 2×count 个作为候选池，从中随机选

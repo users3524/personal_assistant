@@ -724,10 +724,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                   return GestureDetector(
                                     onTap: () => _showFullScreenImage(context, path),
                                     child: Container(
-                                      width: 80,
-                                      height: 80,
+                                      width: 150,
+                                      height: 150,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(10),
                                         border: Border.all(color: Colors.grey.shade300),
                                       ),
                                       child: ClipRRect(

@@ -12,7 +12,7 @@ final List<CollectionCategory> _defaultCategories = [
   CollectionCategory(
     name: '核桃',
     subtypes: ['白狮子', '苹果园', '鸡心', '官帽', '虎头', '四座楼', '南将石', '磨盘', '蛤蟆头', '满天星'],
-    metadataFields: ['边宽(mm)', '肚厚(mm)', '桩高(mm)', '重量(g)'],
+    metadataFields: ['左边宽(mm)', '右边宽(mm)', '左肚厚(mm)', '右肚厚(mm)', '左桩高(mm)', '右桩高(mm)', '重量(g)'],
     sortOrder: 0,
   ),
   CollectionCategory(

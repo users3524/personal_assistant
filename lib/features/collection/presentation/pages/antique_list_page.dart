@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
 import '../widgets/antique_grid_card.dart';
+import '../../../settings/presentation/providers/category_management_providers.dart';
 
 class AntiqueListPage extends ConsumerStatefulWidget {
   const AntiqueListPage({super.key});
@@ -104,26 +105,36 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         SliverToBoxAdapter(child: _buildStatsBar(context, categoryCount)),
         // 藏品网格
         listAsync.when(
-          data: (items) => items.isEmpty
-              ? SliverFillRemaining(child: _buildEmptyState(context))
-              : SliverPadding(
-                  padding: const EdgeInsets.all(12),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: gridColumns,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: aspectRatio,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final item = items[index];
-                        return _buildGridCard(context, ref, item);
-                      },
-                      childCount: items.length,
-                    ),
-                  ),
+          data: (items) {
+            // 分类筛选
+            final filter = ref.watch(categoryDisplayFilterProvider);
+            final filtered = filter.isEmpty
+                ? items
+                : items.where((i) => i.category == filter).toList();
+
+            if (filtered.isEmpty) {
+              return const SliverFillRemaining(child: Center(child: Text('该分类暂无藏品')));
+            }
+
+            return SliverPadding(
+              padding: const EdgeInsets.all(12),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridColumns,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: aspectRatio,
                 ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = filtered[index];
+                    return _buildGridCard(context, ref, item);
+                  },
+                  childCount: filtered.length,
+                ),
+              ),
+            );
+          },
           loading: () => const SliverFillRemaining(
             child: Center(child: CircularProgressIndicator()),
           ),
@@ -168,6 +179,27 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Colors.orange.shade800)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      ref.read(dailyPickRefreshCounter.notifier).state++;
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.replay, size: 14, color: Colors.orange.shade700),
+                          const SizedBox(width: 2),
+                          Text('换一换', style: TextStyle(fontSize: 11, color: Colors.orange.shade700)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -552,6 +584,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     required String Function(AntiqueEntity) label,
     required IconData icon,
   }) {
+    final top3 = items.take(3).toList();
+    final rest = items.length > 3 ? items.sublist(3) : <AntiqueEntity>[];
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       child: Padding(
@@ -566,20 +601,78 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               const Spacer(),
               Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             ]),
-            const SizedBox(height: 8),
-            ...items.map((item) => ListTile(
-              dense: true,
-              leading: Text('${items.indexOf(item) + 1}.',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber.shade700)),
-              title: Text(item.name, style: const TextStyle(fontSize: 13)),
-              subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 11)),
-              trailing: Text(label(item),
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.green)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-            )),
+            const SizedBox(height: 10),
+            // 阶梯式排行：前三有图片（1中2左3右），4-5只有文字
+            if (top3.isNotEmpty)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // 第2名（左）
+                  if (top3.length >= 2)
+                    Expanded(child: _buildPodiumItem(top3[1], 2, label, false)),
+                  const SizedBox(width: 6),
+                  // 第1名（中）
+                  Expanded(child: _buildPodiumItem(top3[0], 1, label, true)),
+                  const SizedBox(width: 6),
+                  // 第3名（右）
+                  if (top3.length >= 3)
+                    Expanded(child: _buildPodiumItem(top3[2], 3, label, false)),
+                  // 只有1或2人时的占位
+                  if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
+                ],
+              ),
+            // 4-5名简单文字
+            if (rest.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              ...rest.map((item) => ListTile(
+                dense: true,
+                leading: Text('${rest.indexOf(item) + 4}.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                title: Text(item.name, style: const TextStyle(fontSize: 12)),
+                subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
+                trailing: Text(label(item),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
+                contentPadding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              )),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPodiumItem(AntiqueEntity item, int rank, String Function(AntiqueEntity) label, bool isFirst) {
+    final colors = [Colors.amber.shade200, Colors.grey.shade300, Colors.brown.shade200];
+    final medals = ['🥇', '🥈', '🥉'];
+    final cover = item.imagePaths.isNotEmpty ? item.imagePaths.first : null;
+    final photosAsync = ref.watch(latestPattingPhotosProvider);
+    final latestPhoto = photosAsync.valueOrNull?[item.id];
+    final displayImage = latestPhoto ?? cover;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 图片
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: isFirst ? 90 : 70,
+            height: isFirst ? 72 : 56,
+            color: colors[rank - 1].withValues(alpha: 0.3),
+            child: displayImage != null
+                ? Image.file(File(displayImage), fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(
+                      rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]))
+                : Icon(rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(medals[rank - 1], style: const TextStyle(fontSize: 16)),
+        Text(item.name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+            textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(label(item), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+      ],
     );
   }
 
@@ -634,21 +727,38 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   Widget _buildStatsBar(BuildContext context, Map<String, int> categoryCount) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          const Icon(Icons.diamond, size: 16, color: Colors.grey),
-          const SizedBox(width: 6),
-          Text(
-            '共 ${categoryCount.values.fold(0, (a, b) => a + b)} 件',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
-          ),
+          Text('🏛️ 共${categoryCount.values.fold(0, (a, b) => a + b)}件',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
           const Spacer(),
-          Text(
-            '${categoryCount.length} 个分类',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
-          ),
+          _buildCategoryFilter(context),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter(BuildContext context) {
+    final categories = ref.watch(collectionCategoriesProvider);
+    final selectedFilter = ref.watch(categoryDisplayFilterProvider);
+    return PopupMenuButton<String>(
+      initialValue: selectedFilter,
+      onSelected: (cat) {
+        ref.read(categoryDisplayFilterProvider.notifier).state = cat;
+      },
+      itemBuilder: (ctx) => [
+        const PopupMenuItem(value: '', child: Text('🗂️ 全部分类')),
+        ...categories.map((c) => PopupMenuItem(
+          value: c.name,
+          child: Text(c.name),
+        )),
+      ],
+      child: Chip(
+        label: Text(selectedFilter.isEmpty ? '筛选' : selectedFilter, style: const TextStyle(fontSize: 11)),
+        avatar: const Icon(Icons.filter_list, size: 14),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
       ),
     );
   }

@@ -239,15 +239,29 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
     final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
     final count = antiqueItems.where((i) => i.category == cat.name).length;
 
-    final message = count > 0
-        ? '确定删除「${cat.name}」分类吗？\n\n⚠️ 有 $count 件藏品正在使用此分类，删除后它们将保留原分类名称，但将不再显示在分类列表中。'
-        : '确定删除「${cat.name}」分类吗？';
+    if (count > 0) {
+      // 有依赖项 → 禁止删除
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('无法删除'),
+          content: Text('「${cat.name}」分类下有 $count 件藏品正在使用，请先移除或修改藏品的分类后再删除。'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除分类'),
-        content: Text(message),
+        content: Text('确定删除「${cat.name}」分类吗？'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           FilledButton(

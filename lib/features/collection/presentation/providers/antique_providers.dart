@@ -12,6 +12,7 @@ import '../../data/repositories/antique_repository_impl.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../../domain/repositories/antique_repository.dart';
 import '../../../../core/database/app_settings_persistence.dart';
+import 'dart:math';
 
 // 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
@@ -28,6 +29,9 @@ final calendarMonthProvider =
 
 // 月历分类筛选
 final calendarFilterProvider = StateProvider<String?>((ref) => null);
+
+/// 网格显示分类筛选（空=全部）
+final categoryDisplayFilterProvider = StateProvider<String>((ref) => '');
 
 // ===== 列表 Provider（可刷新） =====
 
@@ -210,15 +214,24 @@ class DailyPickConfig {
 }
 
 final dailyPickConfigProvider = StateNotifierProvider<DailyPickConfigNotifier, DailyPickConfig>((ref) {
-  return DailyPickConfigNotifier();
+  final notifier = DailyPickConfigNotifier();
+  // 异步从持久化加载配置
+  Future.microtask(() => notifier.loadFromStorage());
+  return notifier;
 });
 
 class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
-  final void Function(Map<String, int>)? _onChanged;
+  DailyPickConfigNotifier() : super(const DailyPickConfig());
+  bool _loaded = false;
 
-  DailyPickConfigNotifier({void Function(Map<String, int>)? onChanged})
-      : _onChanged = onChanged,
-        super(const DailyPickConfig());
+  Future<void> loadFromStorage() async {
+    if (_loaded) return;
+    _loaded = true;
+    final counts = await AppSettingsPersistence().getDailyPickCounts();
+    if (counts.isNotEmpty) {
+      state = DailyPickConfig(counts: counts);
+    }
+  }
 
   void load(Map<String, int> counts) {
     if (counts.isNotEmpty) {
@@ -231,7 +244,7 @@ class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
     final newCounts = Map<String, int>.from(state.counts);
     newCounts[category] = count;
     state = DailyPickConfig(counts: newCounts);
-    _onChanged?.call(newCounts);
+    AppSettingsPersistence().setDailyPickCounts(newCounts);
   }
 
   void addCategory(String category, int count) {
@@ -249,7 +262,11 @@ class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
 
 // ===== 每日翻牌推荐（按配置） =====
 
+/// 刷新计数器 — 用于换一换功能
+final dailyPickRefreshCounter = StateProvider<int>((ref) => 0);
+
 final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
+  ref.watch(dailyPickRefreshCounter); // 监听刷新
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
     final config = ref.watch(dailyPickConfigProvider);
@@ -272,11 +289,17 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
       return fa.compareTo(fb); // 升序：最少优先
     });
 
-    // 按配置取每个类别指定数量
+    // 按配置取每个类别指定数量（从最低频的 2 倍 N 中随机选取）
     final picks = <AntiqueEntity>[];
+    final rand = Random(DateTime.now().millisecondsSinceEpoch ~/ 60000);
     for (final entry in config.counts.entries) {
-      final categoryItems = items.where((i) => i.category == entry.key).take(entry.value);
-      picks.addAll(categoryItems);
+      final pool = items.where((i) => i.category == entry.key).toList();
+      // 取最低频的 2×count 个作为候选池，从中随机选
+      final takeCount = entry.value;
+      final poolSize = (takeCount * 2).clamp(1, pool.length);
+      final candidatePool = pool.take(poolSize).toList();
+      candidatePool.shuffle(rand);
+      picks.addAll(candidatePool.take(takeCount));
     }
     return picks;
   });

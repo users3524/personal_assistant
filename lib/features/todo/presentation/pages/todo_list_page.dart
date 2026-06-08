@@ -27,8 +27,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   DateTime _monthStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
   CalendarView _viewMode = CalendarView.week;
 
-  bool _showArchived = false;
-
   static DateTime _getWeekStart(DateTime date) {
     final weekday = date.weekday;
     return DateTime(date.year, date.month, date.day - (weekday - 1));
@@ -37,6 +35,9 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   @override
   Widget build(BuildContext context) {
     final todoListAsync = ref.watch(todoListProvider);
+
+    // 每天检测一次，将过期待办顺延到今日
+    Future.microtask(() => _carryOverOverdueTodos());
 
     return Scaffold(
       appBar: AppBar(
@@ -60,9 +61,9 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           // 分类管理
           // 归档切换
           IconButton(
-            icon: Icon(_showArchived ? Icons.archive : Icons.archive_outlined),
+            icon: const Icon(Icons.archive_outlined),
             tooltip: '归档',
-            onPressed: () => setState(() => _showArchived = !_showArchived),
+            onPressed: () => _showArchivePage(context),
           ),
         ],
       ),
@@ -78,67 +79,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             flex: 1,
             child: todoListAsync.when(
               data: (todos) {
-                if (_showArchived) {
-                  // —— 归档视图：显示所有已完成/已取消的待办 ——
-                  final archived = todos
-                      .where((t) =>
-                          t.status == TodoStatus.done ||
-                          t.status == TodoStatus.cancelled)
-                      .toList()
-                    ..sort((a, b) {
-                      final aDate =
-                          a.completedAt ?? a.cancelledAt ?? a.createdAt;
-                      final bDate =
-                          b.completedAt ?? b.cancelledAt ?? b.createdAt;
-                      return bDate.compareTo(aDate);
-                    });
-                  if (archived.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.archive_outlined,
-                              size: 60,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.3)),
-                          const SizedBox(height: 12),
-                          const Text('没有已完成的待办',
-                              style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    );
-                  }
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline,
-                                size: 18,
-                                color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 6),
-                            Text('已归档',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )),
-                            const SizedBox(width: 8),
-                            Text('${archived.length}项',
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(child: _buildTodoList(archived)),
-                    ],
-                  );
-                }
-                // —— 普通视图：选中日期的待办 ——
                 final dayTodos = _getTodosForDate(todos, _selectedDate);
                 // 今天额外显示过期待办
                 final isToday = _isSameDay(_selectedDate, DateTime.now());
@@ -172,6 +112,22 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           ),
           // 每日复盘卡片（仅在周视图显示）
           if (_viewMode == CalendarView.week) _DailyReviewCard(),
+          // 月视图底部历史入口
+          if (_viewMode == CalendarView.month)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: GestureDetector(
+                onTap: () => _showHistoryView(context),
+                child: Text('历史日/周报查看',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -476,12 +432,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (_) async {
-        if (_showArchived) {
-          // 归档模式：直接删除（已完成的无需再取消）
-          ref.read(todoListProvider.notifier).deleteTodo(todo.id!);
-        } else {
-          ref.read(todoListProvider.notifier).cancelTodo(todo.id!);
-        }
+        ref.read(todoListProvider.notifier).cancelTodo(todo.id!);
         return true;
       },
       child: ListTile(
@@ -674,6 +625,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     );
   }
 
+  void _showArchivePage(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => _ArchivePage(),
+    ));
+  }
+
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -683,6 +640,57 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
     return todos.where((t) => t.isOverdue && t.dueDate!.isBefore(todayStart)).toList();
+  }
+
+  /// 将过期待办的 dueDate 顺延到今天（不改变 createdAt）
+  void _carryOverOverdueTodos() async {
+    try {
+      final repo = await ref.read(todoRepositoryProvider.future);
+      final allTodos = await repo.getAll();
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      for (final t in allTodos) {
+        if (t.status == TodoStatus.pending && t.dueDate != null && t.dueDate!.isBefore(todayStart)) {
+          await repo.update(t.copyWith(
+            dueDate: todayStart,
+            updatedAt: today,
+          ));
+        }
+      }
+      ref.read(todoListProvider.notifier).refresh();
+    } catch (_) {}
+  }
+
+  void _showHistoryView(BuildContext context) {
+    final weeklyReports = ref.watch(weeklyListByYearProvider);
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: weeklyReports.when(
+          data: (reports) => reports.isEmpty
+              ? const Center(child: Text('暂无周报记录'))
+              : ListView.builder(
+                  itemCount: reports.length,
+                  itemBuilder: (_, i) {
+                    final r = reports[i];
+                    return ListTile(
+                      leading: const Icon(Icons.article),
+                      title: Text('第${r.weekNumber}周'),
+                      subtitle: Text(r.overview.length > 30 ? '${r.overview.substring(0, 30)}…' : r.overview),
+                      trailing: Text(r.createdAt.toString().split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/review/weekly/${r.id}');
+                      },
+                    );
+                  },
+                ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const Center(child: Text('加载失败')),
+        ),
+      ),
+    );
   }
 }
 
@@ -780,6 +788,63 @@ class _DailyReviewCard extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 归档页面 — 按日期分组显示已完成/已取消的待办
+class _ArchivePage extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final todoListAsync = ref.watch(todoListProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('历史归档')),
+      body: todoListAsync.when(
+        data: (todos) {
+          final archived = todos
+              .where((t) => t.status == TodoStatus.done || t.status == TodoStatus.cancelled)
+              .toList()
+            ..sort((a, b) {
+              final aDate = a.completedAt ?? a.cancelledAt ?? a.createdAt;
+              final bDate = b.completedAt ?? b.cancelledAt ?? b.createdAt;
+              return bDate.compareTo(aDate);
+            });
+          if (archived.isEmpty) {
+            return const Center(child: Text('暂无已归档的待办', style: TextStyle(color: Colors.grey)));
+          }
+          // 按日期分组
+          final groups = <String, List<TodoEntity>>{};
+          for (final t in archived) {
+            final key = (t.completedAt ?? t.cancelledAt ?? t.createdAt).toString().split('T')[0];
+            groups.putIfAbsent(key, () => []);
+            groups[key]!.add(t);
+          }
+          return ListView(
+            children: groups.entries.map((entry) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(entry.key, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.teal)),
+                  ),
+                  ...entry.value.map((t) => ListTile(
+                    dense: true,
+                    leading: Icon(t.isDone ? Icons.check_circle : Icons.cancel, color: t.isDone ? Colors.green : Colors.red, size: 20),
+                    title: Text(t.title, style: TextStyle(fontSize: 14, decoration: t.isDone ? TextDecoration.lineThrough : null)),
+                    subtitle: Text(t.category, style: const TextStyle(fontSize: 11)),
+                    onTap: () => context.push('/todos/${t.id}'),
+                  )),
+                  const Divider(indent: 16, endIndent: 16),
+                ],
+              );
+            }).toList(),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('加载失败: $err')),
+      ),
     );
   }
 }

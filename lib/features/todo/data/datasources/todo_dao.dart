@@ -17,7 +17,7 @@ class TodoDao {
     return TodosCompanion(
       title: Value(entity.title),
       description: Value(entity.description),
-      category: Value(entity.category), // 直接用中文分类名存储
+      category: Value(entity.category),
       priority: Value(entity.priority),
       dueDate: Value(entity.dueDate),
       status: Value(_statusToString(entity.status)),
@@ -28,6 +28,8 @@ class TodoDao {
       cancelledAt: Value(entity.cancelledAt),
       actualMinutes: Value(entity.actualMinutes),
       delayCount: Value(entity.delayCount),
+      createdAt: Value(entity.createdAt),
+      updatedAt: Value(entity.updatedAt),
     );
   }
 

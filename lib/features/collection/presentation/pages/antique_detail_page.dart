@@ -1784,8 +1784,8 @@ class _CompareSelectDialogState extends State<_CompareSelectDialog>
                     child: FilledButton.icon(
                       onPressed: _leftKey == _rightKey ? null
                           : () => Navigator.pop(context, {'left': _leftKey, 'right': _rightKey}),
-                      icon: const Icon(Icons.compare_arrows, size: 20),
-                      label: const Text('对比', style: TextStyle(letterSpacing: 1)),
+                      icon: const Icon(Icons.save_alt, size: 20),
+                      label: const Text('保存图片', style: TextStyle(letterSpacing: 1)),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF00BCD4),
                         disabledBackgroundColor: Colors.white10,

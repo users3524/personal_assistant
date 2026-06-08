@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
@@ -165,6 +166,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           children: [
             GestureDetector(
               onTap: () => _showFullScreenImage(context, images[0]),
+              onLongPress: () => _saveImage(context, images[0]),
               child: Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
                 errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
               ),
@@ -198,6 +200,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 children: [
                   GestureDetector(
                     onTap: () => _showFullScreenImage(context, images[index]),
+                    onLongPress: () => _saveImage(context, images[index]),
                     child: Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
                       errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
                     ),
@@ -723,6 +726,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                 children: log.photoPaths.map((path) {
                                   return GestureDetector(
                                     onTap: () => _showFullScreenImage(context, path),
+                                    onLongPress: () => _saveImage(context, path),
                                     child: Container(
                                       width: 150,
                                       height: 150,
@@ -779,6 +783,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         opaque: false,
         pageBuilder: (_, __, ___) => GestureDetector(
           onTap: () => Navigator.of(context).pop(),
+          onLongPress: () => _saveImage(context, path),
           child: Scaffold(
             backgroundColor: Colors.black,
             body: SafeArea(
@@ -793,6 +798,20 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         ),
       ),
     );
+  }
+
+  /// 保存图片到相册（通过分享）
+  Future<void> _saveImage(BuildContext context, String path) async {
+    try {
+      final file = XFile(path);
+      await Share.shareXFiles([file], text: '保存图片');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      }
+    }
   }
 
   void _addPattingCheckin(AntiqueEntity item) {

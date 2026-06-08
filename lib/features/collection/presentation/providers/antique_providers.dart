@@ -53,7 +53,7 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     ref.invalidate(categoryCountProvider);
     ref.invalidate(totalValuationProvider);
     ref.invalidate(pattingCalendarProvider);
-    ref.invalidate(dailyPickProvider);
+    // 不要 invalidate dailyPickProvider — 翻牌推荐只在用户点击换一换时刷新
     ref.invalidate(pattingFrequencyProvider);
     ref.invalidate(monthlyPattingFrequencyProvider);
   }

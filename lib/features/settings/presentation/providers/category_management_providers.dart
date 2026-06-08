@@ -50,6 +50,11 @@ class CollectionCategoriesNotifier extends StateNotifier<List<CollectionCategory
     }
   }
 
+  /// 从持久化重新加载（导入备份后调用）
+  Future<void> reload() async {
+    await _loadFromStorage();
+  }
+
   Future<void> _persist() async {
     await _persistence.setCollectionCategories(
       state.map((c) => c.toJson()).toList(),

@@ -930,9 +930,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await backupService.importBackup(filePath);
       ref.invalidate(appDatabaseProvider);
       ref.invalidate(aiConfigProvider);
-      // 刷新分类 — 从数据库重新加载到内存 provider
-      final catNotifier = ref.read(collectionCategoriesProvider.notifier);
-      catNotifier.reloadFromDb(await ref.read(appDatabaseProvider.future));
+      // 刷新分类：从 SQLite 同步到 AppSettingsPersistence
+      try {
+        final db = await ref.read(appDatabaseProvider.future);
+        final rows = await (db.select(db.collectionCategories).get());
+        final catsJson = rows.map((r) => {
+          'name': r.name,
+          'subtypes': (r.subtypes is String ? (r.subtypes as String).split(',') : r.subtypes) as List<dynamic>,
+          'metadataFields': (r.metadataFields is String ? (r.metadataFields as String).split(',') : r.metadataFields) as List<dynamic>,
+          'sortOrder': r.sortOrder,
+        }).toList();
+        await AppSettingsPersistence().setCollectionCategories(
+          catsJson.cast<Map<String, dynamic>>(),
+        );
+        ref.read(collectionCategoriesProvider.notifier).reload();
+      } catch (_) {}
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));

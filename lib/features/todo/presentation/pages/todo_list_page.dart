@@ -32,12 +32,16 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     return DateTime(date.year, date.month, date.day - (weekday - 1));
   }
 
+  bool _overdueCheckDone = false;
+
   @override
   Widget build(BuildContext context) {
     final todoListAsync = ref.watch(todoListProvider);
-
-    // 每天检测一次，将过期待办顺延到今日
-    Future.microtask(() => _carryOverOverdueTodos());
+    // 每天首次加载时顺延过期待办
+    if (!_overdueCheckDone) {
+      _overdueCheckDone = true;
+      Future.microtask(() => _carryOverOverdueTodos());
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -227,12 +231,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
               final hasReview = reviewDays.contains(date.day);
 
               return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedDate = date);
-                  if (hasReview && !_isSameDay(date, DateTime.now())) {
-                    _showReviewEntry(context, date);
-                  }
-                },
+                onTap: () => setState(() => _selectedDate = date),
                 child: Container(
                   width: 38,
                   height: 42,
@@ -500,7 +499,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                     color: todo.isOverdue ? Colors.red : Colors.grey),
               ),
               if (todo.isOverdue)
-                Text(' 已过期', style: TextStyle(fontSize: 10, color: Colors.red.shade400)),
+                Text(' 逾期${_overdueDays(todo)}天', style: TextStyle(fontSize: 10, color: Colors.red.shade400)),
             ],
             if (todo.priority >= 4)
               const Padding(
@@ -640,6 +639,13 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
     return todos.where((t) => t.isOverdue && t.dueDate!.isBefore(todayStart)).toList();
+  }
+
+  /// 计算逾期天数
+  int _overdueDays(TodoEntity todo) {
+    if (todo.dueDate == null || !todo.isOverdue) return 0;
+    final now = DateTime.now();
+    return now.difference(todo.dueDate!).inDays;
   }
 
   /// 将过期待办的 dueDate 顺延到今天（不改变 createdAt）

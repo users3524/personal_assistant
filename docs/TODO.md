@@ -1,6 +1,17 @@
+## ✅ 已完成
+
+> 以下功能已在历次迭代中完成。
+
+- [x] 简历编辑 — 拖拽排序（已实现，含 ☰ 手柄）
+- [x] 分类管理 — 子分类与专属字段拖拽排序（已实现）
+- [x] 图片保存到系统相册（使用 image_gallery_saver）
+- [x] 排行榜新增趣味维度（串串榜、缘分榜、把玩王）
+
+---
+
 # 待实现功能清单（TODO）
 
-> 以下功能已在最新一轮迭代中规划，但因复杂度或依赖关系暂未实现。  
+> 以下功能因复杂度或依赖关系暂未实现。  
 > 优先级 P0 = 高（影响核心体验），P1 = 中，P2 = 低（增强功能）。
 
 ---
@@ -19,6 +30,8 @@
 3. 保存时根据新索引更新 `sortOrder`
 4. saveAll 时按 sortOrder 写入数据库
 
+✅ **已完成**（2026-06 迭代）
+
 ---
 
 ## 分类管理 — 子分类拖拽排序（P1）
@@ -33,6 +46,8 @@
 1. 将 `Wrap` 改为纵向 `Column` 或带排序的 `ListView`
 2. 每个 `Chip` 添加拖拽手柄
 3. 排序结果写入 `CategoryMetadata.subtypes` 或 `metadataFields` 的列表索引中
+
+✅ **已完成**（2026-06 迭代，使用 ReorderableListView + drag handle）
 
 ---
 
@@ -91,13 +106,7 @@
 
 ## 图片保存到系统相册（P2）
 
-**需求**：长按图片菜单中的"保存到相册"目前只是复制到应用私有目录。应使用 `image_gallery_saver` 或 `gal` 等插件真正写入系统相册。
-
-**当前状态**：`_saveImageToGallery` 保存到 `getApplicationDocumentsDirectory()/saved_photos/` 并通过 SnackBar 提示路径。
-
-**实现方案**：
-1. 添加 `image_gallery_saver: ^2.0.3` 到 `pubspec.yaml`
-2. 替换 `_saveImageToGallery` 实现
+✅ **已完成**（2026-06，使用 image_gallery_saver 写入系统 MediaStore）
 
 ---
 

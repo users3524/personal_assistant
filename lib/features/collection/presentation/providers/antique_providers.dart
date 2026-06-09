@@ -248,6 +248,21 @@ final monthlyPattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
   });
 });
 
+/// 累计盘玩时长（用于把玩王）
+final totalPattingDurationProvider = FutureProvider<Map<int, int>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final duration = <int, int>{};
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      final total = logs.fold(0, (sum, l) => sum + l.durationMinutes);
+      if (total > 0) duration[item.id!] = total;
+    }
+    return duration;
+  });
+});
+
 // ===== 每日翻牌推荐配置 =====
 
 /// 翻牌推荐配置：每个类别推荐的数量

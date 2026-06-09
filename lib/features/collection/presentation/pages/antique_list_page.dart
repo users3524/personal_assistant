@@ -488,6 +488,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               _buildRankTab('🥜 核桃榜', 2),
               _buildRankTab('🏆 老炮榜', 3),
               _buildRankTab('📈 潜力榜', 4),
+              _buildRankTab('🧵 串串榜', 5),
+              _buildRankTab('🤝 缘分榜', 6),
+              _buildRankTab('💪 把玩王', 7),
             ]),
           ),
         ),
@@ -523,6 +526,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       case 2: return _buildSizeRank(context, items);
       case 3: return _buildVeteranRank(context, items);
       case 4: return _buildPotentialRank(context, items);
+      case 5: return _buildStringRank(context, items);
+      case 6: return _buildSourceRank(context, items);
+      case 7: return _buildDurationsRank(context, items);
       default: return _buildWealthRank(context, items);
     }
   }
@@ -653,6 +659,120 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         return '${rate.toStringAsFixed(0)}%';
       },
       icon: Icons.trending_up,
+    );
+  }
+
+  Widget _buildStringRank(BuildContext context, List<AntiqueEntity> items) {
+    // 手串按尺寸排序
+    final braceletItems = items.where((i) => i.category == '手串').toList();
+    final withSize = braceletItems.where((i) =>
+        i.categoryMetadata != null &&
+        i.categoryMetadata!.keys.any((k) => k.contains('尺寸') || k.contains('串型'))).toList();
+    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, '尺寸')
+        .compareTo(_extractSize(a.categoryMetadata!, '尺寸')));
+
+    if (withSize.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
+                const SizedBox(width: 8),
+                Text('暂无手串尺寸数据',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return _buildRankCard(
+      title: '🧵 串串榜',
+      subtitle: '按尺寸排序（仅手串）',
+      items: withSize.take(5).toList(),
+      label: (i) {
+        final size = _extractSize(i.categoryMetadata!, '尺寸');
+        return size > 0 ? '$size mm' : '';
+      },
+      icon: Icons.straighten,
+    );
+  }
+
+  Widget _buildSourceRank(BuildContext context, List<AntiqueEntity> items) {
+    // 按入手渠道聚类
+    final withSource = items.where((i) => i.sourceSeller != null && i.sourceSeller!.isNotEmpty).toList();
+    final grouped = <String, List<AntiqueEntity>>{};
+    for (final item in withSource) {
+      grouped.putIfAbsent(item.sourceSeller!, () => []).add(item);
+    }
+    final sorted = grouped.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+    final top = sorted.take(5).toList();
+    if (top.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.people, size: 16, color: Colors.amber.shade700),
+              const SizedBox(width: 6),
+              Text('🤝 缘分榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
+              const Spacer(),
+              Text('按来源聚类', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            ]),
+            const SizedBox(height: 8),
+            ...top.asMap().entries.map((entry) {
+              final rank = entry.key + 1;
+              final source = entry.value.key;
+              final items = entry.value.value;
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: rank <= 3 ? Colors.amber.shade100 : Colors.grey.shade100,
+                  child: Text('$rank', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: rank <= 3 ? Colors.amber.shade800 : Colors.grey)),
+                ),
+                title: Text(source, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                trailing: Text('${items.length}件', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationsRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, int>>(
+      future: ref.read(totalPattingDurationProvider.future),
+      builder: (context, snapshot) {
+        final duration = snapshot.data ?? {};
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (duration[b.id] ?? 0).compareTo(duration[a.id] ?? 0));
+        final top = ranked.where((i) => (duration[i.id] ?? 0) > 0).take(10).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '💪 把玩王',
+          subtitle: '按累计盘玩时长排序',
+          items: top,
+          label: (i) {
+            final mins = duration[i.id] ?? 0;
+            if (mins >= 60) return '${(mins / 60).toStringAsFixed(1)}h';
+            return '${mins}m';
+          },
+          icon: Icons.fitness_center,
+        );
+      },
     );
   }
 

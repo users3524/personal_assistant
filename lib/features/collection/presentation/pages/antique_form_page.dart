@@ -63,6 +63,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   /// 当前分类的专属字段
   List<String> get _currentFields => _currentCategoryModel?.metadataFields ?? [];
 
+  /// 获取实际展示的字段列表（分类模型未加载时用硬编码兜底）
+  List<String> _getDisplayFields() {
+    if (_currentFields.isNotEmpty) return _currentFields;
+    if (_category == '核桃') return ['边宽(mm)', '肚厚(mm)', '桩高(mm)', '重量(g)'];
+    return [];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +99,13 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     _metaCtrls.clear();
     for (final f in _currentFields) {
       _metaCtrls[f] = TextEditingController();
+    }
+    // 如果当前是核桃但字段为空，从默认分类数据中补充
+    if (_currentFields.isEmpty && _category == '核桃') {
+      const walnutDefaults = ['边宽(mm)', '肚厚(mm)', '桩高(mm)', '重量(g)'];
+      for (final f in walnutDefaults) {
+        _metaCtrls[f] = TextEditingController();
+      }
     }
   }
 
@@ -204,7 +218,8 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
     final dest = File('${imgDir.path}/$fileName');
     final bytes = await photo.readAsBytes();
     await dest.writeAsBytes(bytes);
-    return dest.path;
+    // 存相对路径，App 更新后沙盒路径变化也不影响
+    return 'antique_images/$fileName';
   }
 
   Future<void> _save() async {
@@ -214,7 +229,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       final now = DateTime.now();
 
       // 收集分类专属字段
-      final fields = _currentFields;
+      final fields = _getDisplayFields();
       final metadata = <String, String>{};
       if (_category == '核桃') {
         for (final f in fields) {
@@ -432,12 +447,12 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     ],
 
                     // 分类专属字段
-                    if (_currentFields.isNotEmpty) ...[
+                    if (_getDisplayFields().isNotEmpty) ...[
                       Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       if (_category == '核桃') ...[
                         // 核桃专用：每个字段显示左右双输入（包括重量）
-                        ..._currentFields.map((field) {
+                        ..._getDisplayFields().map((field) {
                           final leftCtrl = _metaCtrls['左$field'] ??= TextEditingController();
                           final rightCtrl = _metaCtrls['右$field'] ??= TextEditingController();
                           return Padding(
@@ -477,7 +492,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                         }),
                       ] else ...[
                         // 非核桃：正常单行
-                        ..._currentFields.map((field) {
+                        ..._getDisplayFields().map((field) {
                           final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),

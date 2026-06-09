@@ -171,32 +171,62 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: cat.subtypes.map((st) => Chip(
-              label: Text(st, style: const TextStyle(fontSize: 11)),
-              deleteIcon: const Icon(Icons.close, size: 14),
-              onDeleted: () {
-                // 检查是否有藏品使用此子类型
-                final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
-                final count = antiqueItems.where((i) => i.category == cat.name && i.subtype == st).length;
-                if (count > 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('「$st」有 $count 件藏品正在使用，不能删除')),
-                  );
-                  return;
-                }
-                ref.read(collectionCategoriesProvider.notifier).update(
-                  cat.name,
-                  cat.copyWith(subtypes: cat.subtypes.where((s) => s != st).toList()),
-                );
-              },
-            )).toList(),
+        if (cat.subtypes.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text('暂无子类型', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cat.subtypes.length,
+            onReorder: (oldIndex, newIndex) {
+              if (newIndex > oldIndex) newIndex--;
+              final updated = [...cat.subtypes];
+              final item = updated.removeAt(oldIndex);
+              updated.insert(newIndex, item);
+              ref.read(collectionCategoriesProvider.notifier).update(
+                cat.name,
+                cat.copyWith(subtypes: updated),
+              );
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (_, i) {
+              final st = cat.subtypes[i];
+              return Padding(
+                key: ValueKey('${cat.name}_st_$i'),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
+                child: Row(
+                  children: [
+                    ReorderableDragStartListener(
+                      index: i,
+                      child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(width: 4),
+                    Chip(
+                      label: Text(st, style: const TextStyle(fontSize: 11)),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      onDeleted: () {
+                        final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
+                        final count = antiqueItems.where((i) => i.category == cat.name && i.subtype == st).length;
+                        if (count > 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('「$st」有 $count 件藏品正在使用，不能删除')),
+                          );
+                          return;
+                        }
+                        ref.read(collectionCategoriesProvider.notifier).update(
+                          cat.name,
+                          cat.copyWith(subtypes: cat.subtypes.where((s) => s != st).toList()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ),
       ],
     );
   }
@@ -228,23 +258,54 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: cat.metadataFields.map((f) => Chip(
-              label: Text(f, style: const TextStyle(fontSize: 11)),
-              deleteIcon: const Icon(Icons.close, size: 14),
-              onDeleted: () {
-                ref.read(collectionCategoriesProvider.notifier).update(
-                  cat.name,
-                  cat.copyWith(metadataFields: cat.metadataFields.where((m) => m != f).toList()),
-                );
-              },
-            )).toList(),
+        if (cat.metadataFields.isEmpty)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Text('无专属字段', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cat.metadataFields.length,
+            onReorder: (oldIndex, newIndex) {
+              if (newIndex > oldIndex) newIndex--;
+              final updated = [...cat.metadataFields];
+              final item = updated.removeAt(oldIndex);
+              updated.insert(newIndex, item);
+              ref.read(collectionCategoriesProvider.notifier).update(
+                cat.name,
+                cat.copyWith(metadataFields: updated),
+              );
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (_, i) {
+              final f = cat.metadataFields[i];
+              return Padding(
+                key: ValueKey('${cat.name}_mf_$i'),
+                padding: EdgeInsets.fromLTRB(16, 1, 16, i == cat.metadataFields.length - 1 ? 12 : 1),
+                child: Row(
+                  children: [
+                    ReorderableDragStartListener(
+                      index: i,
+                      child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(width: 4),
+                    Chip(
+                      label: Text(f, style: const TextStyle(fontSize: 11)),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      onDeleted: () {
+                        ref.read(collectionCategoriesProvider.notifier).update(
+                          cat.name,
+                          cat.copyWith(metadataFields: cat.metadataFields.where((m) => m != f).toList()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ),
       ],
     );
   }

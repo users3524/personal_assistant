@@ -1,6 +1,7 @@
 /// 盘串详情页 — 时间线 + 盘玩打卡 + 情感记录。
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -36,6 +37,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   // 缓存的打卡记录 — banner 从中取最新照片
   List<PattingLogEntity>? _cachedLogs;
 
+  // 高亮动画 — 月历点击跳转时闪烁
+  int? _highlightLogId;
+  bool _isHighlighting = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +48,27 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     _logsFuture = _loadLogs().then((logs) {
       _cachedLogs = logs;
       return logs;
+    });
+    _highlightLogId = widget.highlightLogId;
+    if (_highlightLogId != null) {
+      _startHighlightAnimation();
+    }
+  }
+
+  Future<void> _startHighlightAnimation() async {
+    // 等数据库加载完成
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    setState(() => _isHighlighting = true);
+    // 闪烁 3 次
+    for (int i = 0; i < 3; i++) {
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+      setState(() => _isHighlighting = !_isHighlighting);
+    }
+    setState(() {
+      _isHighlighting = false;
+      _highlightLogId = null;
     });
   }
 
@@ -656,8 +682,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             final time = '${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
             final dateTimeStr = '$y/$m/$d $time';
             final hasPhoto = log.photoPaths.isNotEmpty;
+            final isHighlighted = _highlightLogId != null && log.id == _highlightLogId;
 
             return IntrinsicHeight(
+              key: log.id != null ? ValueKey('log_${log.id}') : null,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -706,7 +734,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                     child: Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       elevation: 0,
-                      color: Colors.grey.shade50,
+                      color: isHighlighted && _isHighlighting
+                          ? Colors.amber.shade100
+                          : Colors.grey.shade50,
                       child: Padding(
                         padding: const EdgeInsets.all(10),
                         child: Column(
@@ -803,7 +833,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     final dest = File('${imgDir.path}/$fileName');
     final bytes = await photo.readAsBytes();
     await dest.writeAsBytes(bytes);
-    return dest.path;
+    return 'patting_images/$fileName'; // 相对路径
   }
 
   /// 全屏查看图片 — 点击图片进入，再次点击任意位置退出

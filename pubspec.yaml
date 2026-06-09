@@ -39,7 +39,7 @@ dependencies:
 
   # 图片
   image_picker: ^1.0.7
-  image_gallery_saver: ^2.0.3
+  gal: ^2.3.0
 
   # 分享
   share_plus: ^12.0.2
@@ -53,6 +53,7 @@ dependencies:
 
   # 文件选择
   file_picker: ^8.0.3
+  gal: ^2.3.2
 
 hooks:
   user_defines:

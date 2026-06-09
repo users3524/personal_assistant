@@ -3,7 +3,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,7 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -917,24 +916,20 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         return;
       }
       final bytes = await file.readAsBytes();
-      final result = await ImageGallerySaver.saveImage(
-        Uint8List.fromList(bytes),
-        quality: 95,
-        name: 'personal_assistant_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      // gal 需要先写入临时文件
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_save_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(bytes);
+      await Gal.putImage(tempFile.path);
+      // 清理临时文件
+      await tempFile.delete();
       if (context.mounted) {
-        if (result != null && result['isSuccess'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ 已保存到系统相册'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('保存失败，请在设置中授予存储权限')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ 已保存到系统相册'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {

@@ -72,6 +72,16 @@ class CollectionCategoriesNotifier extends StateNotifier<List<CollectionCategory
     _persist();
   }
 
+  /// 拖拽重排序：从 oldIndex 移到 newIndex
+  void reorder(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex--;
+    final updated = [...state];
+    final item = updated.removeAt(oldIndex);
+    updated.insert(newIndex, item);
+    state = updated;
+    _persist();
+  }
+
   void remove(String name) {
     if (state.length <= 1) return;
     state = state.where((c) => c.name != name).toList();

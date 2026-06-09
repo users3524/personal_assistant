@@ -89,23 +89,34 @@ class TodoEntity {
   }
 
   /// 是否已过期（未完成且截止日期已过）
-  /// 两种判定逻辑：
-  /// 1. 有截止日期 → 判断当前时间是否超过截止日期
-  /// 2. 无截止日期 → 判断当前日期是否大于开始日期
+  /// 纯日期比对，规避时分秒陷阱。
+  /// - 有截止日期：今天严格大于截止日期才算逾期（截止日当天不算）
+  /// - 无截止日期：永不逾期（任务自动滚存）
   bool get isOverdue {
     if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
     if (deletedAt != null) return false;
+    if (dueDate == null) return false; // 无截止日期永不逾期
     final now = DateTime.now();
-    if (dueDate != null) {
-      // 有截止日期：超过截止日期即逾期
-      return now.isAfter(dueDate!);
-    }
-    // 无截止日期：有开始时间且开始日期在今天之前即逾期
+    final today = DateTime(now.year, now.month, now.day);
+    final deadlineDay = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+    // 只有今天严格在截止日期之后才算逾期
+    return deadlineDay.isBefore(today);
+  }
+
+  /// 是否应该显示在「今天」待办中（即"挪到当天"逻辑）
+  bool get shouldShowInToday {
+    if (!isActive) return false;
+    if (isOverdue) return true; // 逾期任务强制显示
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // 有开始日期且开始日期在今天或之前
     if (startedAt != null) {
       final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
-      final today = DateTime(now.year, now.month, now.day);
-      return startDay.isBefore(today);
+      if (!startDay.isAfter(today)) return true;
     }
+
     return false;
   }
 

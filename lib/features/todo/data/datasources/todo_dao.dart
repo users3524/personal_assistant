@@ -234,21 +234,18 @@ class TodoDao {
   }
 
   /// 今日待办：截止日期为今天且未完成
+  /// 今日待办：所有应显示在今天的未完成任务（使用 shouldShowInToday 过滤）
   Future<List<TodoEntity>> getToday() async {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
     final rows = await (_db.select(_db.todos)
           ..where((t) =>
-              t.dueDate.isBetweenValues(todayStart, todayEnd) &
               t.status.isNotIn(['done', 'cancelled']) &
               t.deletedAt.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map(_toEntity).where((e) => e.shouldShowInToday).toList();
   }
 
-  /// 活跃待办：未完成、未逾期（实体 isOverdue 逻辑）、未删除
+  /// 活跃待办：未完成、未逾期、未删除
   Future<List<TodoEntity>> getActive() async {
     final rows = await (_db.select(_db.todos)
           ..where((t) =>
@@ -259,8 +256,7 @@ class TodoDao {
     return rows.map(_toEntity).where((e) => !e.isOverdue).toList();
   }
 
-  /// 逾期待办：使用实体 isOverdue 判定
-  /// 有截止日期超过即逾期；无截止日期但有开始时间且开始日期在今天之前即逾期
+  /// 逾期待办：有截止日期且已过截止日（由实体 isOverdue 判定）
   Future<List<TodoEntity>> getOverdue() async {
     final rows = await (_db.select(_db.todos)
           ..where((t) =>

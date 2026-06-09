@@ -55,15 +55,12 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
               : ReorderableListView.builder(
                   itemCount: cats.length,
                   onReorder: (oldIndex, newIndex) {
-                    if (newIndex > oldIndex) newIndex--;
-                    final cat = cats[oldIndex];
-                    final updated = cat.copyWith(sortOrder: newIndex);
-                    ref.read(collectionCategoriesProvider.notifier).update(cat.name, updated);
+                    ref.read(collectionCategoriesProvider.notifier).reorder(oldIndex, newIndex);
                   },
                   buildDefaultDragHandles: false,
-                  itemBuilder: (_, i) => ReorderableDragStartListener(
+                  itemBuilder: (_, i) => Card(
                     key: ValueKey('cat_${cats[i].name}'),
-                    index: i,
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: _buildCategoryCard(context, cats[i], i),
                   ),
                 ),
@@ -195,9 +192,9 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             itemBuilder: (_, i) {
               final st = cat.subtypes[i];
               return ReorderableDelayedDragStartListener(
+                key: ValueKey('${cat.name}_st_$i'),
                 index: i,
                 child: Padding(
-                key: ValueKey('${cat.name}_st_$i'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
                 child: Row(
                   children: [
@@ -281,9 +278,9 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             itemBuilder: (_, i) {
               final f = cat.metadataFields[i];
               return ReorderableDelayedDragStartListener(
+                key: ValueKey('${cat.name}_mf_$i'),
                 index: i,
                 child: Padding(
-                key: ValueKey('${cat.name}_mf_$i'),
                 padding: EdgeInsets.fromLTRB(16, 1, 16, i == cat.metadataFields.length - 1 ? 12 : 1),
                 child: Row(
                   children: [

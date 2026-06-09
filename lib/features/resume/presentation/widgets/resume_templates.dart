@@ -11,6 +11,46 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/resume_entity.dart';
 
+// ===== 核心排版工具函数 =====
+
+/// 将换行文本转为 Bullet Points 列表
+Widget buildBulletPoints(String? text) {
+  if (text == null || text.trim().isEmpty) return const SizedBox.shrink();
+  final points = text.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: points.map((p) => Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF666666))),
+          Expanded(child: Text(p, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF444444)))),
+        ],
+      ),
+    )).toList(),
+  );
+}
+
+/// 技术栈蓝色徽章
+Widget buildTechStack(List<String> stack) {
+  if (stack.isEmpty) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Wrap(
+      spacing: 4, runSpacing: 2,
+      children: stack.map((tech) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F0FE),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(tech, style: const TextStyle(fontSize: 9, color: Color(0xFF1A73E8))),
+      )).toList(),
+    ),
+  );
+}
+
 // ======================================================================
 // 模板 1：简洁经典 — 单栏商务风
 // ======================================================================
@@ -154,46 +194,8 @@ class ClassicResumeTemplate extends StatelessWidget {
           const SizedBox(height: 2),
           Text(e.position,
               style: const TextStyle(fontSize: 13, color: Color(0xFF555555), fontWeight: FontWeight.w500)),
-          if (e.description != null && e.description!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(e.description!,
-                  style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF666666))),
-            ),
-          // 职责列表（Bullet Points）
-          if (e.responsibilities.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: e.responsibilities.map((r) => Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 1),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('• ', style: TextStyle(fontSize: 11, color: Color(0xFF888888))),
-                      Expanded(child: Text(r, style: const TextStyle(fontSize: 11, height: 1.4, color: Color(0xFF555555)))),
-                    ],
-                  ),
-                )).toList(),
-              ),
-            ),
-          // 技术栈徽章
-          if (e.techStack.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: 4, runSpacing: 2,
-                children: e.techStack.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F0FE),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(t, style: const TextStyle(fontSize: 9, color: Color(0xFF1A73E8))),
-                )).toList(),
-              ),
-            ),
+          buildTechStack(e.techStack),
+          buildBulletPoints(e.description),
         ],
       ),
     );
@@ -233,7 +235,6 @@ class ClassicResumeTemplate extends StatelessWidget {
                     style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
             ],
           ),
-          // 项目徽章
           if (e.badges.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -249,13 +250,7 @@ class ClassicResumeTemplate extends StatelessWidget {
                 )).toList(),
               ),
             ),
-          if (e.description != null && e.description!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(e.description!,
-                  style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF666666))),
-            ),
-          // 核心业绩点
+          buildTechStack(e.techStack),
           if (e.keyDeliverables.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -273,22 +268,7 @@ class ClassicResumeTemplate extends StatelessWidget {
                 )).toList(),
               ),
             ),
-          // 技术栈
-          if (e.techStack.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: 4, runSpacing: 2,
-                children: e.techStack.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F0FE),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(t, style: const TextStyle(fontSize: 9, color: Color(0xFF1A73E8))),
-                )).toList(),
-              ),
-            ),
+          buildBulletPoints(e.description),
         ],
       ),
     );

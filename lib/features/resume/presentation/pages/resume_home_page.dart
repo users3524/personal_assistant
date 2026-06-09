@@ -221,6 +221,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           companyCtrl: TextEditingController(text: w.company),
           positionCtrl: TextEditingController(text: w.position),
           descCtrl: TextEditingController(text: w.description ?? ''),
+          techStackCtrl: TextEditingController(text: w.techStack.join(', ')),
           isVisible: w.isVisible,
         )).toList();
         _educations = educations.map((e) => _EduEditItem(
@@ -242,6 +243,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           nameCtrl: TextEditingController(text: p.name),
           roleCtrl: TextEditingController(text: p.role ?? ''),
           descCtrl: TextEditingController(text: p.description ?? ''),
+          techStackCtrl: TextEditingController(text: p.techStack.join(', ')),
           isVisible: p.isVisible,
         )).toList();
         _isLoading = false;
@@ -261,6 +263,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       w.companyCtrl.dispose();
       w.positionCtrl.dispose();
       w.descCtrl.dispose();
+      w.techStackCtrl.dispose();
     }
     for (final e in _educations) {
       e.schoolCtrl.dispose();
@@ -275,6 +278,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       p.nameCtrl.dispose();
       p.roleCtrl.dispose();
       p.descCtrl.dispose();
+      p.techStackCtrl.dispose();
     }
     super.dispose();
   }
@@ -298,6 +302,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
         company: w.companyCtrl.text.trim(),
         position: w.positionCtrl.text.trim(),
         description: w.descCtrl.text.trim().isEmpty ? null : w.descCtrl.text.trim(),
+        techStack: w.techStackCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         startDate: DateTime.now(),
         isVisible: w.isVisible,
       ));
@@ -330,6 +335,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
         name: p.nameCtrl.text.trim(),
         role: p.roleCtrl.text.trim().isEmpty ? null : p.roleCtrl.text.trim(),
         description: p.descCtrl.text.trim().isEmpty ? null : p.descCtrl.text.trim(),
+        techStack: p.techStackCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         startDate: DateTime.now(),
         isVisible: p.isVisible,
       ));
@@ -435,6 +441,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                           companyCtrl: TextEditingController(),
                           positionCtrl: TextEditingController(),
                           descCtrl: TextEditingController(),
+                          techStackCtrl: TextEditingController(),
                         )));
                       },
                       icon: const Icon(Icons.add, size: 18),
@@ -539,6 +546,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                           nameCtrl: TextEditingController(),
                           roleCtrl: TextEditingController(),
                           descCtrl: TextEditingController(),
+                          techStackCtrl: TextEditingController(),
                         )));
                       },
                       icon: const Icon(Icons.add, size: 18),
@@ -595,8 +603,13 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             ),
             const SizedBox(height: 8),
             TextFormField(
+              controller: item.techStackCtrl,
+              decoration: const InputDecoration(labelText: '技术栈', hintText: '逗号分隔，如: C, RT-Thread', border: OutlineInputBorder(), isDense: true),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
               controller: item.descCtrl,
-              decoration: const InputDecoration(labelText: '描述', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(labelText: '描述', hintText: '换行自动转圆点列表', border: OutlineInputBorder(), isDense: true),
               maxLines: 2,
             ),
           ],
@@ -745,9 +758,14 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             ),
             const SizedBox(height: 8),
             TextFormField(
+              controller: item.techStackCtrl,
+              decoration: const InputDecoration(labelText: '核心技术栈', hintText: '逗号分隔', border: OutlineInputBorder(), isDense: true),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
               controller: item.descCtrl,
-              decoration: const InputDecoration(labelText: '描述', border: OutlineInputBorder(), isDense: true),
-              maxLines: 2,
+              decoration: const InputDecoration(labelText: '描述', hintText: '换行自动转圆点列表', border: OutlineInputBorder(), isDense: true),
+              maxLines: 3,
             ),
           ],
         ),
@@ -763,6 +781,7 @@ class _WorkEditItem {
   final TextEditingController companyCtrl;
   final TextEditingController positionCtrl;
   final TextEditingController descCtrl;
+  final TextEditingController techStackCtrl;
   bool isVisible;
 
   _WorkEditItem({
@@ -770,6 +789,7 @@ class _WorkEditItem {
     required this.companyCtrl,
     required this.positionCtrl,
     required this.descCtrl,
+    required this.techStackCtrl,
     this.isVisible = true,
   });
 }
@@ -811,6 +831,7 @@ class _ProjectEditItem {
   final TextEditingController nameCtrl;
   final TextEditingController roleCtrl;
   final TextEditingController descCtrl;
+  final TextEditingController techStackCtrl;
   bool isVisible;
 
   _ProjectEditItem({
@@ -818,6 +839,7 @@ class _ProjectEditItem {
     required this.nameCtrl,
     required this.roleCtrl,
     required this.descCtrl,
+    required this.techStackCtrl,
     this.isVisible = true,
   });
 }

@@ -319,15 +319,20 @@ class TodoDao {
   }
 
   Future<int> countTodayTotal() async {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
-    final rows = await (_db.select(_db.todos)
+    // 已完成数（口径与 countTodayCompleted 一致）
+    final completedCount = await countTodayCompleted();
+
+    // 所有未完成的活跃任务
+    final activeRows = await (_db.select(_db.todos)
           ..where((t) =>
-              t.createdAt.isBetweenValues(todayStart, todayEnd) &
+              t.status.isNotIn(['done', 'cancelled']) &
               t.deletedAt.isNull()))
         .get();
-    return rows.length;
+
+    final activeEntities = activeRows.map(_toEntity).toList();
+    final activeTodayCount = activeEntities.where((e) => e.shouldShowInToday).length;
+
+    return completedCount + activeTodayCount;
   }
 
   Future<double> weeklyCompletionRate() async {

@@ -74,6 +74,8 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           _buildCalendarHeader(),
           _buildCalendarGrid(),
           const Divider(height: 1),
+          // 统计仪表盘（仅周视图）
+          if (_viewMode == CalendarView.week) const TodoStatsCard(),
           // 选中日期的待办列表
           Flexible(
             flex: 1,

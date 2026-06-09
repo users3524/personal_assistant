@@ -340,7 +340,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   Widget _buildTodoItem(TodoEntity todo) {
     return Dismissible(
-      key: Key('todo_${todo.id}_${todo.status.name}'),
+      key: Key('todo_${todo.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -349,8 +349,31 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (_) async {
-        ref.read(todoListProvider.notifier).cancelTodo(todo.id!);
-        return true;
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('删除待办'),
+            content: Text('将「${todo.title}」移入回收站？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('删除'),
+              ),
+            ],
+          ),
+        ) ?? false;
+      },
+      onDismissed: (_) {
+        // 乐观更新：立即从本地状态移除，防 Dismissible 报错
+        ref.read(todoListProvider.notifier).deleteTodoLocal(todo.id!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('「${todo.title}」已移入回收站')),
+        );
       },
       child: ListTile(
         leading: GestureDetector(

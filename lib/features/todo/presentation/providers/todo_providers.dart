@@ -1,6 +1,8 @@
 /// 待办模块状态管理 Provider。
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // 仓库 Provider 由 todo_repository_impl.dart 提供（FutureProvider）
@@ -63,6 +65,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
     final repo = await _getRepo();
     await repo.delete(id);
     await refresh();
+  }
+
+  /// 乐观删除：先更新本地状态再异步入库（用于 Dismissible 防闪退）
+  void deleteTodoLocal(int id) {
+    final currentList = state.valueOrNull ?? [];
+    state = AsyncData(currentList.where((t) => t.id != id).toList());
+    // 后台异步入库
+    unawaited(_deleteAfter(id));
+  }
+
+  Future<void> _deleteAfter(int id) async {
+    try {
+      final repo = await _getRepo();
+      await repo.delete(id);
+    } catch (_) {}
   }
 
   /// 恢复软删除

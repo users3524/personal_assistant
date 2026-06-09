@@ -91,33 +91,51 @@ class TodoEntity {
   /// 是否已过期（未完成且截止日期已过）
   /// 纯日期比对，规避时分秒陷阱。
   /// - 有截止日期：今天严格大于截止日期才算逾期（截止日当天不算）
-  /// - 无截止日期：永不逾期（任务自动滚存）
+  /// - 无截止日期：开始日期在今天之前即逾期（拖延了）
   bool get isOverdue {
     if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
     if (deletedAt != null) return false;
-    if (dueDate == null) return false; // 无截止日期永不逾期
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final deadlineDay = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
-    // 只有今天严格在截止日期之后才算逾期
-    return deadlineDay.isBefore(today);
+
+    if (dueDate != null) {
+      final deadlineDay = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+      return deadlineDay.isBefore(today);
+    }
+
+    // 无截止日期：开始日期在今天之前 → 逾期（拖延/滚存标记）
+    if (startedAt != null) {
+      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      return startDay.isBefore(today);
+    }
+    return false;
+  }
+
+  /// 任务在日历/周历中的展示日期（动态漂移）
+  /// - 已完成/已取消 → 固定在完成/取消那天
+  /// - 未完成 → 如果今天大于开始日期则自动漂移到今天
+  DateTime get displayDate {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (status == TodoStatus.done && completedAt != null) return completedAt!;
+    if (status == TodoStatus.cancelled && cancelledAt != null) return cancelledAt!;
+
+    if (startedAt != null) {
+      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      if (today.isAfter(startDay)) return today; // 自动挪到今天
+      return startDay;
+    }
+    return createdAt;
   }
 
   /// 是否应该显示在「今天」待办中（即"挪到当天"逻辑）
   bool get shouldShowInToday {
     if (!isActive) return false;
-    if (isOverdue) return true; // 逾期任务强制显示
-
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
-    // 有开始日期且开始日期在今天或之前
-    if (startedAt != null) {
-      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
-      if (!startDay.isAfter(today)) return true;
-    }
-
-    return false;
+    final itemDisplayDay = DateTime(displayDate.year, displayDate.month, displayDate.day);
+    return itemDisplayDay == today;
   }
 
   /// 软删除标记

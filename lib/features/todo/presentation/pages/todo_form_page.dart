@@ -36,12 +36,13 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descController;
+  late TextEditingController _categoryController;
 
   String _category = '生活';
   int _priority = 3;
   DateTime? _dueDate;
   late DateTime _startedAt;
-  DateTime? _originalCreatedAt; // 编辑时保留原创建时间
+  DateTime? _originalCreatedAt;
   bool _isLoading = false;
 
   bool get _isEditing => widget.editId != null;
@@ -51,6 +52,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
     super.initState();
     _titleController = TextEditingController();
     _descController = TextEditingController();
+    _categoryController = TextEditingController();
     _startedAt = DateTime.now();
     if (_isEditing) {
       _loadExisting();
@@ -66,6 +68,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         _titleController.text = todo.title;
         _descController.text = todo.description ?? '';
         _category = todo.category;
+        _categoryController.text = todo.category;
         _priority = todo.priority;
         _dueDate = todo.dueDate;
         _startedAt = todo.startedAt ?? todo.createdAt;
@@ -79,6 +82,7 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
@@ -195,7 +199,10 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                               icon: _categoryIcons[cat] ?? Icons.category,
                               color: _categoryColors[cat] ?? Colors.teal,
                               isSelected: _category == cat,
-                              onTap: () => setState(() => _category = cat),
+                              onTap: () => setState(() {
+                                _category = cat;
+                                _categoryController.clear();
+                              }),
                             ),
                           )).toList(),
                         );
@@ -211,8 +218,9 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                       ),
                     const SizedBox(height: 8),
                     TextField(
+                      controller: _categoryController,
                       decoration: const InputDecoration(
-                        hintText: '自定义分类（输入新名称）',
+                        hintText: '自定义分类（输入后点击保存即新增）',
                         border: OutlineInputBorder(),
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

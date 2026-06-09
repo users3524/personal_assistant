@@ -38,7 +38,24 @@ class MainShell extends StatelessWidget {
     ];
 
     return Scaffold(
-      body: navigationShell,
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            // 检查 shell 内当前分支是否有上一级路由
+            final router = GoRouter.of(context);
+            if (router.canPop()) {
+              router.pop();
+            } else {
+              // 如果在非首页 Tab，切回首Tab
+              if (navigationShell.currentIndex != 0) {
+                navigationShell.goBranch(0);
+              }
+            }
+          }
+        },
+        child: navigationShell,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,

@@ -824,11 +824,19 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   // ===== 统计摘要条 =====
 
   Widget _buildStatsBar(BuildContext context, Map<String, int> categoryCount) {
+    final selectedFilter = ref.watch(categoryDisplayFilterProvider);
+    final totalCount = categoryCount.values.fold(0, (a, b) => a + b);
+    final displayCount = selectedFilter.isEmpty
+        ? totalCount
+        : categoryCount[selectedFilter] ?? 0;
+    final displayLabel = selectedFilter.isEmpty
+        ? '共$totalCount件'
+        : '$selectedFilter $displayCount件';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          Text('🏛️ 共${categoryCount.values.fold(0, (a, b) => a + b)}件',
+          Text('🏛️ $displayLabel',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
           const Spacer(),
           _buildCategoryFilter(context),

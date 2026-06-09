@@ -375,7 +375,24 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     // === 工作经历 ===
                     _sectionTitle('工作经历'),
                     const SizedBox(height: 8),
-                    ..._works.asMap().entries.map((entry) => _buildWorkCard(entry.key, entry.value)),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _works.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _works.removeAt(oldIndex);
+                          _works.insert(newIndex, item);
+                        });
+                      },
+                      buildDefaultDragHandles: false,
+                      itemBuilder: (context, index) => ReorderableDragStartListener(
+                        key: ValueKey('work_$index'),
+                        index: index,
+                        child: _buildWorkCard(index, _works[index]),
+                      ),
+                    ),
                     OutlinedButton.icon(
                       onPressed: () {
                         setState(() => _works.add(_WorkEditItem(
@@ -394,7 +411,24 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     // === 教育背景 ===
                     _sectionTitle('教育背景'),
                     const SizedBox(height: 8),
-                    ..._educations.asMap().entries.map((entry) => _buildEduCard(entry.key, entry.value)),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _educations.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _educations.removeAt(oldIndex);
+                          _educations.insert(newIndex, item);
+                        });
+                      },
+                      buildDefaultDragHandles: false,
+                      itemBuilder: (context, index) => ReorderableDragStartListener(
+                        key: ValueKey('edu_$index'),
+                        index: index,
+                        child: _buildEduCard(index, _educations[index]),
+                      ),
+                    ),
                     OutlinedButton.icon(
                       onPressed: () {
                         setState(() => _educations.add(_EduEditItem(
@@ -413,7 +447,24 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     // === 技能 ===
                     _sectionTitle('技能'),
                     const SizedBox(height: 8),
-                    ..._skills.asMap().entries.map((entry) => _buildSkillCard(entry.key, entry.value)),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _skills.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _skills.removeAt(oldIndex);
+                          _skills.insert(newIndex, item);
+                        });
+                      },
+                      buildDefaultDragHandles: false,
+                      itemBuilder: (context, index) => ReorderableDragStartListener(
+                        key: ValueKey('skill_$index'),
+                        index: index,
+                        child: _buildSkillCard(index, _skills[index]),
+                      ),
+                    ),
                     OutlinedButton.icon(
                       onPressed: () {
                         setState(() => _skills.add(_SkillEditItem(
@@ -431,7 +482,24 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     // === 项目经历 ===
                     _sectionTitle('项目经历'),
                     const SizedBox(height: 8),
-                    ..._projects.asMap().entries.map((entry) => _buildProjectCard(entry.key, entry.value)),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _projects.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _projects.removeAt(oldIndex);
+                          _projects.insert(newIndex, item);
+                        });
+                      },
+                      buildDefaultDragHandles: false,
+                      itemBuilder: (context, index) => ReorderableDragStartListener(
+                        key: ValueKey('proj_$index'),
+                        index: index,
+                        child: _buildProjectCard(index, _projects[index]),
+                      ),
+                    ),
                     OutlinedButton.icon(
                       onPressed: () {
                         setState(() => _projects.add(_ProjectEditItem(
@@ -474,6 +542,11 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           children: [
             Row(
               children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                ),
+                const SizedBox(width: 4),
                 Text('工作 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Switch(
@@ -517,6 +590,11 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           children: [
             Row(
               children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                ),
+                const SizedBox(width: 4),
                 Text('教育 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Switch(
@@ -559,6 +637,11 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           children: [
             Row(
               children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                ),
+                const SizedBox(width: 4),
                 Text('技能 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Text('熟练度: ${item.proficiency}/5'),
@@ -609,6 +692,11 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
           children: [
             Row(
               children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                ),
+                const SizedBox(width: 4),
                 Text('项目 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Switch(

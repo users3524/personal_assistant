@@ -2,6 +2,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -872,19 +874,37 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     }
   }
 
-  /// 保存图片到持久化目录（在应用文档内，更新后不丢失）
+  /// 保存图片到系统相册
   Future<void> _saveImageToGallery(BuildContext context, String path) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final saveDir = Directory('${dir.path}/saved_photos');
-      if (!await saveDir.exists()) await saveDir.create(recursive: true);
-      final fileName = 'saved_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final dest = File('${saveDir.path}/$fileName');
-      await File(path).copy(dest.path);
+      final file = File(path);
+      if (!await file.exists()) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('图片文件不存在')),
+          );
+        }
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      final result = await ImageGallerySaver.saveImage(
+        Uint8List.fromList(bytes),
+        quality: 95,
+        name: 'personal_assistant_${DateTime.now().millisecondsSinceEpoch}',
+      );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已保存到: ${dest.path}'), duration: const Duration(seconds: 3)),
-        );
+        if (result != null && result['isSuccess'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ 已保存到系统相册'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败，请在设置中授予存储权限')),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -1425,14 +1445,14 @@ class _CompareDialog extends StatefulWidget {
 class _CompareDialogState extends State<_CompareDialog> {
   late String _leftKey;
   late String _rightKey;
-  int _colorStyle = 0;
+  int _colorStyle = 1; // 默认暖木
   final _compareKey = GlobalKey();
   bool _savingImage = false;
 
   static const _styles = [
     {'name': '暗夜', 'bg': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)], 'text': Colors.white70, 'subtext': Colors.white38, 'badgeBg': Colors.white24},
     {'name': '暖木', 'bg': [Color(0xFF2D1F15), Color(0xFF4A3728)], 'text': Color(0xFFE8D5C4), 'subtext': Color(0xFFB8A08E), 'badgeBg': Color(0x55FFFFFF)},
-    {'name': '素白', 'bg': [Color(0xFFF5F0EB), Color(0xFFE8E0D5)], 'text': Colors.black87, 'subtext': Colors.black54, 'badgeBg': Colors.black12},
+    {'name': '清新', 'bg': [Color(0xFF1B4332), Color(0xFF2D6A4F)], 'text': Color(0xFFD8F3DC), 'subtext': Color(0xFF95D5B2), 'badgeBg': Color(0x44FFFFFF)},
   ];
 
   PattingLogEntity? get _leftLog => _findLog(_leftKey);

@@ -52,9 +52,20 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
         Expanded(
           child: cats.isEmpty
               ? const Center(child: Text('暂无分类，请添加'))
-              : ListView.builder(
+              : ReorderableListView.builder(
                   itemCount: cats.length,
-                  itemBuilder: (_, i) => _buildCategoryCard(context, cats[i], i),
+                  onReorder: (oldIndex, newIndex) {
+                    if (newIndex > oldIndex) newIndex--;
+                    final cat = cats[oldIndex];
+                    final updated = cat.copyWith(sortOrder: newIndex);
+                    ref.read(collectionCategoriesProvider.notifier).update(cat.name, updated);
+                  },
+                  buildDefaultDragHandles: false,
+                  itemBuilder: (_, i) => ReorderableDragStartListener(
+                    key: ValueKey('cat_${cats[i].name}'),
+                    index: i,
+                    child: _buildCategoryCard(context, cats[i], i),
+                  ),
                 ),
         ),
       ],
@@ -98,7 +109,17 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ExpansionTile(
-        leading: Icon(cat.name == '核桃' ? Icons.circle : Icons.grain, color: Colors.brown),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ReorderableDragStartListener(
+              index: index,
+              child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+            ),
+            const SizedBox(width: 4),
+            Icon(cat.name == '核桃' ? Icons.circle : Icons.grain, color: Colors.brown),
+          ],
+        ),
         title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text('${cat.subtypes.length} 个子类型 · ${cat.metadataFields.length} 个字段'),
         trailing: Row(

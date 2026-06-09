@@ -39,6 +39,7 @@ dependencies:
 
   # 图片
   image_picker: ^1.0.7
+  image_gallery_saver: ^2.0.3
 
   # 分享
   share_plus: ^12.0.2

@@ -263,6 +263,77 @@ final totalPattingDurationProvider = FutureProvider<Map<int, int>>((ref) {
   });
 });
 
+/// 冷宫幽怨榜：距离上次打卡的天数
+final coldPalaceRankProvider = FutureProvider<Map<int, int>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final daysMap = <int, int>{};
+    final now = DateTime.now();
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      if (logs.isEmpty) {
+        // 从未打卡：从入手日算起
+        daysMap[item.id!] = now.difference(item.acquiredDate).inDays;
+      } else {
+        final lastLog = logs.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+        daysMap[item.id!] = now.difference(lastLog.date).inDays;
+      }
+    }
+    return daysMap;
+  });
+});
+
+/// 夜猫子榜：深夜(23:00-3:00)打卡次数
+final nightOwlRankProvider = FutureProvider<Map<int, int>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final nightCount = <int, int>{};
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      final count = logs.where((l) =>
+          l.date.hour >= 23 || l.date.hour < 3).length;
+      if (count > 0) nightCount[item.id!] = count;
+    }
+    return nightCount;
+  });
+});
+
+/// 性价比/劳模榜：购入价 ÷ 累计打卡次数（单次成本）
+final costPerPlayProvider = FutureProvider<Map<int, double>>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    final costMap = <int, double>{};
+    for (final item in items) {
+      if (item.id == null || item.acquiredPrice == null || item.acquiredPrice! <= 0) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      final playCount = logs.length;
+      if (playCount == 0) continue;
+      costMap[item.id!] = item.acquiredPrice! / playCount;
+    }
+    return costMap;
+  });
+});
+
+/// 雨露均沾榜：近两周打卡的品类数
+final recentVarietyProvider = FutureProvider<Map<int, int>>((ref) {
+  final now = DateTime.now();
+  final twoWeeksAgo = now.subtract(const Duration(days: 14));
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
+    final items = await repo.getAll();
+    // 先统计每个 id 近两周的记录数
+    final recentCount = <int, int>{};
+    for (final item in items) {
+      if (item.id == null) continue;
+      final logs = await repo.getPattingLogs(item.id!);
+      final recent = logs.where((l) => l.date.isAfter(twoWeeksAgo)).length;
+      if (recent > 0) recentCount[item.id!] = recent;
+    }
+    return recentCount;
+  });
+});
+
 // ===== 每日翻牌推荐配置 =====
 
 /// 翻牌推荐配置：每个类别推荐的数量

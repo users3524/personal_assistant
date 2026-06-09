@@ -11,6 +11,7 @@ import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
 import '../widgets/antique_grid_card.dart';
 import '../../../settings/presentation/providers/category_management_providers.dart';
+import '../../../todo/presentation/providers/todo_providers.dart';
 
 class AntiqueListPage extends ConsumerStatefulWidget {
   const AntiqueListPage({super.key});
@@ -474,23 +475,132 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   // ===== 趣味排行 =====
 
+  // ===== 今日运势 =====
+
+  Widget _buildFortuneCard(BuildContext context, List<AntiqueEntity> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    // 找冷宫最久的那件
+    final now = DateTime.now();
+    String? coldestName;
+    int coldestDays = 0;
+    String? frequentName;
+    int frequentCount = 0;
+    for (final item in items) {
+      final days = now.difference(item.acquiredDate).inDays;
+      if (days > coldestDays && item.id != null) {
+        coldestDays = days;
+        coldestName = item.name;
+      }
+    }
+    // 随便挑个今日宜忌
+    final fortuneMessages = [
+      ('大汗猛盘', '🔥', '适合出一身汗大力盘刷，包浆进度 +50%'),
+      ('静置养护', '🌙', '今天宜静置，让包浆自然固化'),
+      ('拍照记录', '📸', '今日光线极佳，适合给宝贝拍标准照'),
+      ('刷子伺候', '🪥', '缝隙积灰了，今天宜深度清洁'),
+      ('比对尺寸', '📏', '心血来潮量一量，看看变化了没有'),
+      ('上油保养', '🧴', '干燥季节，适当上油防止开裂'),
+      ('换个绳', '🪢', '手串绳子松了，今天宜换新绳'),
+      ('掌中摩挲', '🤲', '开会/追剧时随手盘，今日宜零碎时间利用'),
+    ];
+    final fortune = fortuneMessages[DateTime.now().day % fortuneMessages.length];
+    final todoCount = ref.watch(todayTotalCountProvider).valueOrNull ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text('🔮 今日运势', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  ['宜', '忌', '宜'][DateTime.now().day % 3],
+                  style: TextStyle(fontSize: 11, color: Colors.purple.shade400, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(fortune.$1, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(fortune.$2, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(fortune.$3, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (coldestName != null && coldestDays > 7) ...[
+              const Divider(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.ac_unit, size: 14, color: Colors.lightBlue),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '「$coldestName」已在冷宫待了$coldestDays天，今日宜：${fortune.$2}；忌：继续吃灰',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (todoCount > 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+                  const SizedBox(width: 4),
+                  Text('还有 $todoCount 项待办待处理，盘串别忘了正事 😄',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRankings(BuildContext context, List<AntiqueEntity> items, DateTime month) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 今日运势
+        _buildFortuneCard(context, items),
+        const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
               _buildRankTab('💰 财富榜', 0),
-              _buildRankTab('💆 侍寝榜', 1),
+              _buildRankTab('👑 贵妃榜', 1),
               _buildRankTab('🥜 核桃榜', 2),
               _buildRankTab('🏆 老炮榜', 3),
               _buildRankTab('📈 潜力榜', 4),
               _buildRankTab('🧵 串串榜', 5),
               _buildRankTab('🤝 缘分榜', 6),
               _buildRankTab('💪 把玩王', 7),
+              _buildRankTab('❄️ 冷宫幽怨', 8),
+              _buildRankTab('🌙 夜猫子', 9),
+              _buildRankTab('🧮 性价比', 10),
+              _buildRankTab('🌧️ 雨露均沾', 11),
             ]),
           ),
         ),
@@ -529,6 +639,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       case 5: return _buildStringRank(context, items);
       case 6: return _buildSourceRank(context, items);
       case 7: return _buildDurationsRank(context, items);
+      case 8: return _buildColdPalaceRank(context, items);
+      case 9: return _buildNightOwlRank(context, items);
+      case 10: return _buildCostPerPlayRank(context, items);
+      case 11: return _buildRecentVarietyRank(context, items);
       default: return _buildWealthRank(context, items);
     }
   }
@@ -560,8 +674,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
-          title: '💆 侍寝榜',
-          subtitle: '按本月打卡次数排序',
+          title: '👑 贵妃榜',
+          subtitle: '按本月打卡次数排序（专宠）',
           items: top,
           label: (i) => '${freq[i.id] ?? 0}次',
           icon: Icons.touch_app,
@@ -771,6 +885,99 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             return '${mins}m';
           },
           icon: Icons.fitness_center,
+        );
+      },
+    );
+  }
+
+  Widget _buildColdPalaceRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, int>>(
+      future: ref.read(coldPalaceRankProvider.future),
+      builder: (context, snapshot) {
+        final daysMap = snapshot.data ?? {};
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (daysMap[b.id] ?? 0).compareTo(daysMap[a.id] ?? 0));
+        final top = ranked.where((i) => (daysMap[i.id] ?? 0) > 3).take(10).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '❄️ 冷宫幽怨榜',
+          subtitle: '按冷落天数排序',
+          items: top,
+          label: (i) {
+            final days = daysMap[i.id] ?? 0;
+            if (days >= 365) return '${(days / 365).toStringAsFixed(1)}年';
+            return '${days}天';
+          },
+          icon: Icons.ac_unit,
+        );
+      },
+    );
+  }
+
+  Widget _buildNightOwlRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, int>>(
+      future: ref.read(nightOwlRankProvider.future),
+      builder: (context, snapshot) {
+        final nightCount = snapshot.data ?? {};
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (nightCount[b.id] ?? 0).compareTo(nightCount[a.id] ?? 0));
+        final top = ranked.where((i) => (nightCount[i.id] ?? 0) > 0).take(10).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '🌙 夜猫子榜',
+          subtitle: '深夜盘玩次数（23:00-3:00）',
+          items: top,
+          label: (i) => '${nightCount[i.id] ?? 0}次',
+          icon: Icons.nightlight_round,
+        );
+      },
+    );
+  }
+
+  Widget _buildCostPerPlayRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, double>>(
+      future: ref.read(costPerPlayProvider.future),
+      builder: (context, snapshot) {
+        final costMap = snapshot.data ?? {};
+        // 按单次成本从低到高（劳模）排序
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (costMap[a.id] ?? double.infinity).compareTo(costMap[b.id] ?? double.infinity));
+        final top = ranked.where((i) => costMap.containsKey(i.id)).take(10).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '🧮 劳模榜',
+          subtitle: '单次盘玩成本（越低越值）',
+          items: top,
+          label: (i) {
+            final cost = costMap[i.id] ?? 0;
+            if (cost >= 100) return '¥${cost.toStringAsFixed(0)}/次';
+            return '¥${cost.toStringAsFixed(1)}/次';
+          },
+          icon: Icons.emoji_events,
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentVarietyRank(BuildContext context, List<AntiqueEntity> items) {
+    return FutureBuilder<Map<int, int>>(
+      future: ref.read(recentVarietyProvider.future),
+      builder: (context, snapshot) {
+        final recentCount = snapshot.data ?? {};
+        final ranked = List<AntiqueEntity>.from(items)
+          ..sort((a, b) => (recentCount[b.id] ?? 0).compareTo(recentCount[a.id] ?? 0));
+        final top = ranked.where((i) => (recentCount[i.id] ?? 0) > 0).take(10).toList();
+        if (top.isEmpty) return const SizedBox.shrink();
+
+        return _buildRankCard(
+          title: '🌧️ 雨露均沾榜',
+          subtitle: '近两周盘玩活跃度',
+          items: top,
+          label: (i) => '${recentCount[i.id] ?? 0}次',
+          icon: Icons.spa,
         );
       },
     );

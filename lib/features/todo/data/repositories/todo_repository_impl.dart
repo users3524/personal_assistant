@@ -25,10 +25,19 @@ class TodoRepositoryImpl implements TodoRepository {
   @override
   Future<TodoEntity> update(TodoEntity todo) => _dao.update(todo);
 
-  @override
-  Future<void> delete(int id) => _dao.delete(id);
+  // ===== 删除与恢复 =====
 
   @override
+  Future<void> delete(int id) => _dao.softDelete(id);
+
+  @override
+  Future<void> restore(int id) => _dao.restore(id);
+
+  @override
+  Future<void> hardDelete(int id) => _dao.hardDelete(id);
+
+  // ===== 查询 =====
+
   @override
   Future<List<TodoEntity>> getByCategory(String category) =>
       _dao.getByCategory(category);
@@ -58,6 +67,28 @@ class TodoRepositoryImpl implements TodoRepository {
   Future<List<TodoEntity>> getToday() => _dao.getToday();
 
   @override
+  Future<List<TodoEntity>> getActive() => _dao.getActive();
+
+  @override
+  Future<List<TodoEntity>> getOverdue() => _dao.getOverdue();
+
+  @override
+  Future<List<TodoEntity>> getArchived() => _dao.getArchived();
+
+  @override
+  Future<List<TodoEntity>> getTrashed() => _dao.getTrashed();
+
+  // ===== 批量操作 =====
+
+  @override
+  Future<void> softClearCompleted() => _dao.softClearCompleted();
+
+  @override
+  Future<void> emptyTrash() => _dao.emptyTrash();
+
+  // ===== 统计 =====
+
+  @override
   Future<int> countTodayCompleted() => _dao.countTodayCompleted();
 
   @override
@@ -68,6 +99,8 @@ class TodoRepositoryImpl implements TodoRepository {
 
   @override
   Future<double> delayRate() => _dao.delayRate();
+
+  // ===== 状态操作 =====
 
   @override
   Future<TodoEntity> start(int id) async {
@@ -86,11 +119,9 @@ class TodoRepositoryImpl implements TodoRepository {
     final todo = await _dao.getById(id);
     if (todo == null) throw Exception('Todo not found');
     final now = DateTime.now();
-    // 计算实际耗时
     final actualMinutes = todo.startedAt != null
         ? now.difference(todo.startedAt!).inMinutes
         : null;
-    // 检查是否延期
     final isDelayed = todo.dueDate != null && now.isAfter(todo.dueDate!);
     final updated = todo.copyWith(
       status: TodoStatus.done,

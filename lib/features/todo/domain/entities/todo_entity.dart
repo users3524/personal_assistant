@@ -21,6 +21,7 @@ class TodoEntity {
   final DateTime? startedAt;
   final DateTime? completedAt;
   final DateTime? cancelledAt;
+  final DateTime? deletedAt;
   final int? actualMinutes;
   final int delayCount;
   final DateTime createdAt;
@@ -39,6 +40,7 @@ class TodoEntity {
     this.startedAt,
     this.completedAt,
     this.cancelledAt,
+    this.deletedAt,
     this.actualMinutes,
     this.delayCount = 0,
     required this.createdAt,
@@ -59,6 +61,7 @@ class TodoEntity {
     DateTime? startedAt,
     DateTime? completedAt,
     DateTime? cancelledAt,
+    DateTime? deletedAt,
     int? actualMinutes,
     int? delayCount,
     DateTime? createdAt,
@@ -77,6 +80,7 @@ class TodoEntity {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       actualMinutes: actualMinutes ?? this.actualMinutes,
       delayCount: delayCount ?? this.delayCount,
       createdAt: createdAt ?? this.createdAt,
@@ -84,27 +88,35 @@ class TodoEntity {
     );
   }
 
-  /// 是否已过期（未完成且截止日期已过，或无截止日期时开始时间已过）
+  /// 是否已过期（未完成且截止日期已过）
   bool get isOverdue {
     if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
-    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    if (deletedAt != null) return false;
+    final now = DateTime.now();
+    // 只比较到当天结束，当天不算逾期（给全天缓冲）
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     if (dueDate != null) {
-      final dueDateStart = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
-      return dueDateStart.isBefore(todayStart);
-    }
-    // 没有截止日期时，按开始时间判断：开始时间在今天之前即为逾期
-    if (startedAt != null) {
-      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
-      return startDay.isBefore(todayStart);
+      return dueDate!.isBefore(todayEnd);
     }
     return false;
   }
+
+  /// 软删除标记
+  bool get isDeleted => deletedAt != null;
+
+  /// 是否可恢复（已软删除的待办）
+  bool get isRestorable => deletedAt != null;
 
   /// 是否在进行中
   bool get isInProgress => status == TodoStatus.inProgress;
 
   /// 是否已完成
   bool get isDone => status == TodoStatus.done;
+
+  /// 是否活跃（待办或进行中，且未删除）
+  bool get isActive =>
+      (status == TodoStatus.pending || status == TodoStatus.inProgress) &&
+      deletedAt == null;
 
   /// 状态标签（中文）
   String get statusLabel {

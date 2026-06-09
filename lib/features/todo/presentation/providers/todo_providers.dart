@@ -16,12 +16,12 @@ import '../../domain/repositories/todo_repository.dart';
 /// 当前选中的分类筛选（null = 全部）
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
-/// 排序方式：createdAt | dueDate
+/// 排序方式
 final sortModeProvider = StateProvider<String>((ref) => 'createdAt');
 
-// ===== 待办列表 Provider（自动刷新） =====
+// ===== 待办列表 Provider =====
 
-/// 可刷新待办列表
+/// 可刷新待办总列表
 final todoListProvider =
     AsyncNotifierProvider<TodoListNotifier, List<TodoEntity>>(
   TodoListNotifier.new,
@@ -58,9 +58,17 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
     await refresh();
   }
 
+  /// 软删除（移入回收站）
   Future<void> deleteTodo(int id) async {
     final repo = await _getRepo();
     await repo.delete(id);
+    await refresh();
+  }
+
+  /// 恢复软删除
+  Future<void> restoreTodo(int id) async {
+    final repo = await _getRepo();
+    await repo.restore(id);
     await refresh();
   }
 
@@ -110,6 +118,43 @@ final searchTodosProvider =
     FutureProvider.family<List<TodoEntity>, String>((ref, keyword) {
   return ref.watch(todoRepositoryProvider.future).then((repo) {
     return repo.search(keyword);
+  });
+});
+
+// ===== 分段列表 =====
+
+/// 活跃待办（未完成、未逾期）
+final activeTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
+  return ref.watch(todoRepositoryProvider.future).then((repo) {
+    return repo.getActive();
+  });
+});
+
+/// 逾期待办
+final overdueTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
+  return ref.watch(todoRepositoryProvider.future).then((repo) {
+    return repo.getOverdue();
+  });
+});
+
+/// 今日待办（截止日期为今天）
+final todayTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
+  return ref.watch(todoRepositoryProvider.future).then((repo) {
+    return repo.getToday();
+  });
+});
+
+/// 归档（已完成/已取消）
+final archivedTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
+  return ref.watch(todoRepositoryProvider.future).then((repo) {
+    return repo.getArchived();
+  });
+});
+
+/// 回收站（已软删除）
+final trashedTodosProvider = FutureProvider<List<TodoEntity>>((ref) {
+  return ref.watch(todoRepositoryProvider.future).then((repo) {
+    return repo.getTrashed();
   });
 });
 

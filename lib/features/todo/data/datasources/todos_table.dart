@@ -22,6 +22,7 @@ class Todos extends Table {
   DateTimeColumn get startedAt => dateTime().nullable()();
   DateTimeColumn get completedAt => dateTime().nullable()();
   DateTimeColumn get cancelledAt => dateTime().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
   IntColumn get actualMinutes => integer().nullable()();
   IntColumn get delayCount => integer().withDefault(const Constant(0))();
 

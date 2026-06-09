@@ -144,6 +144,13 @@ class ReviewDao {
     return entity;
   }
 
+  Future<void> deleteDaily(DateTime date) async {
+    final normalized = DateTime(date.year, date.month, date.day);
+    await (_db.delete(_db.dailyReviews)
+          ..where((t) => t.date.equals(normalized)))
+        .go();
+  }
+
   // ===== 周报 CRUD =====
 
   Future<WeeklyReportEntity> insertWeekly(WeeklyReportEntity entity) async {

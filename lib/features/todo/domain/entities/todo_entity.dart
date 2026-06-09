@@ -89,14 +89,22 @@ class TodoEntity {
   }
 
   /// 是否已过期（未完成且截止日期已过）
+  /// 两种判定逻辑：
+  /// 1. 有截止日期 → 判断当前时间是否超过截止日期
+  /// 2. 无截止日期 → 判断当前日期是否大于开始日期
   bool get isOverdue {
     if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
     if (deletedAt != null) return false;
     final now = DateTime.now();
-    // 只比较到当天结束，当天不算逾期（给全天缓冲）
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     if (dueDate != null) {
-      return dueDate!.isBefore(todayEnd);
+      // 有截止日期：超过截止日期即逾期
+      return now.isAfter(dueDate!);
+    }
+    // 无截止日期：有开始时间且开始日期在今天之前即逾期
+    if (startedAt != null) {
+      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      final today = DateTime(now.year, now.month, now.day);
+      return startDay.isBefore(today);
     }
     return false;
   }

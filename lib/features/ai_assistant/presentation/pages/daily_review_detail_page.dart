@@ -27,6 +27,12 @@ class DailyReviewDetailPage extends ConsumerWidget {
             tooltip: '对话查看/编辑',
             onPressed: () => context.push('/review/daily/edit/$dateStr'),
           ),
+          if (reviewAsync.valueOrNull != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: '删除',
+              onPressed: () => _confirmDelete(context, ref, date),
+            ),
         ],
       ),
       body: reviewAsync.when(
@@ -36,9 +42,35 @@ class DailyReviewDetailPage extends ConsumerWidget {
           }
           return _buildContent(context, review);
         },
-        loading: () =>
-            const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('加载失败: $err')),
+        loading: () => const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('加载中...', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+        error: (err, _) {
+          // 首次加载常见超时错误，刷新后缓存可正常读取
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                const SizedBox(height: 12),
+                const Text('加载失败，请重试'),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () => ref.invalidate(dailyReviewProvider(date)),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -188,6 +220,34 @@ class DailyReviewDetailPage extends ConsumerWidget {
       case 4: return '⚡⚡';
       case 5: return '⚡⚡⚡';
       default: return '⚡';
+    }
+  }
+
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, DateTime date) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除 ${date.year}-${date.month}-${date.day} 的复盘记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      final repo = await ref.read(reviewRepositoryProvider.future);
+      await repo.deleteDaily(date);
+      ref.invalidate(dailyReviewProvider(date));
+      if (context.mounted) Navigator.of(context).pop();
     }
   }
 }

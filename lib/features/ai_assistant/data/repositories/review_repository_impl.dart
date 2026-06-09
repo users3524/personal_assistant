@@ -37,6 +37,9 @@ class ReviewRepositoryImpl implements ReviewRepository {
       _dao.updateDaily(review);
 
   @override
+  Future<void> deleteDaily(DateTime date) => _dao.deleteDaily(date);
+
+  @override
   Future<WeeklyReportEntity> createWeekly(WeeklyReportEntity report) =>
       _dao.insertWeekly(report);
 

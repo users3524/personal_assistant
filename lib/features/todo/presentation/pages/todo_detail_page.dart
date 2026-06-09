@@ -72,7 +72,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 状态卡片
+                // 状态卡片 + 时间摘要
                 _buildStatusCard(todo),
                 const SizedBox(height: 16),
 
@@ -106,50 +106,80 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _getStatusIcon(todo),
-              color: color,
-              size: 40,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    todo.statusLabel,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                  if (todo.isOverdue)
-                    const Text(
-                      '已过期',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // 优先级星星
             Row(
-              children: List.generate(5, (index) {
-                return Icon(
-                  index < todo.priority ? Icons.star : Icons.star_border,
-                  size: 16,
-                  color: index < todo.priority ? Colors.orange : Colors.grey,
-                );
-              }),
+              children: [
+                Icon(_getStatusIcon(todo), color: color, size: 40),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        todo.statusLabel,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                      ),
+                      if (todo.isOverdue)
+                        const Text('已逾期',
+                            style: TextStyle(color: Colors.red, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                // 优先级星星
+                Row(
+                  children: List.generate(5, (index) {
+                    return Icon(
+                      index < todo.priority ? Icons.star : Icons.star_border,
+                      size: 16,
+                      color: index < todo.priority ? Colors.orange : Colors.grey,
+                    );
+                  }),
+                ),
+              ],
             ),
+            const Divider(height: 24),
+            // 时间信息
+            _buildTimeRow(Icons.play_circle_outline, '开始时间', todo.startedAt),
+            const SizedBox(height: 6),
+            _buildTimeRow(Icons.event, '截止时间', todo.dueDate,
+                color: todo.isOverdue ? Colors.red : null),
+            if (todo.completedAt != null) ...[
+              const SizedBox(height: 6),
+              _buildTimeRow(Icons.check_circle, '完成时间', todo.completedAt,
+                  color: Colors.green),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTimeRow(IconData icon, String label, DateTime? date,
+      {Color? color}) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color ?? Colors.grey),
+        const SizedBox(width: 8),
+        Text('$label：',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+        Text(
+          date != null
+              ? '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+                  '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
+              : '未设置',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: color ?? (date == null ? Colors.grey : null),
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
   }
 
@@ -160,54 +190,20 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow(
-              Icons.category,
-              '分类',
-              todo.category,
-              todo.category == '生活' ? Colors.green : Colors.blue,
-            ),
+            _buildInfoRow(Icons.category, '分类', todo.category,
+                todo.category == '生活' ? Colors.green : Colors.blue),
             const Divider(),
             _buildInfoRow(
-              Icons.access_time,
-              '创建时间',
-              _formatDate(todo.createdAt),
-              null,
-            ),
-            if (todo.dueDate != null) ...[
-              const Divider(),
-              _buildInfoRow(
-                Icons.event,
-                '截止日期',
-                _formatDate(todo.dueDate!),
-                todo.isOverdue ? Colors.red : null,
-              ),
-            ],
-            if (todo.completedAt != null) ...[
-              const Divider(),
-              _buildInfoRow(
-                Icons.check_circle,
-                '完成时间',
-                _formatDate(todo.completedAt!),
-                Colors.green,
-              ),
-            ],
+                Icons.access_time, '创建时间', _formatDate(todo.createdAt), null),
             if (todo.actualMinutes != null) ...[
               const Divider(),
-              _buildInfoRow(
-                Icons.timer,
-                '实际耗时',
-                '${todo.actualMinutes} 分钟',
-                null,
-              ),
+              _buildInfoRow(Icons.timer, '实际耗时',
+                  '${todo.actualMinutes} 分钟', null),
             ],
             if (todo.delayCount > 0) ...[
               const Divider(),
-              _buildInfoRow(
-                Icons.warning,
-                '延期次数',
-                '${todo.delayCount} 次',
-                Colors.orange,
-              ),
+              _buildInfoRow(Icons.warning, '延期次数', '${todo.delayCount} 次',
+                  Colors.orange),
             ],
             if (todo.tags.isNotEmpty) ...[
               const Divider(),
@@ -231,21 +227,20 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, Color? color) {
+  Widget _buildInfoRow(
+      IconData icon, String label, String value, Color? color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Icon(icon, size: 18, color: color ?? Colors.grey),
           const SizedBox(width: 12),
-          Text('$label：',
-              style: const TextStyle(color: Colors.grey)),
+          Text('$label：', style: const TextStyle(color: Colors.grey)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontWeight: FontWeight.w500, color: color),
-            ),
+            child: Text(value,
+                style:
+                    TextStyle(fontWeight: FontWeight.w500, color: color)),
           ),
         ],
       ),
@@ -322,10 +317,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
     }
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    TodoEntity todo,
-  ) async {
+  Future<void> _confirmDelete(BuildContext context, TodoEntity todo) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

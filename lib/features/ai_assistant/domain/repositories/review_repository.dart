@@ -11,6 +11,7 @@ abstract class ReviewRepository {
   Future<List<DailyReviewEntity>> getDailyByMonth(int year, int month);
   Future<List<DailyReviewEntity>> getDailyByWeek(int year, int weekNumber);
   Future<DailyReviewEntity> updateDaily(DailyReviewEntity review);
+  Future<void> deleteDaily(DateTime date);
 
   // ===== 周报 =====
   Future<WeeklyReportEntity> createWeekly(WeeklyReportEntity report);

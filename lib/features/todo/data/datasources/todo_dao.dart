@@ -248,33 +248,27 @@ class TodoDao {
     return rows.map(_toEntity).toList();
   }
 
-  /// 活跃待办：未完成、未逾期、未删除
+  /// 活跃待办：未完成、未逾期（实体 isOverdue 逻辑）、未删除
   Future<List<TodoEntity>> getActive() async {
-    final now = DateTime.now();
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final rows = await (_db.select(_db.todos)
           ..where((t) =>
               t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull() &
-              (t.dueDate.isNull() | t.dueDate.isBiggerThanValue(todayEnd)))
+              t.deletedAt.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map(_toEntity).where((e) => !e.isOverdue).toList();
   }
 
-  /// 逾期待办：未完成、截止日期已过、未删除
+  /// 逾期待办：使用实体 isOverdue 判定
+  /// 有截止日期超过即逾期；无截止日期但有开始时间且开始日期在今天之前即逾期
   Future<List<TodoEntity>> getOverdue() async {
-    final now = DateTime.now();
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final rows = await (_db.select(_db.todos)
           ..where((t) =>
               t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull() &
-              t.dueDate.isNotNull() &
-              t.dueDate.isSmallerThanValue(todayEnd))
+              t.deletedAt.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map(_toEntity).where((e) => e.isOverdue).toList();
   }
 
   /// 归档：已完成或已取消（不含已删除）

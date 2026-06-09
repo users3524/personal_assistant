@@ -1,19 +1,32 @@
 /// 简历首页 — 默认预览模式，点击编辑进入长条滑动编辑页。
 library;
 
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../domain/entities/resume_entity.dart';
 import '../providers/resume_providers.dart';
+import '../widgets/resume_templates.dart';
 
-class ResumeHomePage extends ConsumerWidget {
+class ResumeHomePage extends ConsumerStatefulWidget {
   const ResumeHomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResumeHomePage> createState() => _ResumeHomePageState();
+}
+
+class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
+  final _repaintKey = GlobalKey();
+  bool _isExporting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final dataAsync = ref.watch(resumeDataProvider);
     final templateId = ref.watch(selectedTemplateIdProvider);
 
@@ -34,9 +47,13 @@ class ResumeHomePage extends ConsumerWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: '分享',
-            onPressed: () => _exportPDF(ref),
+            icon: _isExporting
+                ? const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.share),
+            tooltip: '导出分享',
+            onPressed: _isExporting ? null : _exportAsImage,
           ),
           PopupMenuButton<int>(
             icon: const Icon(Icons.design_services),
@@ -49,6 +66,7 @@ class ResumeHomePage extends ConsumerWidget {
                   child: ListTile(
                     leading: Icon(Icons.article),
                     title: Text('简洁经典'),
+                    subtitle: Text('单栏布局，适合传统行业'),
                     dense: true,
                   )),
               const PopupMenuItem(
@@ -56,6 +74,7 @@ class ResumeHomePage extends ConsumerWidget {
                   child: ListTile(
                     leading: Icon(Icons.credit_card),
                     title: Text('现代卡片'),
+                    subtitle: Text('双栏布局，适合设计/产品岗'),
                     dense: true,
                   )),
               const PopupMenuItem(
@@ -63,6 +82,7 @@ class ResumeHomePage extends ConsumerWidget {
                   child: ListTile(
                     leading: Icon(Icons.code),
                     title: Text('技术极简'),
+                    subtitle: Text('等宽字体，适合程序员'),
                     dense: true,
                   )),
             ],
@@ -70,30 +90,30 @@ class ResumeHomePage extends ConsumerWidget {
         ],
       ),
       body: dataAsync.when(
-        data: (data) => _buildPreview(context, data, templateId),
+        data: (data) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: RepaintBoundary(
+            key: _repaintKey,
+            child: Container(
+              width: 360, // A4 比例约束
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: _buildTemplate(data, templateId),
+            ),
+          ),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('加载失败: $err')),
-      ),
-    );
-  }
-
-  Widget _buildPreview(BuildContext context, ResumeData data, int templateId) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: _buildTemplate(data, templateId),
       ),
     );
   }
@@ -101,19 +121,42 @@ class ResumeHomePage extends ConsumerWidget {
   Widget _buildTemplate(ResumeData data, int templateId) {
     switch (templateId) {
       case 1:
-        return _ModernTemplate(data);
+        return ModernResumeTemplate(data);
       case 2:
-        return _TechTemplate(data);
+        return TechResumeTemplate(data);
       default:
-        return _ClassicTemplate(data);
+        return ClassicResumeTemplate(data);
     }
   }
 
-  void _exportPDF(WidgetRef ref) {
-    Share.share(
-      '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
-      subject: '个人简历',
-    );
+  Future<void> _exportAsImage() async {
+    setState(() => _isExporting = true);
+    try {
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('无法获取预览区域');
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('编码失败');
+
+      final dir = Directory.systemTemp;
+      final file = File('${dir.path}/resume_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 }
 
@@ -239,7 +282,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
   Future<void> _saveAll() async {
     final repo = await ref.read(resumeRepositoryProvider.future);
 
-    // 保存个人信息
     await repo.saveProfile(ResumeProfileEntity(
       fullName: _nameCtrl.text.trim(),
       jobTitle: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
@@ -250,7 +292,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       updatedAt: DateTime.now(),
     ));
 
-    // 保存工作经历
     for (final w in _works) {
       await repo.saveWorkExperience(WorkExperienceEntity(
         id: w.id,
@@ -262,7 +303,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       ));
     }
 
-    // 保存教育经历
     for (final e in _educations) {
       await repo.saveEducation(EducationEntity(
         id: e.id,
@@ -274,7 +314,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       ));
     }
 
-    // 保存技能
     for (final s in _skills) {
       await repo.saveSkill(SkillItemEntity(
         id: s.id,
@@ -285,7 +324,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       ));
     }
 
-    // 保存项目经历
     for (final p in _projects) {
       await repo.saveProject(ProjectExperienceEntity(
         id: p.id,
@@ -328,7 +366,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // === 个人信息 ===
                     _sectionTitle('个人信息'),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -372,7 +409,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     const SizedBox(height: 24),
                     const Divider(),
 
-                    // === 工作经历 ===
                     _sectionTitle('工作经历'),
                     const SizedBox(height: 8),
                     ReorderableListView.builder(
@@ -408,7 +444,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     const SizedBox(height: 24),
                     const Divider(),
 
-                    // === 教育背景 ===
                     _sectionTitle('教育背景'),
                     const SizedBox(height: 8),
                     ReorderableListView.builder(
@@ -444,7 +479,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     const SizedBox(height: 24),
                     const Divider(),
 
-                    // === 技能 ===
                     _sectionTitle('技能'),
                     const SizedBox(height: 8),
                     ReorderableListView.builder(
@@ -479,7 +513,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     const SizedBox(height: 24),
                     const Divider(),
 
-                    // === 项目经历 ===
                     _sectionTitle('项目经历'),
                     const SizedBox(height: 8),
                     ReorderableListView.builder(
@@ -512,15 +545,6 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                       label: const Text('添加项目经历'),
                     ),
 
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _saveAll,
-                        icon: const Icon(Icons.save),
-                        label: const Text('保存全部'),
-                      ),
-                    ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -796,154 +820,4 @@ class _ProjectEditItem {
     required this.descCtrl,
     this.isVisible = true,
   });
-}
-
-// ===== 以下为简历模板（从预览页移入） =====
-
-// ===== 模板 1：简洁经典 =====
-
-class _ClassicTemplate extends StatelessWidget {
-  final ResumeData data;
-  const _ClassicTemplate(this.data);
-
-  @override
-  Widget build(BuildContext context) {
-    final p = data.profile;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Center(
-          child: Column(
-            children: [
-              Text(p.fullName,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  )),
-              if (p.jobTitle != null)
-                Text(p.jobTitle!,
-                    style: const TextStyle(fontSize: 14, color: Colors.black54)),
-              if (p.email != null || p.phone != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('${p.email ?? ""}  ${p.phone ?? ""}'.trim(),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ),
-            ],
-          ),
-        ),
-        const Divider(height: 32),
-        if (p.personalSummary != null && p.personalSummary!.isNotEmpty) ...[
-          _sectionTitle('个人简介'),
-          Text(p.personalSummary!, style: const TextStyle(fontSize: 13, height: 1.5)),
-          const SizedBox(height: 20),
-        ],
-        if (data.workExperiences.isNotEmpty) ...[
-          _sectionTitle('工作经历'),
-          ...data.workExperiences.map(_workItem),
-          const SizedBox(height: 16),
-        ],
-        if (data.educations.isNotEmpty) ...[
-          _sectionTitle('教育背景'),
-          ...data.educations.map(_eduItem),
-          const SizedBox(height: 16),
-        ],
-        if (data.skills.isNotEmpty) ...[
-          _sectionTitle('专业技能'),
-          Wrap(
-            spacing: 8, runSpacing: 4,
-            children: data.skills
-                .map((s) => Chip(
-                      label: Text(s.name, style: const TextStyle(fontSize: 12)),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (data.projects.isNotEmpty) ...[
-          _sectionTitle('项目经历'),
-          ...data.projects.map(_projectItem),
-        ],
-      ],
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
-    );
-  }
-
-  Widget _workItem(WorkExperienceEntity e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Text(e.company, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text('${e.startDate.year} - ${e.endDate?.year ?? "至今"}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ]),
-          Text(e.position, style: const TextStyle(fontSize: 13, color: Colors.black54)),
-          if (e.description != null)
-            Text(e.description!, style: const TextStyle(fontSize: 12, height: 1.4)),
-        ],
-      ),
-    );
-  }
-
-  Widget _eduItem(EducationEntity e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text('${e.school}  ${e.major}  ${e.degree}',
-          style: const TextStyle(fontSize: 13)),
-    );
-  }
-
-  Widget _projectItem(ProjectExperienceEntity e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(e.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          if (e.role != null)
-            Text(e.role!, style: const TextStyle(fontSize: 13, color: Colors.black54)),
-          if (e.description != null)
-            Text(e.description!, style: const TextStyle(fontSize: 12, height: 1.4)),
-        ],
-      ),
-    );
-  }
-}
-
-// ===== 模板 2：现代卡片 =====
-
-class _ModernTemplate extends StatelessWidget {
-  final ResumeData data;
-  const _ModernTemplate(this.data);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(children: [Text('现代卡片模板')]);
-  }
-}
-
-// ===== 模板 3：技术极简 =====
-
-class _TechTemplate extends StatelessWidget {
-  final ResumeData data;
-  const _TechTemplate(this.data);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(children: [Text('技术极简模板')]);
-  }
 }

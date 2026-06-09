@@ -476,113 +476,138 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   // ===== 趣味排行 =====
 
-  // ===== 今日运势 =====
+  // ===== 文玩老道今日批注 =====
 
   Widget _buildFortuneCard(BuildContext context, List<AntiqueEntity> items) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    // 找冷宫最久的那件
     final now = DateTime.now();
-    String? coldestName;
-    int coldestDays = 0;
-    String? frequentName;
-    int frequentCount = 0;
+
+    AntiqueEntity? coldestItem;
+    int maxColdDays = 0;
     for (final item in items) {
-      final days = now.difference(item.acquiredDate).inDays;
-      if (days > coldestDays && item.id != null) {
-        coldestDays = days;
-        coldestName = item.name;
+      final coldDays = now.difference(item.acquiredDate).inDays;
+      if (coldDays > maxColdDays) {
+        maxColdDays = coldDays;
+        coldestItem = item;
       }
     }
-    // 今日宜忌文案库（按日期轮换）
-    final fortuneMessages = [
-      ('🔥', '大汗猛盘', '适合出一身汗大力盘刷，包浆进度 +50%'),
-      ('🌙', '静置养护', '今天宜静置，让包浆自然固化'),
-      ('📸', '拍照记录', '今日光线极佳，适合给宝贝拍标准照'),
-      ('🪥', '刷子伺候', '缝隙积灰了，今天宜深度清洁'),
-      ('📏', '比对尺寸', '心血来潮量一量，看看变化了没有'),
-      ('🧴', '上油保养', '干燥季节，适当上油防止开裂'),
-      ('🪢', '换个绳', '手串绳子松了，今天宜换新绳'),
-      ('🤲', '掌中摩挲', '开会/追剧时随手盘，今日宜零碎时间利用'),
-      ('⚖️', '称重记录', '今天称一称，看看有没有偷偷变重'),
-      ('🖼️', '对比旧照', '翻出入手照片对比一下，包浆感人'),
-      ('☀️', '晒晒太阳', '温和日光下晒一晒，杀菌又提色'),
-      ('👆', '指尖盘玩', '今天适合细细品味纹路，指尖感受变化'),
-      ('🍵', '泡茶配盘', '泡一壶茶，盘一对核桃，偷得半日闲'),
-      ('🪡', '清理缝隙', '纹路深处藏污纳垢，今天宜精细清理'),
-      ('📋', '编号归档', '给宝贝们重新编个号，后宫名册更新'),
-      ('🪡', '换线重穿', '手串线快磨断了吧？今天宜换新线'),
-      ('📐', '测量周径', '盘了这么久，看看尺寸收缩了多少'),
-      ('🌃', '夜间养护', '睡前上点保养油，明天起来更润'),
-      ('💎', '多宝搭配', '今天试试不同材质的搭配组合'),
-      ('🤚', '素手轻盘', '洗净手，啥也不涂，感受最原始的包浆'),
+
+    final yiList = [
+      ('🔥 大汗猛盘', '适合出一身汗大力盘刷，包浆进度 +50%'),
+      ('🪥 刷子伺候', '缝隙积灰了，今天宜深度清洁'),
+      ('🍵 泡茶配盘', '泡一壶好茶，单手揉核桃，偷得半日闲'),
+      ('📸 绝美定格', '今日光线极佳，适合给宝贝拍标准照'),
+      ('🧼 素手净盘', '洗净双手，不沾油汗，感受最原始的阻尼感'),
+      ('🤲 掌中摩挲', '开会追剧时随手盘，今日宜零碎时间利用'),
+      ('⚖️ 称重记录', '今天称一称，看看有没有偷偷变重'),
+      ('☀️ 晒晒太阳', '温和日光下晒一晒，杀菌又提色'),
+      ('📐 测量周径', '盘了这么久，看看尺寸收缩了多少'),
+      ('💎 多宝搭配', '今天试试不同材质的搭配组合'),
     ];
-    final fortune = fortuneMessages[DateTime.now().day % fortuneMessages.length];
+
+    final jiList = [
+      ('❄️ 继续吃灰', '再不盘它，宝贝要在冷宫里长毛了'),
+      ('🧴 盲目上油', '大力流汗的日子，别瞎上油，容易盘黑'),
+      ('🩹 暴力武盘', '核桃尖尖在哭泣，今天动静小点'),
+      ('🤡 买新忘旧', '看着手里的，别老想着海鲜市场还没发货的'),
+      ('🌊 沾水盘玩', '今天湿气重，别拿宝贝碰水'),
+      ('🗑️ 随手乱放', '上次差点坐碎核桃的是不是你？'),
+      ('🐶 被狗叼走', '放高点，二哈最近对你的核桃很感兴趣'),
+      ('🧊 冷宫放置', '再不开后宫，嫔妃们要发动宫变了'),
+    ];
+
+    final seed = now.day + now.month;
+    final yi = yiList[seed % yiList.length];
+    final ji = jiList[(seed * 3) % jiList.length];
+
     final todoCount = ref.watch(todayTotalCountProvider).valueOrNull ?? 0;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.purple.shade100, width: 1),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Colors.purple.shade50.withValues(alpha: 0.3), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Text('🔮 今日运势', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  ['宜', '忌', '宜'][DateTime.now().day % 3],
-                  style: TextStyle(fontSize: 11, color: Colors.purple.shade400, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 6),
             Row(
               children: [
-                Text(fortune.$1, style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 8),
+                Text('🔮 文玩老道今日批注',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.purple.shade800)),
+                const Spacer(),
+                Text('📅 农历干支玄学', style: TextStyle(fontSize: 10, color: Colors.purple.shade300)),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Divider(height: 1, color: Colors.purple.withValues(alpha: 0.1)),
+            ),
+            Row(
+              children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(fortune.$2, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text(fortune.$3, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      Text('【 宜 】', style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text(yi.$1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text(yi.$2, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 40, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 8)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('【 忌 】', style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text(ji.$1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text(ji.$2, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
               ],
             ),
-            if (coldestName != null && coldestDays > 7) ...[
-              const Divider(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.ac_unit, size: 14, color: Colors.lightBlue),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '「$coldestName」已在冷宫待了$coldestDays天，今日宜：${fortune.$2}；忌：继续吃灰',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+            if (coldestItem != null && maxColdDays > 7) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Text('🥶', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '后宫怨气警告：怨气值 +$maxColdDays％！「${coldestItem.name}」已被打入冷宫 $maxColdDays 天，今晚不摸一把说不过去了吧？',
+                        style: TextStyle(fontSize: 11, color: Colors.blue.shade900, fontStyle: FontStyle.italic),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
             if (todoCount > 0) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-                  const SizedBox(width: 4),
-                  Text('还有 $todoCount 项待办待处理，盘串别忘了正事 😄',
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
-                ],
-              ),
+              const SizedBox(height: 6),
+              Text('💡 提示：今日还有 $todoCount 项正事没干。盘串虽爽，可别耽误搬砖买新串！',
+                  style: TextStyle(fontSize: 10, color: Colors.orange.shade800)),
             ],
           ],
         ),
@@ -590,32 +615,58 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
+  // ===== 随机榜单（每日抽3个） =====
+  List<int> _dailySelectedRankIndices = [];
+  int _lastDataDay = -1;
+
+  void _initDailyRandomRanks() {
+    final today = DateTime.now().day;
+    if (_lastDataDay == today && _dailySelectedRankIndices.isNotEmpty) return;
+    _lastDataDay = today;
+    final allIndices = List.generate(10, (i) => i);
+    allIndices.shuffle();
+    _dailySelectedRankIndices = allIndices.take(3).toList();
+    _rankTabIndex = 0;
+  }
+
   Widget _buildRankings(BuildContext context, List<AntiqueEntity> items) {
+    _initDailyRandomRanks();
+
+    const allRankTabs = [
+      ('💰 财富榜', 0), ('👑 贵妃榜', 1), ('🥜 核桃榜', 2),
+      ('🏆 老炮榜', 3), ('🧵 串串榜', 4), ('🤝 缘分榜', 5),
+      ('❄️ 冷宫幽怨', 6), ('🌙 夜猫子', 7), ('🧮 劳模榜', 8), ('🌧️ 端水大师', 9),
+    ];
+
+    final displayedTabs = allRankTabs.where((tab) => _dailySelectedRankIndices.contains(tab.$2)).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFortuneCard(context, items),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              _buildRankTab('💰 财富榜', 0),
-              _buildRankTab('👑 贵妃榜', 1),
-              _buildRankTab('🥜 核桃榜', 2),
-              _buildRankTab('🏆 老炮榜', 3),
-              _buildRankTab('🧵 串串榜', 4),
-              _buildRankTab('🤝 缘分榜', 5),
-              _buildRankTab('❄️ 冷宫幽怨', 6),
-              _buildRankTab('🌙 夜猫子', 7),
-              _buildRankTab('🧮 劳模榜', 8),
-              _buildRankTab('🌧️ 端水大师', 9),
-            ]),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Text('✨ 今日限定内卷榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+              const SizedBox(width: 6),
+              Text('(每日随机精选)', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        _buildRankContent(items),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: displayedTabs.asMap().entries.map((entry) {
+              final pageIndex = entry.key;
+              final tab = entry.value;
+              return _buildRankTab(tab.$1, pageIndex);
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 4),
+        _buildRankContent(items, displayedTabs.map((t) => t.$2).toList()),
       ],
     );
   }
@@ -629,47 +680,52 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     super.dispose();
   }
 
-  Widget _buildRankTab(String label, int index) {
-    final selected = _rankTabIndex == index;
+  Widget _buildRankTab(String label, int pageIndex) {
+    final selected = _rankTabIndex == pageIndex;
     return GestureDetector(
       onTap: () {
-        setState(() => _rankTabIndex = index);
-        _rankPageController.animateToPage(index,
-            duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+        setState(() => _rankTabIndex = pageIndex);
+        _rankPageController.animateToPage(pageIndex,
+            duration: const Duration(milliseconds: 250), curve: Curves.decelerate);
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Colors.amber.shade100 : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(16),
+          color: selected ? Colors.amber.shade700 : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: selected ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
         ),
-        child: Text(label, style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.bold : null)),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.bold : null, color: selected ? Colors.white : Colors.grey.shade700),
+        ),
       ),
     );
   }
 
-  Widget _buildRankContent(List<AntiqueEntity> items) {
-    // 所有榜单数据统一在这里准备好，传给 PageView
-    final rankWidgets = [
-      _buildWealthRank(context, items),
-      _buildPattingRank(context, items),
-      _buildSizeRank(context, items),
-      _buildVeteranRank(context, items),
-      _buildStringRank(context, items),
-      _buildSourceRank(context, items),
-      _buildColdPalaceRank(context, items),
-      _buildNightOwlRank(context, items),
-      _buildCostPerPlayRank(context, items),
-      _buildRecentVarietyRank(context, items),
-    ];
+  Widget _buildRankContent(List<AntiqueEntity> items, List<int> selectedIndices) {
+    final allWidgets = <int, Widget>{
+      0: _buildWealthRank(context, items),
+      1: _buildPattingRank(context, items),
+      2: _buildSizeRank(context, items),
+      3: _buildVeteranRank(context, items),
+      4: _buildStringRank(context, items),
+      5: _buildSourceRank(context, items),
+      6: _buildColdPalaceRank(context, items),
+      7: _buildNightOwlRank(context, items),
+      8: _buildCostPerPlayRank(context, items),
+      9: _buildRecentVarietyRank(context, items),
+    };
+
+    final activeWidgets = selectedIndices.map((index) => allWidgets[index]!).toList();
 
     return SizedBox(
-      height: 420, // 固定高度，PageView 在里面切不触发外层 scroll
+      height: 440,
       child: PageView(
         controller: _rankPageController,
         onPageChanged: (i) => setState(() => _rankTabIndex = i),
-        children: rankWidgets,
+        children: activeWidgets,
       ),
     );
   }
@@ -1057,12 +1113,12 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (top3.length >= 2)
-                    Expanded(child: _buildPodiumItem(top3[1], 2, label)),
+                    Expanded(child: _buildPodiumItem(top3[1], 2, 85, label)),
                   const SizedBox(width: 6),
-                  Expanded(child: _buildPodiumItem(top3[0], 1, label)),
+                  Expanded(child: _buildPodiumItem(top3[0], 1, 105, label)),
                   const SizedBox(width: 6),
                   if (top3.length >= 3)
-                    Expanded(child: _buildPodiumItem(top3[2], 3, label)),
+                    Expanded(child: _buildPodiumItem(top3[2], 3, 75, label)),
                   if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
                 ],
               ),
@@ -1111,9 +1167,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildPodiumItem(AntiqueEntity item, int rank, String Function(AntiqueEntity) label) {
+  Widget _buildPodiumItem(AntiqueEntity item, int rank, double baseHeight, String Function(AntiqueEntity) label) {
     final medals = ['🥇', '🥈', '🥉'];
-    final colors = [Colors.amber.shade200, Colors.grey.shade300, Colors.brown.shade200];
+    final podiumColors = [
+      [Colors.amber.shade400, Colors.orange.shade300],
+      [Colors.grey.shade300, Colors.grey.shade400],
+      [Colors.orange.shade200, Colors.brown.shade300],
+    ];
     final cover = item.imagePaths.isNotEmpty ? item.imagePaths.first : null;
     final photosAsync = ref.watch(latestPattingPhotosProvider);
     final latestPhoto = photosAsync.valueOrNull?[item.id];
@@ -1124,27 +1184,54 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 50x50 图片
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: rank == 1 ? 56 : 50,
-              height: 50,
-              color: colors[rank - 1].withValues(alpha: 0.3),
-              child: displayImage != null
-                  ? Image.file(File(displayImage), width: 50, height: 50, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]))
-                  : Icon(rank == 1 ? Icons.emoji_events : Icons.diamond, size: 24, color: colors[rank - 1]),
+          Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: podiumColors[rank - 1][0], width: 2),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
+                ),
+                child: CircleAvatar(
+                  radius: rank == 1 ? 26 : 22,
+                  backgroundColor: Colors.grey.shade100,
+                  backgroundImage: displayImage != null ? FileImage(File(displayImage)) : null,
+                  child: displayImage == null ? Text(medals[rank - 1], style: const TextStyle(fontSize: 18)) : null,
+                ),
+              ),
+              if (displayImage != null)
+                Positioned(
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(color: podiumColors[rank - 1][0], borderRadius: BorderRadius.circular(8)),
+                    child: Text(medals[rank - 1], style: const TextStyle(fontSize: 9)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(item.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label(item), style: TextStyle(fontSize: 9, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Container(
+            height: baseHeight - 45,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: podiumColors[rank - 1],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, -1))],
+            ),
+            child: Center(
+              child: Text('$rank', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white38)),
             ),
           ),
-          const SizedBox(height: 3),
-          Text(medals[rank - 1], style: const TextStyle(fontSize: 14)),
-          Text(item.name,
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
-              textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(label(item),
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
         ],
       ),
     );

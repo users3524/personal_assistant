@@ -59,6 +59,7 @@ class WorkExperienceEntity {
   final DateTime startDate;
   final DateTime? endDate;
   final String? description;
+  final List<String> responsibilities;
   final List<String> techStack;
   final bool isVisible;
   final int sortOrder;
@@ -70,6 +71,7 @@ class WorkExperienceEntity {
     required this.startDate,
     this.endDate,
     this.description,
+    this.responsibilities = const [],
     this.techStack = const [],
     this.isVisible = true,
     this.sortOrder = 0,
@@ -82,6 +84,7 @@ class WorkExperienceEntity {
     DateTime? startDate,
     DateTime? endDate,
     String? description,
+    List<String>? responsibilities,
     List<String>? techStack,
     bool? isVisible,
     int? sortOrder,
@@ -93,6 +96,7 @@ class WorkExperienceEntity {
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,
         description: description ?? this.description,
+        responsibilities: responsibilities ?? this.responsibilities,
         techStack: techStack ?? this.techStack,
         isVisible: isVisible ?? this.isVisible,
         sortOrder: sortOrder ?? this.sortOrder,
@@ -187,6 +191,8 @@ class ProjectExperienceEntity {
   final String? role;
   final String? description;
   final List<String> techStack;
+  final List<String> keyDeliverables;
+  final List<String> badges;
   final String? link;
   final DateTime startDate;
   final DateTime? endDate;
@@ -199,6 +205,8 @@ class ProjectExperienceEntity {
     this.role,
     this.description,
     this.techStack = const [],
+    this.keyDeliverables = const [],
+    this.badges = const [],
     this.link,
     required this.startDate,
     this.endDate,
@@ -212,6 +220,8 @@ class ProjectExperienceEntity {
     String? role,
     String? description,
     List<String>? techStack,
+    List<String>? keyDeliverables,
+    List<String>? badges,
     String? link,
     DateTime? startDate,
     DateTime? endDate,
@@ -224,6 +234,8 @@ class ProjectExperienceEntity {
         role: role ?? this.role,
         description: description ?? this.description,
         techStack: techStack ?? this.techStack,
+        keyDeliverables: keyDeliverables ?? this.keyDeliverables,
+        badges: badges ?? this.badges,
         link: link ?? this.link,
         startDate: startDate ?? this.startDate,
         endDate: endDate ?? this.endDate,

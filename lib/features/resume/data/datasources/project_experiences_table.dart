@@ -10,9 +10,15 @@ class ProjectExperiences extends Table {
 
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get role => text()();
+  TextColumn get role => text().nullable()();
   TextColumn get description => text().nullable()();
   TextColumn get techStack => text()
+      .map(const StringListConverter())
+      .withDefault(const Constant('[]'))();
+  TextColumn get keyDeliverables => text()
+      .map(const StringListConverter())
+      .withDefault(const Constant('[]'))();
+  TextColumn get badges => text()
       .map(const StringListConverter())
       .withDefault(const Constant('[]'))();
   TextColumn get link => text().nullable()();

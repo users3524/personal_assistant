@@ -12,8 +12,11 @@ class WorkExperiences extends Table {
   TextColumn get company => text()();
   TextColumn get position => text()();
   DateTimeColumn get startDate => dateTime()();
-  DateTimeColumn get endDate => dateTime().nullable()();    // null = present
+  DateTimeColumn get endDate => dateTime().nullable()();
   TextColumn get description => text().nullable()();
+  TextColumn get responsibilities => text()
+      .map(const StringListConverter())
+      .withDefault(const Constant('[]'))();
   TextColumn get techStack => text()
       .map(const StringListConverter())
       .withDefault(const Constant('[]'))();

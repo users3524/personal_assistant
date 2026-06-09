@@ -194,15 +194,13 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             buildDefaultDragHandles: false,
             itemBuilder: (_, i) {
               final st = cat.subtypes[i];
-              return Padding(
+              return ReorderableDelayedDragStartListener(
+                index: i,
+                child: Padding(
                 key: ValueKey('${cat.name}_st_$i'),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
                 child: Row(
                   children: [
-                    ReorderableDragStartListener(
-                      index: i,
-                      child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
-                    ),
                     const SizedBox(width: 4),
                     Chip(
                       label: Text(st, style: const TextStyle(fontSize: 11)),
@@ -223,6 +221,7 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
                       },
                     ),
                   ],
+                ),
                 ),
               );
             },
@@ -281,15 +280,13 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
             buildDefaultDragHandles: false,
             itemBuilder: (_, i) {
               final f = cat.metadataFields[i];
-              return Padding(
+              return ReorderableDelayedDragStartListener(
+                index: i,
+                child: Padding(
                 key: ValueKey('${cat.name}_mf_$i'),
                 padding: EdgeInsets.fromLTRB(16, 1, 16, i == cat.metadataFields.length - 1 ? 12 : 1),
                 child: Row(
                   children: [
-                    ReorderableDragStartListener(
-                      index: i,
-                      child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
-                    ),
                     const SizedBox(width: 4),
                     Chip(
                       label: Text(f, style: const TextStyle(fontSize: 11)),
@@ -302,6 +299,7 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
                       },
                     ),
                   ],
+                ),
                 ),
               );
             },

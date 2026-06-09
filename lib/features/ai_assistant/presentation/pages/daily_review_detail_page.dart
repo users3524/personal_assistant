@@ -246,7 +246,12 @@ class DailyReviewDetailPage extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       final repo = await ref.read(reviewRepositoryProvider.future);
       await repo.deleteDaily(date);
+      // 同时 invalidate 所有相关缓存，确保首页、列表页实时刷新
       ref.invalidate(dailyReviewProvider(date));
+      ref.invalidate(allDailyReviewsProvider);
+      ref.invalidate(dailyListByMonthProvider);
+      ref.invalidate(monthlyAvgMoodProvider);
+      ref.invalidate(monthlyAvgEnergyProvider);
       if (context.mounted) Navigator.of(context).pop();
     }
   }

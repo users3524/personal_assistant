@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_windows
+  gal
   share_plus
   speech_to_text_windows
   sqlite3_flutter_libs

@@ -1547,7 +1547,12 @@ class _CompareDialogState extends State<_CompareDialog> {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: RepaintBoundary(
                   key: _compareKey,
-                  child: SizedBox(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+                    ),
+                    child: SizedBox(
                     height: 300,
                     child: Row(
                       children: [
@@ -1555,6 +1560,7 @@ class _CompareDialogState extends State<_CompareDialog> {
                         Container(width: 1, color: badgeBg),
                         Expanded(child: _tile(rightLog, widget.item, textColor, subtextColor, badgeBg, false)),
                       ],
+                    ),
                     ),
                   ),
                 ),

@@ -305,7 +305,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             const Divider(height: 24),
             // 趣味排行
             listAsync.when(
-              data: (items) => _buildRankings(context, items, month),
+              data: (items) => _buildRankings(context, items),
               loading: () => const SizedBox(height: 100),
               error: (_, __) => const SizedBox.shrink(),
             ),
@@ -338,6 +338,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // 月历头部导航
         Padding(
@@ -493,16 +494,28 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         coldestName = item.name;
       }
     }
-    // 随便挑个今日宜忌
+    // 今日宜忌文案库（按日期轮换）
     final fortuneMessages = [
-      ('大汗猛盘', '🔥', '适合出一身汗大力盘刷，包浆进度 +50%'),
-      ('静置养护', '🌙', '今天宜静置，让包浆自然固化'),
-      ('拍照记录', '📸', '今日光线极佳，适合给宝贝拍标准照'),
-      ('刷子伺候', '🪥', '缝隙积灰了，今天宜深度清洁'),
-      ('比对尺寸', '📏', '心血来潮量一量，看看变化了没有'),
-      ('上油保养', '🧴', '干燥季节，适当上油防止开裂'),
-      ('换个绳', '🪢', '手串绳子松了，今天宜换新绳'),
-      ('掌中摩挲', '🤲', '开会/追剧时随手盘，今日宜零碎时间利用'),
+      ('🔥', '大汗猛盘', '适合出一身汗大力盘刷，包浆进度 +50%'),
+      ('🌙', '静置养护', '今天宜静置，让包浆自然固化'),
+      ('📸', '拍照记录', '今日光线极佳，适合给宝贝拍标准照'),
+      ('🪥', '刷子伺候', '缝隙积灰了，今天宜深度清洁'),
+      ('📏', '比对尺寸', '心血来潮量一量，看看变化了没有'),
+      ('🧴', '上油保养', '干燥季节，适当上油防止开裂'),
+      ('🪢', '换个绳', '手串绳子松了，今天宜换新绳'),
+      ('🤲', '掌中摩挲', '开会/追剧时随手盘，今日宜零碎时间利用'),
+      ('⚖️', '称重记录', '今天称一称，看看有没有偷偷变重'),
+      ('🖼️', '对比旧照', '翻出入手照片对比一下，包浆感人'),
+      ('☀️', '晒晒太阳', '温和日光下晒一晒，杀菌又提色'),
+      ('👆', '指尖盘玩', '今天适合细细品味纹路，指尖感受变化'),
+      ('🍵', '泡茶配盘', '泡一壶茶，盘一对核桃，偷得半日闲'),
+      ('🪡', '清理缝隙', '纹路深处藏污纳垢，今天宜精细清理'),
+      ('📋', '编号归档', '给宝贝们重新编个号，后宫名册更新'),
+      ('🪡', '换线重穿', '手串线快磨断了吧？今天宜换新线'),
+      ('📐', '测量周径', '盘了这么久，看看尺寸收缩了多少'),
+      ('🌃', '夜间养护', '睡前上点保养油，明天起来更润'),
+      ('💎', '多宝搭配', '今天试试不同材质的搭配组合'),
+      ('🤚', '素手轻盘', '洗净手，啥也不涂，感受最原始的包浆'),
     ];
     final fortune = fortuneMessages[DateTime.now().day % fortuneMessages.length];
     final todoCount = ref.watch(todayTotalCountProvider).valueOrNull ?? 0;
@@ -577,11 +590,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildRankings(BuildContext context, List<AntiqueEntity> items, DateTime month) {
+  Widget _buildRankings(BuildContext context, List<AntiqueEntity> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 今日运势
         _buildFortuneCard(context, items),
         const SizedBox(height: 8),
         Padding(
@@ -593,30 +605,37 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               _buildRankTab('👑 贵妃榜', 1),
               _buildRankTab('🥜 核桃榜', 2),
               _buildRankTab('🏆 老炮榜', 3),
-              _buildRankTab('📈 潜力榜', 4),
-              _buildRankTab('🧵 串串榜', 5),
-              _buildRankTab('🤝 缘分榜', 6),
-              _buildRankTab('💪 把玩王', 7),
-              _buildRankTab('❄️ 冷宫幽怨', 8),
-              _buildRankTab('🌙 夜猫子', 9),
-              _buildRankTab('🧮 性价比', 10),
-              _buildRankTab('🌧️ 雨露均沾', 11),
+              _buildRankTab('🧵 串串榜', 4),
+              _buildRankTab('🤝 缘分榜', 5),
+              _buildRankTab('❄️ 冷宫幽怨', 6),
+              _buildRankTab('🌙 夜猫子', 7),
+              _buildRankTab('🧮 劳模榜', 8),
+              _buildRankTab('🌧️ 端水大师', 9),
             ]),
           ),
         ),
         const SizedBox(height: 8),
-        // 用 tabIndex 切换
-        _buildRankContent(context, items, month),
+        _buildRankContent(items),
       ],
     );
   }
 
   int _rankTabIndex = 0;
+  final _rankPageController = PageController();
+
+  @override
+  void dispose() {
+    _rankPageController.dispose();
+    super.dispose();
+  }
+
   Widget _buildRankTab(String label, int index) {
     final selected = _rankTabIndex == index;
     return GestureDetector(
       onTap: () {
         setState(() => _rankTabIndex = index);
+        _rankPageController.animateToPage(index,
+            duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -630,21 +649,29 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildRankContent(BuildContext context, List<AntiqueEntity> items, DateTime month) {
-    switch (_rankTabIndex) {
-      case 1: return _buildPattingRank(context, items);
-      case 2: return _buildSizeRank(context, items);
-      case 3: return _buildVeteranRank(context, items);
-      case 4: return _buildPotentialRank(context, items);
-      case 5: return _buildStringRank(context, items);
-      case 6: return _buildSourceRank(context, items);
-      case 7: return _buildDurationsRank(context, items);
-      case 8: return _buildColdPalaceRank(context, items);
-      case 9: return _buildNightOwlRank(context, items);
-      case 10: return _buildCostPerPlayRank(context, items);
-      case 11: return _buildRecentVarietyRank(context, items);
-      default: return _buildWealthRank(context, items);
-    }
+  Widget _buildRankContent(List<AntiqueEntity> items) {
+    // 所有榜单数据统一在这里准备好，传给 PageView
+    final rankWidgets = [
+      _buildWealthRank(context, items),
+      _buildPattingRank(context, items),
+      _buildSizeRank(context, items),
+      _buildVeteranRank(context, items),
+      _buildStringRank(context, items),
+      _buildSourceRank(context, items),
+      _buildColdPalaceRank(context, items),
+      _buildNightOwlRank(context, items),
+      _buildCostPerPlayRank(context, items),
+      _buildRecentVarietyRank(context, items),
+    ];
+
+    return SizedBox(
+      height: 420, // 固定高度，PageView 在里面切不触发外层 scroll
+      child: PageView(
+        controller: _rankPageController,
+        onPageChanged: (i) => setState(() => _rankTabIndex = i),
+        children: rankWidgets,
+      ),
+    );
   }
 
   Widget _buildWealthRank(BuildContext context, List<AntiqueEntity> items) {
@@ -992,6 +1019,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   }) {
     final top3 = items.take(3).toList();
     final rest = items.length > 3 ? items.sublist(3) : <AntiqueEntity>[];
+    final placeholderCount = items.isEmpty ? 10 : 10 - items.length;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -1008,27 +1036,39 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             ]),
             const SizedBox(height: 10),
-            // 前三名阶梯展示：2左 1中 3右
-            if (top3.isNotEmpty)
+            // 前三名阶梯展示
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.inbox_outlined, size: 40, color: Colors.grey.shade300),
+                      const SizedBox(height: 8),
+                      Text('虚位以待',
+                          style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 第2名（左）
                   if (top3.length >= 2)
                     Expanded(child: _buildPodiumItem(top3[1], 2, label)),
                   const SizedBox(width: 6),
-                  // 第1名（中）
                   Expanded(child: _buildPodiumItem(top3[0], 1, label)),
                   const SizedBox(width: 6),
-                  // 第3名（右）
                   if (top3.length >= 3)
                     Expanded(child: _buildPodiumItem(top3[2], 3, label)),
                   if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
                 ],
               ),
+            ],
             // 4-10名列表
-            if (rest.isNotEmpty) ...[
+            if (rest.isNotEmpty || placeholderCount > 0) ...[
               const SizedBox(height: 8),
               const Divider(height: 1),
               ...rest.asMap().entries.map((entry) {
@@ -1050,6 +1090,18 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                     ],
                   ),
                   onTap: () => context.push('/collection/${item.id}'),
+                );
+              }),
+              // 虚位以待占位
+              ...List.generate(placeholderCount, (i) {
+                final rank = items.length + i + 1;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade300)),
+                  title: Text('—', style: TextStyle(fontSize: 12, color: Colors.grey.shade300)),
+                  subtitle: Text('虚位以待', style: TextStyle(fontSize: 10, color: Colors.grey.shade300)),
                 );
               }),
             ],
@@ -1110,7 +1162,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final dateStr = '${date.month}月${date.day}日';
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -500,9 +500,16 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 
   /// 计算逾期天数
   int _overdueDays(TodoEntity todo) {
-    if (todo.dueDate == null || !todo.isOverdue) return 0;
+    if (!todo.isOverdue) return 0;
     final now = DateTime.now();
-    return now.difference(todo.dueDate!).inDays;
+    if (todo.dueDate != null) {
+      return now.difference(todo.dueDate!).inDays;
+    }
+    if (todo.startedAt != null) {
+      final startDay = DateTime(todo.startedAt!.year, todo.startedAt!.month, todo.startedAt!.day);
+      return now.difference(startDay).inDays;
+    }
+    return 0;
   }
 
   /// 将过期待办的 dueDate 顺延到今天（不改变 createdAt）

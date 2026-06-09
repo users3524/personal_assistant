@@ -5,8 +5,6 @@
 /// 初始分类：生活、工作。
 library;
 
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/user_preferences_dao.dart';

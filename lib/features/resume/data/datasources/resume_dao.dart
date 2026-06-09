@@ -1,8 +1,6 @@
 /// 简历模块 DAO — drift 数据库操作。
 library;
 
-import 'dart:convert';
-
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -296,15 +294,4 @@ class ResumeDao {
         .go();
   }
 
-  // ===== 辅助 =====
-
-  List<String> _decodeList(String json) {
-    try {
-      return (jsonDecode(json) as List).cast<String>();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  String _encodeList(List<String> list) => jsonEncode(list);
 }

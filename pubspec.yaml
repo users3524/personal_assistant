@@ -27,18 +27,11 @@ dependencies:
   path_provider: ^2.1.3
   path: ^1.9.0
 
-  # 网络
+  # 网络（AI API）
   dio: ^5.4.3+1
-
-  # AI
-  # 使用 dio 直接调用 OpenAI 兼容 API
 
   # 图表
   fl_chart: ^0.68.0
-
-  # PDF
-  pdf: ^3.11.0
-  printing: ^5.12.0
 
   # 通知
   flutter_local_notifications: ^17.1.0
@@ -46,27 +39,19 @@ dependencies:
 
   # 图片
   image_picker: ^1.0.7
-  cached_network_image: ^3.3.1
 
   # 分享
   share_plus: ^12.0.2
 
-  # 加密
-  encrypt: ^5.0.3
-  crypto: ^3.0.3
-  pointycastle: ^3.7.4
-
   # 国际化
   flutter_localizations:
     sdk: flutter
-  intl: any
 
-  # 工具
-  device_info_plus: ^10.1.0
-  file_picker: ^8.0.3
-  uuid: ^4.4.0
-  collection: ^1.18.0
+  # 语音输入
   speech_to_text: ^7.0.0
+
+  # 文件选择
+  file_picker: ^8.0.3
 
 hooks:
   user_defines:
@@ -81,10 +66,6 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   drift_dev: ^2.33.0
   build_runner: ^2.15.0
-  mocktail: ^1.0.3
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/

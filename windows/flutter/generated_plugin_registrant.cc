@@ -7,7 +7,6 @@
 #include "generated_plugin_registrant.h"
 
 #include <file_selector_windows/file_selector_windows.h>
-#include <printing/printing_plugin.h>
 #include <share_plus/share_plus_windows_plugin_c_api.h>
 #include <speech_to_text_windows/speech_to_text_windows.h>
 #include <sqlite3_flutter_libs/sqlite3_flutter_libs_plugin.h>
@@ -16,8 +15,6 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   FileSelectorWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FileSelectorWindows"));
-  PrintingPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("PrintingPlugin"));
   SharePlusWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("SharePlusWindowsPluginCApi"));
   SpeechToTextWindowsRegisterWithRegistrar(

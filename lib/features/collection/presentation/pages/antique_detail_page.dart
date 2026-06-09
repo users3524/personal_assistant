@@ -247,28 +247,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
-  Widget _fullscreenButton(BuildContext context, String path) {
-    return Material(
-      color: Colors.black54,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => _showFullScreenImage(context, path),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.fullscreen, color: Colors.white, size: 16),
-              SizedBox(width: 4),
-              Text('全屏', style: TextStyle(color: Colors.white, fontSize: 12)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildInfoCard(AntiqueEntity item) {
     // 计算拥有天数
     final daysOwned = DateTime.now().difference(item.acquiredDate).inDays;
@@ -1016,7 +994,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.file(
-                          File(photoPath!),
+                          File(photoPath),
                           fit: BoxFit.cover,
                           errorBuilder: (_, e, __) => Container(
                             color: Colors.grey.shade200,
@@ -1143,7 +1121,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       durationMinutes: 0,
                       method: 'bare_hand',
                       note: note.isEmpty ? null : note,
-                      photoPaths: (fileExists) ? [photoPath!] : [],
+                      photoPaths: (fileExists) ? [photoPath] : [],
                     ));
                     if (ctx.mounted) Navigator.pop(ctx);
                     _refreshPage();
@@ -1528,9 +1506,9 @@ class _CompareDialogState extends State<_CompareDialog> {
                     height: 300,
                     child: Row(
                       children: [
-                        Expanded(child: _tile(leftLog!, widget.item, textColor, subtextColor, badgeBg, true)),
+                        Expanded(child: _tile(leftLog, widget.item, textColor, subtextColor, badgeBg, true)),
                         Container(width: 1, color: badgeBg),
-                        Expanded(child: _tile(rightLog!, widget.item, textColor, subtextColor, badgeBg, false)),
+                        Expanded(child: _tile(rightLog, widget.item, textColor, subtextColor, badgeBg, false)),
                       ],
                     ),
                   ),

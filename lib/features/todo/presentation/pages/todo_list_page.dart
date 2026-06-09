@@ -472,65 +472,6 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     });
   }
 
-  void _showReviewEntry(BuildContext context, DateTime date) async {
-    final today = DateTime.now();
-    final isPastOrToday = !date.isAfter(today);
-    if (!isPastOrToday) return; // 未来日期不显示
-
-    final normalized = DateTime(date.year, date.month, date.day);
-    final review = await ref.read(dailyReviewProvider(normalized).future);
-    if (review == null) return;
-
-    final dateStr = normalized.toIso8601String().split('T')[0];
-    if (!context.mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${date.month}月${date.day}日 复盘',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(review.summary,
-                maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-            const SizedBox(height: 6),
-            Row(children: [
-              _miniBadge('能量 ${review.energyLevel}/5', Colors.orange),
-              const SizedBox(width: 8),
-              _miniBadge('情绪 ${review.moodLevel}/5', Colors.blue),
-            ]),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.visibility, size: 18),
-                    label: const Text('查看详情'),
-                    onPressed: () { Navigator.pop(ctx); context.push('/review/daily/$dateStr'); },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('编辑'),
-                    onPressed: () { Navigator.pop(ctx); context.push('/review/daily/edit/$dateStr'); },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _miniBadge(String text, MaterialColor color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

@@ -861,26 +861,6 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  // ===== 空状态 =====
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.diamond_outlined,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text('还没有宝贝',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          const Text('点击右下角 + 添加第一件宝贝'),
-        ],
-      ),
-    );
-  }
-
   // ===== 搜索 =====
 
   void _showSearch(BuildContext context, WidgetRef ref) {

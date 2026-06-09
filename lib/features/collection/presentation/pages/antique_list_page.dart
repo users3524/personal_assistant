@@ -481,12 +481,15 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   Widget _buildFortuneCard(BuildContext context, List<AntiqueEntity> items) {
     if (items.isEmpty) return const SizedBox.shrink();
 
+    // 使用 coldPalaceRankProvider 的数据（基于实际打卡时间计算冷宫天数）
     final now = DateTime.now();
-
+    final coldDaysAsync = ref.watch(coldPalaceRankProvider);
+    final coldDaysMap = coldDaysAsync.valueOrNull ?? {};
     AntiqueEntity? coldestItem;
     int maxColdDays = 0;
     for (final item in items) {
-      final coldDays = now.difference(item.acquiredDate).inDays;
+      if (item.id == null) continue;
+      final coldDays = coldDaysMap[item.id] ?? 0;
       if (coldDays > maxColdDays) {
         maxColdDays = coldDays;
         coldestItem = item;
@@ -721,7 +724,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final activeWidgets = selectedIndices.map((index) => allWidgets[index]!).toList();
 
     return SizedBox(
-      height: 440,
+      height: 520,
       child: PageView(
         controller: _rankPageController,
         onPageChanged: (i) => setState(() => _rankTabIndex = i),
@@ -1127,39 +1130,51 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             if (rest.isNotEmpty || placeholderCount > 0) ...[
               const SizedBox(height: 8),
               const Divider(height: 1),
-              ...rest.asMap().entries.map((entry) {
-                final rank = entry.key + 4;
-                final item = entry.value;
-                return ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                  title: Text(item.name, style: const TextStyle(fontSize: 12)),
-                  subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(label(item), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.green)),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
-                    ],
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ...rest.asMap().entries.map((entry) {
+                          final rank = entry.key + 4;
+                          final item = entry.value;
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                            title: Text(item.name, style: const TextStyle(fontSize: 12)),
+                            subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(label(item), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.green)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+                              ],
+                            ),
+                            onTap: () => context.push('/collection/${item.id}'),
+                          );
+                        }),
+                        // 虚位以待占位
+                        ...List.generate(placeholderCount, (i) {
+                          final rank = items.length + i + 1;
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade300)),
+                            title: Text('—', style: TextStyle(fontSize: 12, color: Colors.grey.shade300)),
+                            subtitle: Text('虚位以待', style: TextStyle(fontSize: 10, color: Colors.grey.shade300)),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                  onTap: () => context.push('/collection/${item.id}'),
-                );
-              }),
-              // 虚位以待占位
-              ...List.generate(placeholderCount, (i) {
-                final rank = items.length + i + 1;
-                return ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade300)),
-                  title: Text('—', style: TextStyle(fontSize: 12, color: Colors.grey.shade300)),
-                  subtitle: Text('虚位以待', style: TextStyle(fontSize: 10, color: Colors.grey.shade300)),
-                );
-              }),
+                ),
+              ),
             ],
           ],
         ),

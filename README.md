@@ -1,341 +1,227 @@
 [English](./README_EN.md) | [中文](./README.md)
 
-<h1 align="center">📋 个人全能助手</h1>
+# 个人全能助手
 
-<div align="center">
+待办、文玩记录、AI 复盘、动态简历集成在一个 Flutter 本地优先应用里。当前代码以 Android 为主要运行目标，同时保留 Windows / Web 工程。
 
-<h3>待办 · 文玩 · AI 复盘 · 动态简历 —— 你的生活工作管理中心</h3>
+> 本文按 2026-06-20 的代码现状整理。未实现的深夜日报、RAG、人生罗盘、STAR 简历生成、PDF 导出等，只记录在 `docs/ROADMAP.md` 和 `docs/TODO.md`。
 
-<p>
-  <a href="https://github.com/users3524/personal_assistant/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/users3524/personal_assistant?color=blue&label=版本" />
-  </a>
-  <a href="https://github.com/users3524/personal_assistant/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/badge/license-暂无-blueviolet" />
-  </a>
-  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter" />
-  <img alt="Dart" src="https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart" />
-  <img alt="Platform" src="https://img.shields.io/badge/Android-API_28+-3DDC84?logo=android" />
-  <img alt="CI" src="https://img.shields.io/badge/build-passing-brightgreen" />
-</p>
+## 当前原则
 
-<p>
-基于 <strong>Flutter + Riverpod + Drift</strong> 构建的全功能本地优先生活管理工具。
-一套代码覆盖 Android / Windows / Web，数据 100% 存储在设备本地。
-</p>
+| 原则 | 当前实现 |
+| --- | --- |
+| 本地优先 | 业务数据存储在本地 SQLite。 |
+| 隐私优先 | 无广告 SDK、无统计 SDK；AI 请求只发往用户在设置页配置的地址。 |
+| 模块化 | 文玩、待办、复盘、简历、设置按 feature 目录拆分。 |
+| 文档按代码说话 | 当前规格只描述已实现代码，不把规划写成现状。 |
 
-🚧 <strong>开发中 — 功能持续完善</strong>
+## 全局演进取舍
 
-</div>
+当前文档把“已实现现状”和“后续智能化规划”分开维护。后续实现顺序统一按以下阶段推进：
 
----
+1. 先修现有数据债：备份导入导出、API Key 安全存储、文玩估值移除策略、图片路径统一。
+2. 再修现有功能链路：待办树查询、复盘真实文玩分钟、输入/STT 限制、周报日期范围查询、简历编辑缺口。
+3. 然后落地 AI 成本闸门：`PromptBuilder`、`chat_turns`、15 轮熔断、离线便签。
+4. 再做深夜引擎：先前台 Catch-Up Guard 补偿闭环，再接 Android WorkManager。
+5. 最后进入长期智能化：高光池、向量记忆、人生罗盘、RAG、STAR 简历和 PDF 导出。
 
-> [!WARNING]
-> 本应用定位为个人工具，**不收集任何用户数据**，不上传服务器。
-> AI 复盘功能仅向用户自行配置的 API 地址发送请求。
-> 备份文件为明文 JSON，请用户自行妥善保管。
-
----
-
-## 📑 目录
-
-- [项目简介](#-项目简介)
-- [快速开始](#-快速开始)
-- [核心功能模块](#-核心功能模块)
-- [技术架构](#-技术架构)
-- [项目结构](#-项目结构)
-- [文档索引](#-文档索引)
-- [开发计划](#-开发计划)
-- [隐私与安全](#-隐私与安全)
-- [鸣谢](#-鸣谢)
-- [许可证](#-许可证)
-
----
-
-## 🎯 项目简介
-
-**个人全能助手**是一个面向个人生活的多功能管理应用，以**本地优先、隐私安全、功能实用**为设计原则。
-
-| 核心理念 | 说明 |
-|---------|------|
-| 🏠 **本地优先** | 所有数据存储于设备本地 SQLite，无需注册账号，不上传任何服务器 |
-| 🔒 **隐私安全** | 无广告 SDK、无第三方统计、无崩溃分析，AI API Key 可配置任意供应商 |
-| 🧩 **模块化** | 待办、文玩、AI 复盘、简历四大模块独立运作又相互打通 |
-| 📱 **跨平台** | Flutter 构建，Android / Windows / Web 三端覆盖 |
-
-### 模块联动示意图
-
-```
-[待办模块: 完成任务 + 耗时/延期数据] ──(自动聚合)──┐
-                                                   │
-[文玩模块: 盘玩时长 + 打卡频率] ──────────────┐  ▼
-                                         ├──► [AI 复盘模块]
-[用户手动输入: 今日心得/不足/情绪] ────────────┘     │
-                                                     ▼ (一键导入亮点)
-                                               [动态简历仓库]
-                                                     ▼
-                                             [PDF / Markdown 导出]
-```
-
----
-
-## 🚀 快速开始
-
-### a. 下载 APK（推荐）
-
-前往 [GitHub Releases](https://github.com/users3524/personal_assistant/releases) 下载最新 APK 直接安装。
-
-> [!NOTE]
-> 当前仅提供 Android arm64-v8a 构建。Windows / Web 版本可通过本地构建运行。
-
-### b. 本地构建
+## 快速开始
 
 ```bash
-# 1. 安装 Flutter SDK（3.x 以上，含 Dart 3.x）
-# 2. 克隆仓库
-git clone https://github.com/users3524/personal_assistant.git
-cd personal_assistant
-
-# 3. 获取依赖
 flutter pub get
-
-# 4. 生成 drift 数据库代码
 dart run build_runner build --delete-conflicting-outputs
-
-# 5. 运行（连接设备或模拟器）
 flutter run
-
-# 或构建 APK
-flutter build apk --debug
 ```
 
-### c. 一键构建脚本
+Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前 `pubspec.yaml` 版本为 `1.0.2+3`，Dart SDK 约束为 `^3.10.0`。
 
-Windows 用户可直接双击 `build_and_run.bat`，自动完成构建 + 安装到已连接设备。
+## 当前功能模块
 
----
+### 文玩/盘串
 
-## ✨ 核心功能模块
+入口：`/collection`
 
-### ✅ 待办清单
-> 生活 / 工作双域管理，全生命周期追踪
+当前已实现：
 
-- **双域切换**：底部 TabBar 切换「生活」「工作」，不同主题色区分
-- **优先级 + 分类**：1-5 级优先级 + 自定义分类标签
-- **生命周期追踪**：创建 → 开始 → 完成/取消，记录实际耗时与延期次数
-- **多视图**：日视图、周视图、月视图，分类管理
-- **统计仪表盘**：按分类/状态/优先级的完成率、耗时分布
+- 藏品建档：名称、分类、子类型、入手日期、入手价格、来源、品相、图片、备注、分类专属字段。
+- 文玩分类管理：默认核桃、手串、把件；支持子类型和专属字段管理。
+- 盘玩打卡：照片、时长、方式、备注、时间线展示。
+- 列表与月历：网格视图、月历视图、最新打卡照片、每日翻牌、趣味榜单。
+- 照片能力：全屏查看、分享、保存、打卡照片对比。
 
-### 🏺 文玩记录
-> 藏品数字化资产管理，盘玩打卡时间线
+估值相关代码当前仍存在：`valuation_records` 表、`current_valuation` 字段、`ValuationChart`、`totalValuationProvider`、财富/潜力相关排序逻辑。产品口径是文玩记录继续保留，但估值模块后续不需要保留，后续应做迁移或移除，而不是继续扩展估值能力。
 
-- **藏品建档**：名称、分类、购入价格、品相、描述、多图
-- **分类体系**：核桃 / 手串 / 把件 三大类，每类含细分品类 + 专属字段
-- **盘玩打卡**：拍照记录 → 时间线展示，支持打卡对比（双图并排）
-- **Banner 轮播**：优先展示最新打卡照片，全屏缩放查看
-- **估值追踪**：fl_chart 折线图展示估值变化趋势
+### 待办
 
-### 🤖 AI 复盘
-> 自然语言对话式日报 + 周报自动汇总
+入口：`/todos`
 
-- **对话式日报**：5 步自然语言状态机，AI 引导填写今日总结、收获、不足
-- **情绪能量趋势**：可视化看板展示情绪与能量变化
-- **周报自动汇总**：聚合本周日报 → AI 生成结构化周报
-- **可切换供应商**：OpenAI / DeepSeek / 通义千问 / 硅基流动，API Key 本地存储
-- **改进点置顶**：每日不足之处在首页 📌 置顶提醒
+当前已实现：
 
-### 📄 动态简历
-> 原子化简历仓库，多模板 PDF 导出
+- 待办创建、编辑、详情、开始、完成、取消、重新打开、星标、软删除、归档。
+- 父任务和子任务：`todos.parent_id` 自关联；详情页可添加子任务。
+- 清单表：`todo_lists` 已有表和 DAO，UI 使用仍有限。
+- 周/月视图：周视图展示今日任务与统计卡；月视图展示日报标记和历史入口。
+- 统计：今日完成数、今日总数、本周完成率、拖延率；统计口径排除子任务。
+- 分类：默认“生活/工作”，分类列表保存在 `user_preferences.todo_categories`。
 
-- **原子化数据**：个人资料、工作经历、教育背景、技能、项目经历独立管理
-- **可见性控制**：每条记录可单独开关，灵活组合简历内容
-- **多模板引擎**：简洁经典 / 现代卡片 / 技术极简 三套模板
-- **PDF 导出**：A4 布局，调用系统分享面板保存或打印
-- **一键导入周报亮点**：从 AI 周报直接导入项目经历
+当前未实现：AI 教练式待办追问、人生罗盘绑定、15 轮熔断、输入 500 字硬限制。
 
-### ⚙️ 设置与管理
-- 🌓 **主题切换**：浅色 / 深色模式，持久化到数据库
-- 🔑 **AI 配置**：任意 OpenAI 兼容 API 地址 + Key + 模型选择
-- 🔔 **通知管理**：定时/即时通知开关
-- 💾 **备份与恢复**：纯 JSON 导出（含图片 Base64 内联），SAF 选择保存位置
-- 📖 **开源许可**：内置 Flutter `showLicensePage`
+### AI 复盘
 
----
+入口：
 
-## 🏗️ 技术架构
+- `/review/daily/new`
+- `/review/daily/edit/:date`
+- `/review/daily/:date`
+- `/review/weekly/:id`
 
-<p>
-  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&style=flat" />
-  <img alt="Dart" src="https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&style=flat" />
-  <img alt="Riverpod" src="https://img.shields.io/badge/Riverpod-2.x-5C4EE5?style=flat" />
-  <img alt="Drift" src="https://img.shields.io/badge/Drift-2.x-005A9C?style=flat" />
-  <img alt="go_router" src="https://img.shields.io/badge/go__router-14.x-30B0D8?style=flat" />
-  <img alt="Dio" src="https://img.shields.io/badge/Dio-5.x-FF4081?style=flat" />
-  <img alt="fl_chart" src="https://img.shields.io/badge/fl__chart-0.68-FF6F00?style=flat" />
-</p>
+当前已实现：
 
-| 层级 | 技术 | 用途 |
-|------|------|------|
-| **框架** | Flutter 3.x + Dart 3.x | 跨平台 UI |
-| **状态管理** | Riverpod 2.x | 编译安全、可测试、异步数据流 |
-| **本地数据库** | drift + sqlite3_flutter_libs | SQLite ORM，类型安全 |
-| **路由** | go_router 14.x | 声明式路由，StatefulShellRoute 保持 Tab 状态 |
-| **网络** | dio 5.x | AI API HTTP 调用 |
-| **图表** | fl_chart | 估值趋势、情绪能量看板 |
-| **PDF** | pdf + printing | A4 简历渲染导出 |
-| **通知** | flutter_local_notifications | 定时/即时提醒 |
-| **国际化** | flutter_localizations + intl | .arb 多语言 |
+- 对话式日报：按总结、收获、不足、情绪/能量、AI 建议逐步收集。
+- 日报详情：查看、编辑、删除。
+- 周报：按年和周数生成/查看。
+- AI 服务：离线模板生成器和 OpenAI 兼容接口。
+- 语音输入：使用 `speech_to_text` 转文本。
 
-### Feature 内部 Clean Architecture
+当前未实现：深夜 2:00-5:00 后台引擎、充电/Wi-Fi 条件、结构化 JSON 输出、解析失败重试、RAG/向量库、自动高光里程碑。
 
-```
-feature/
-├── data/                            # 数据层
-│   ├── datasources/                 # DAO + drift 表定义
-│   └── repositories/                # 仓库实现 + Provider
-├── domain/                          # 业务层（纯 Dart，零 Flutter 依赖）
-│   ├── entities/                    # 纯 Dart 实体
-│   └── repositories/                # 抽象接口
-└── presentation/                    # 表示层
-    ├── providers/                   # Riverpod 状态
-    ├── pages/                       # 页面
-    └── widgets/                     # 本模块组件
-```
+### 动态简历
 
-### 数据库设计（13 张表）
+入口：`/resume`
 
-| 表名 | 用途 |
-|------|------|
-| `user_preferences` | 用户设置（主题/AI/通知/语言） |
-| `todos` | 待办事项 |
-| `antique_items` | 藏品主表（含 categoryMetadata JSON） |
-| `valuation_records` | 估值记录 |
-| `patting_logs` | 盘玩打卡日志 |
-| `daily_reviews` | 每日 AI 复盘 |
-| `weekly_reports` | 每周周报 |
-| `resume_profile` | 简历个人资料 |
-| `work_experiences` | 工作经历 |
-| `educations` | 教育经历 |
-| `skill_items` | 技能项 |
-| `project_experiences` | 项目经历 |
+当前已实现：
 
----
+- 个人资料、工作经历、教育经历、技能、项目经历。
+- 可见性开关和拖拽排序。
+- 三套 Flutter 预览模板：简洁经典、现代卡片、技术极简。
+- 技术栈、项目标签、关键交付在模板层可展示。
+- 导出分享：通过 `RepaintBoundary` 截取当前预览为 PNG，再使用 `share_plus` 分享。
 
-## 📁 项目结构
+当前未实现：PDF 导出、Markdown 导出、STAR AI 润色、里程碑素材池、从日报/周报导入高光。
 
-```
-personal_assistant/
-├── lib/                           # Dart 源码
-│   ├── main.dart                  # 入口
-│   ├── app/                       # 全局配置
-│   │   ├── app.dart               # MaterialApp + 主题 + 路由 + 初始化
-│   │   ├── router/                # go_router 路由表 + 路由名常量
-│   │   └── theme/                 # 主题/色彩/字体定义
-│   ├── core/                      # 基础设施
-│   │   ├── ai/                    # AI 服务抽象 + OpenAI 实现 + Provider
-│   │   └── database/              # drift 数据库 + 备份 + 偏好 DAO + 迁移
-│   ├── features/                  # 业务模块（Feature-First）
-│   │   ├── collection/            # 文玩（藏品/打卡/对比/榜单）
-│   │   ├── todo/                  # 待办（双域/视图/统计）
-│   │   ├── ai_assistant/          # AI 复盘（日报/周报/情绪看板）
-│   │   ├── resume/                # 简历（编辑/预览/PDF/导入周报）
-│   │   └── settings/              # 设置（主题/AI/通知/备份/分类管理）
-│   └── l10n/                      # 国际化资源
-├── android/                       # Android 平台 (API 36)
-├── windows/                       # Windows 桌面端
-├── web/                           # Web 端
-├── test/                          # 单元测试
-├── docs/                          # 设计文档（见下方索引）
-├── build_and_run.bat              # 一键构建 + 安装 APK
-├── pubspec.yaml                   # 依赖配置
-├── analysis_options.yaml          # Dart Lint 规则
-└── CHANGELOG.md                   # 版本变更日志
+### 设置
+
+入口：`/settings`
+
+当前已实现：
+
+- 主题、AI Provider/baseUrl/model/apiKey、通知开关。
+- 每日复盘、每周周报通知配置。
+- 文玩分类管理、每日翻牌配置、文玩网格列数。
+- JSON 备份导出/导入。
+- Flutter 开源许可页。
+
+## 技术栈
+
+| 层级 | 当前依赖 | 用途 |
+| --- | --- | --- |
+| UI | Flutter | 跨平台界面。 |
+| 状态管理 | `flutter_riverpod` | Provider 状态流。 |
+| 路由 | `go_router` | 3 个底部 Tab 和全屏路由。 |
+| 数据库 | `drift` + `sqlite3_flutter_libs` | 本地 SQLite。 |
+| 网络 | `dio` | OpenAI 兼容 API。 |
+| 图表 | `fl_chart` | 当前仅用于文玩估值图表，后续随估值模块处理。 |
+| 通知 | `flutter_local_notifications` + `timezone` | 本地提醒。 |
+| 图片 | `image_picker` + `gal` | 拍照/选图和保存到相册。 |
+| 分享 | `share_plus` | 简历图片、文玩图片分享。 |
+| 语音 | `speech_to_text` | 复盘语音输入。 |
+| 文件 | `file_picker` | JSON 备份导入导出。 |
+
+当前没有 `pdf` / `printing` 依赖。
+
+## 数据库
+
+当前 `schemaVersion = 6`，注册 14 张表：
+
+| 表 | 用途 |
+| --- | --- |
+| `user_preferences` | 主题、语言、通知、AI 配置、复盘提醒、简历模板 ID、待办分类 JSON。 |
+| `collection_categories` | 文玩分类、子类型、专属字段、排序。 |
+| `todo_lists` | 待办清单。 |
+| `todos` | 待办任务、父子关系、状态、标签、软删除、重复策略。 |
+| `antique_items` | 文玩藏品档案。 |
+| `valuation_records` | 文玩估值记录，当前存在，后续不作为保留模块。 |
+| `patting_logs` | 文玩盘玩/打卡日志。 |
+| `daily_reviews` | 每日复盘。 |
+| `weekly_reports` | 每周周报。 |
+| `resume_profile` | 简历个人资料。 |
+| `work_experiences` | 工作经历。 |
+| `educations` | 教育经历。 |
+| `skill_items` | 技能项。 |
+| `project_experiences` | 项目经历。 |
+
+## 当前路由
+
+底部导航当前只有 3 个 Tab：
+
+```text
+/collection    盘串
+/todos         待办
+/resume        简历
 ```
 
----
+全屏路由：
 
-## 📖 文档索引
+```text
+/settings
+/review/daily/new
+/review/daily/edit/:date
+/review/daily/:date
+/review/weekly/:id
+```
 
-| 文档 | 内容 | 适合读者 |
-|------|------|---------|
-| [📄 完整开发计划](docs/PLAN.md) | 各 Phase 的开发和完成状态 | 贡献者、维护者 |
-| [🗺️ 核心路线图](docs/ROADMAP.md) | v1.1.0+ 规划、当前进行中、已废弃 | 贡献者 |
-| [⏳ 待实现功能](docs/TODO.md) | 已知问题与后续优化项（含优先级） | 贡献者 |
-| [🏗️ 架构设计](docs/ARCHITECTURE.md) | 技术栈选型、分层架构、路由、数据库 ER | 开发者 |
-| [✅ 待办模块规格](docs/SPEC_TODO.md) | 数据模型、DAO 接口、筛选查询、统计 | 模块开发者 |
-| [🏺 文玩模块规格](docs/SPEC_COLLECTION.md) | 藏品/打卡/估值模型、图片存储方案、分类体系 | 模块开发者 |
-| [🤖 AI 复盘模块规格](docs/SPEC_REVIEW.md) | 日报/周报模型、对话状态机、情绪分析 | 模块开发者 |
-| [📄 简历模块规格](docs/SPEC_RESUME.md) | 简历数据模型、模板引擎、PDF 导出优化 | 模块开发者 |
-| [🔒 数据安全说明](docs/SECURITY.md) | 敏感数据范围、备份风险、开发规范 | 所有用户 |
-| [📋 变更日志](CHANGELOG.md) | 各版本的 Bug 修复和新增功能 | 用户、贡献者 |
+`RouteNames` 中保留了 `/review`、`/resume/preview`、`/resume/templates` 常量，但当前路由表没有注册这些独立页面。后续计划将 `ReviewHomePage` 注册为独立 `/review` 历史入口，但不新增底部 Tab。
 
----
+## 项目结构
 
-## 🗺️ 开发计划
+```text
+lib/
+├── main.dart
+├── app/
+│   ├── app.dart
+│   ├── router/
+│   └── theme/
+├── core/
+│   ├── ai/
+│   ├── database/
+│   ├── models/
+│   ├── notification_service.dart
+│   └── utils/
+├── features/
+│   ├── ai_assistant/
+│   ├── collection/
+│   ├── resume/
+│   ├── settings/
+│   └── todo/
+└── l10n/
+```
 
-### ✅ 已完成
+Feature 内部基本按 `data/domain/presentation` 分层。
 
-- [x] **Phase 1 — 脚手架与基础设施**：项目初始化、主题系统、路由表、数据库
-- [x] **Phase 2 — 待办清单**：双域管理、周/月视图、分类、统计
-- [x] **Phase 3 — 文玩记录**：藏品建档、盘玩打卡、估值追踪、打卡对比
-- [x] **Phase 4 — AI 复盘**：对话式日报、周报自动汇总、情绪能量看板
-- [x] **Phase 5 — 动态简历**：原子化数据、多模板 PDF 导出、周报导入
-- [x] **Phase 6 — 集成收尾**：MainShell 5 Tab、设置页、备份恢复、v1.0.1 发布
-- [x] **Phase 7 — v1.0.2 里程碑**：逾期逻辑重写、待办软删除、文玩后宫排行榜、简历三模板、技术栈编辑、仪表盘
+## 文档索引
 
-### 🔜 规划中
+| 文档 | 内容 |
+| --- | --- |
+| [总览规格](docs/SPEC_PERSONAL_AI_ASSISTANT.md) | 当前功能、当前数据库、AI 边界、估值口径。 |
+| [架构现状](docs/ARCHITECTURE.md) | 项目结构、路由、依赖、数据库、平台现状。 |
+| [待办规格](docs/SPEC_TODO.md) | 待办表、DAO、Repository、页面、统计口径。 |
+| [文玩规格](docs/SPEC_COLLECTION.md) | 文玩表、页面、打卡、分类、估值移除口径。 |
+| [复盘规格](docs/SPEC_REVIEW.md) | 日报/周报、AI 服务、对话流程、未实现边界。 |
+| [简历规格](docs/SPEC_RESUME.md) | 简历表、模板、编辑、导出边界。 |
+| [安全与备份](docs/SECURITY.md) | 本地数据、AI 请求、JSON 备份风险。 |
+| [路线图](docs/ROADMAP.md) | 后续代码债和功能规划。 |
+| [TODO](docs/TODO.md) | 待实现清单。 |
+| [实施计划](docs/PLAN.md) | 当前建议实现顺序和协作约定。 |
 
-详见 [ROADMAP.md](docs/ROADMAP.md) 和 [TODO.md](docs/TODO.md)，主要方向：
+## 隐私与安全
 
-- **Phase 8 — 文玩轻量化**：下线估值模块，移除 fl_chart 依赖
-- **Phase 9 — 四层架构**：分类→清单→任务→子任务，AI 复盘状态机
-- **APK 体积瘦身**：限制单架构构建，清理 assets 目录，移除无用依赖
-- **图片存储规范化**：废除 Base64 入 JSON 备份，全部改为沙盒文件存储
+- 数据库、AI Key、备份 JSON 当前均为本地明文。
+- AI 请求只会发往用户配置的 Provider/baseUrl。
+- JSON 备份可能包含 API Key、个人资料、藏品价格、图片 Base64。
+- 备份导入当前是覆盖恢复，不是合并恢复。
 
----
+更多细节见 [docs/SECURITY.md](docs/SECURITY.md)。
 
-## 🔒 隐私与安全
+## License
 
-| 措施 | 状态 |
-|------|------|
-| 无广告 SDK、无第三方统计、无崩溃分析 | ✅ |
-| 所有数据本地 SQLite 存储，不上传任何服务器 | ✅ |
-| AI API 请求仅发往用户自行配置的地址（HTTPS） | ✅ |
-| AI API Key 持久化（当前明文，计划 v1.1 加密） | 🟡 |
-| 备份文件为明文 JSON，用户自行保管 | ✅ |
-| 图片不保留 EXIF 信息 | ✅ |
-| 构建产物、IDE 配置不提交 Git | ✅ |
-
-> [!CAUTION]
-> 备份文件包含 AI API Key、个人资料、藏品价格等敏感信息，
-> 请勿公开分享。建议导出后自行加密存储。
-
----
-
-## 🙏 鸣谢
-
-- [Flutter](https://flutter.dev/) — 跨平台 UI 框架
-- [Riverpod](https://riverpod.dev/) — 编译安全的 Dart 状态管理
-- [Drift](https://drift.simonbinder.eu/) — Dart 的 SQLite ORM
-- [go_router](https://github.com/flutter/packages/tree/main/packages/go_router) — Flutter 声明式路由
-- [fl_chart](https://github.com/imaNNeo/fl_chart) — Flutter 图表库
-- [pdf](https://pub.dev/packages/pdf) + [printing](https://pub.dev/packages/printing) — PDF 生成与打印
-
----
-
-## 📄 许可证
-
-本项目当前**未选择正式开源许可证**，保留所有权利。
-
-- 欢迎阅读代码和学习架构。
-- 如需在其他项目中使用，请联系作者获得授权。
-
----
-
-<p align="center">
-  <sub>Made with ❤️ for personal productivity</sub>
-  <br/>
-  <a href="https://github.com/users3524/personal_assistant">
-    <img src="https://moe-counter.lxchapu.com/:personal_assistant?theme=moebooru" alt="访问计数">
-  </a>
-</p>
+本项目当前未选择正式开源许可证，保留所有权利。

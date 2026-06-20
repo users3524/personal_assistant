@@ -1,116 +1,174 @@
-# 高光摘取与动态简历规格
+# 动态简历模块规格
 
 最后更新：2026-06-20
 
-简历模块负责把日常高价值事件转化为可复用的职业资产。AI 只能生成纯文本内容，最终展示、A4 布局、字号、间距与导出样式必须由 Flutter 模板硬编码控制。
+本文记录当前简历模块现状。STAR AI 润色、PDF 导出、里程碑素材池尚未实现。
 
-## 1. 当前实现基线
+## 1. 当前页面与入口
 
-当前已存在以下表：
+| 路由 | 页面 | 当前功能 |
+| --- | --- | --- |
+| `/resume` | `ResumeHomePage` | 默认简历预览，可编辑、切换模板、导出分享图片。 |
 
-| 表 | 用途 |
+`RouteNames` 中存在 `/resume/preview`、`/resume/templates` 常量，但当前路由未注册独立页面。
+
+## 2. 数据表
+
+### `resume_profile`
+
+| 字段 | 当前用途 |
 | --- | --- |
-| `resume_profile` | 个人信息 |
-| `work_experiences` | 工作经历 |
-| `educations` | 教育经历 |
-| `skill_items` | 技能项 |
-| `project_experiences` | 项目经历 |
+| `id` | 主键。 |
+| `full_name` | 姓名。 |
+| `avatar_path` | 头像路径，实体有字段，当前页面使用有限。 |
+| `email` | 邮箱。 |
+| `phone` | 电话。 |
+| `personal_summary` | 个人简介。 |
+| `website` | 网站。 |
+| `location` | 地点。 |
+| `job_title` | 求职/职位标题。 |
+| `updated_at` | 更新时间。 |
 
-`project_experiences` 已包含 `tech_stack`、`key_deliverables`、`badges`，三者均使用 `StringListConverter` 存储字符串数组，适合承接高光标签和 STAR 结果。
+### `work_experiences`
 
-## 2. 项目经历数据模型
-
-| 字段 | 说明 |
+| 字段 | 当前用途 |
 | --- | --- |
-| `name` | 项目名称 |
-| `role` | 角色 |
-| `description` | 项目描述或 STAR 文本 |
-| `tech_stack` | 技术栈数组，UI 以 Chip/Wrap 渲染 |
-| `key_deliverables` | 关键交付物或成果 bullet |
-| `badges` | 标签，如 `简历素材`、`高光` |
-| `link` | 链接 |
-| `start_date` / `end_date` | 项目周期 |
-| `is_visible` | 是否进入简历展示 |
-| `sort_order` | 排序 |
+| `company` | 公司。 |
+| `position` | 职位。 |
+| `start_date` / `end_date` | 时间范围。 |
+| `description` | 描述。 |
+| `responsibilities` | 职责列表，`StringListConverter`。 |
+| `tech_stack` | 技术栈列表，`StringListConverter`。 |
+| `is_visible` | 是否在简历中展示。 |
+| `sort_order` | 排序。 |
+| `created_at` / `updated_at` | 时间戳。 |
 
-## 3. 技术栈徽章化
+### `educations`
 
-| 层 | 规则 |
+| 字段 | 当前用途 |
 | --- | --- |
-| 数据层 | `tech_stack` 使用 `StringListConverter` 保存字符串数组。 |
-| 输入层 | UI 支持逗号分隔输入，并去除空白项。 |
-| 展示层 | 使用 `Wrap + Chip` 自动流式换行。 |
-| AI 层 | 模型不得生成样式，只可建议技术词条。 |
+| `school` | 学校。 |
+| `major` | 专业。 |
+| `degree` | 学历。 |
+| `start_date` / `end_date` | 时间范围。 |
+| `description` | 描述。 |
+| `is_visible` | 是否展示。 |
+| `sort_order` | 排序。 |
 
-## 4. 高光记录交叉筛选
+### `skill_items`
 
-未来需要独立里程碑库，或先用标签关联现有数据。
-
-| 筛选方式 | 说明 |
+| 字段 | 当前用途 |
 | --- | --- |
-| 关键词 | 在里程碑摘要、待办标题、日报内容、本地标签中检索。 |
-| 时间范围 | 支持按日、周、月、项目周期过滤。 |
-| 来源类型 | Todo、文玩打卡、习惯打卡、日报、手动记录。 |
-| 标签 | `#简历素材`、`#项目成果`、`#技术突破` 等。 |
-| 网络 | 全部基于本地数据库查询，不需要网络。 |
+| `name` | 技能名称。 |
+| `category` | 技能分类。 |
+| `proficiency` | 熟练度整数 1-5，不是 `expert/good/fair` 之类的文本枚举。 |
+| `is_visible` | 是否展示。 |
+| `sort_order` | 排序。 |
 
-## 5. 里程碑判定门槛
+### `project_experiences`
 
-| 规则 | 限制 |
+| 字段 | 当前用途 |
 | --- | --- |
-| 单日自动高光 | 最多 2 条。 |
-| 普通日常行为 | 不进入高光库。 |
-| 无重大突破 | 高光记录为 0。 |
-| 来源可追溯 | 每条里程碑必须保留 sourceType/sourceId。 |
-| 用户确认 | 写入简历项目经历前必须可预览与撤销。 |
+| `name` | 项目名称。 |
+| `role` | 角色，Drift 字段可空。 |
+| `description` | 描述。 |
+| `tech_stack` | 技术栈列表。 |
+| `key_deliverables` | 关键交付列表，模板会展示；当前编辑页尚未完整编辑该字段。 |
+| `badges` | 标签列表，模板会展示；当前编辑页尚未完整编辑该字段。 |
+| `link` | 链接。 |
+| `start_date` / `end_date` | 时间范围。 |
+| `is_visible` | 是否展示。 |
+| `sort_order` | 排序。 |
 
-## 6. STAR 叙事润色
+## 3. 当前仓库与数据组装
 
-AI 提示词目标是把零碎、口语化的里程碑重构为符合招聘场景的项目成果。
-
-| 项 | 规则 |
+| 能力 | 当前实现 |
 | --- | --- |
-| 输出格式 | 紧凑圆点列表，纯文本。 |
-| Bullet 上限 | 每个项目最多 3 条。 |
-| 持久化保护 | 超出 3 条的输出由代码丢弃。 |
-| 幻觉防护 | 不允许凭空添加数字、公司、用户规模或业务指标。 |
-| 事实来源 | 只能使用本地里程碑、项目描述和用户确认信息。 |
+| 个人资料 | `getProfile()`、`saveProfile()`。 |
+| 工作经历 | 查询全部/可见、保存、删除、重排接口。 |
+| 教育经历 | 查询全部/可见、保存、删除。 |
+| 技能 | 查询全部/可见、保存、删除。 |
+| 项目经历 | 查询全部/可见、保存、删除。 |
+| 简历组装 | `buildResumeData()` 只取可见记录。 |
+| 刷新 | 保存后递增 `resumeRefreshProvider`。 |
 
-示例输出形态：
+## 4. 当前预览功能
 
-```text
-- 设计并落地待办四层级任务结构，统一父子任务状态流转，降低复盘统计失真风险。
-- 将每日高优任务完成情况沉淀为结构化复盘素材，为后续简历高光筛选提供可追溯来源。
-```
+来源：`ResumeHomePage`、`resume_templates.dart`
 
-## 7. 样式边界
-
-| 责任方 | 负责内容 |
+| 功能 | 当前实现 |
 | --- | --- |
-| AI | 纯文本 bullet、摘要、技术词建议。 |
-| Flutter 模板 | 页面布局、字号、间距、颜色、A4 排版、导出样式。 |
-| 用户 | 最终确认、编辑、隐藏或删除。 |
+| 默认预览 | `/resume` 直接显示当前模板。 |
+| 模板切换 | AppBar 菜单切换 0/1/2。 |
+| 模板 0 | `ClassicResumeTemplate`，简洁经典，单栏。 |
+| 模板 1 | `ModernResumeTemplate`，现代卡片，双栏侧边栏。 |
+| 模板 2 | `TechResumeTemplate`，技术极简，类 Markdown/等宽风格。 |
+| 技术栈 | `buildTechStack()` 使用小徽章展示。 |
+| 项目 badges | 模板支持展示。 |
+| 项目 keyDeliverables | 模板支持 bullet 展示。 |
 
-模型绝对不参与 PDF / 页面排版样式控制。即使后续恢复或新增 PDF 依赖，最终模板仍由系统代码硬编码。
+## 5. 当前编辑功能
 
-## 8. 与日报的关系
+来源：`_ResumeEditPage`
 
-深夜日报负责高光初筛，简历模块负责二次加工。
-
-```text
-daily_reviews + structured milestone JSON
-  -> milestones / tags
-  -> 本地筛选
-  -> STAR 纯文本润色
-  -> project_experiences.key_deliverables / badges
-```
-
-## 9. 后续新增建议
-
-| 能力 | 建议 |
+| 区域 | 当前实现 |
 | --- | --- |
-| `milestones` 表 | 保存 sourceType、sourceId、summary、tags、createdAt、confirmedAt。 |
-| 项目绑定 | 允许里程碑绑定到已有 `project_experiences`。 |
-| STAR 版本管理 | 保存 AI 原文、用户修改版、采纳时间。 |
-| 简历素材池 | 在简历页单独展示待采纳高光。 |
-| 导出 | 先稳定 Flutter 模板，再决定 PDF / Markdown / 图片导出。 |
+| 个人信息 | 姓名、职位、邮箱、电话、地点、网站、个人简介。 |
+| 工作经历 | ReorderableListView，支持可见性开关、公司、职位、描述、技术栈。 |
+| 教育背景 | ReorderableListView，支持可见性开关、学校、专业、学历、描述。 |
+| 技能 | ReorderableListView，支持可见性开关、技能名、分类、熟练度。 |
+| 项目经历 | ReorderableListView，支持可见性开关、项目名、角色、描述、技术栈。 |
+| 保存 | 一次性保存所有编辑项到 Repository。 |
+
+当前编辑页使用逗号分隔文本解析技术栈。
+
+## 6. 当前导出能力
+
+| 能力 | 当前实现 |
+| --- | --- |
+| 图片导出 | 使用 `RepaintBoundary` 截图当前预览；`_exportAsImage()` 已 `await boundary.toImage()` 和 `toByteData()`。 |
+| 分享 | 使用 `share_plus` 分享 PNG 图片。 |
+| 临时文件 | 当前写入 `Directory.systemTemp`。 |
+| 导出依赖 | 当前 `pubspec.yaml` 只有 `share_plus`，没有 `pdf` / `printing`。 |
+| PDF 导出 | 当前未实现。 |
+| Markdown 导出 | 当前未实现。 |
+
+当前 PNG 导出仍在页面方法中完成，尚未抽成独立服务；也没有显式等待 `debugNeedsPaint` 结束，分享前没有再次检查页面是否仍 mounted。后续若继续保留图片导出，应补齐绘制状态等待、生命周期检查、临时目录策略和失败降级。
+
+## 7. 当前数据债
+
+| 问题 | 代码事实 | 后续处理 |
+| --- | --- | --- |
+| 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `work_experiences` 导入列缺 `responsibilities`。 | 补齐导入字段，并增加导出-导入镜像测试。 |
+| 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `project_experiences` 导入列缺 `key_deliverables` / `badges`。 | 补齐导入字段，并覆盖 `StringListConverter` 字段。 |
+| 模板未持久化 | `selectedTemplateIdProvider` 是内存 `StateProvider<int>`；`user_preferences.resume_template_id` 字段存在但当前未接入。 | 切换模板时写入偏好，初始化时读取。 |
+| 项目成果编辑缺口 | 模板可展示 `keyDeliverables` / `badges`，编辑页当前只编辑项目名、角色、描述、技术栈。 | 增加对应编辑控件。 |
+
+## 8. 当前未实现
+
+1. STAR AI 叙事润色。
+2. 从日报/周报高光导入项目经历。
+3. 里程碑素材池。
+4. PDF 生成与打印。
+5. 项目 `badges` / `keyDeliverables` 的完整编辑 UI。
+6. 简历模板持久化到 `user_preferences.resume_template_id`。
+
+## 9. 未来 AI 简历规划原则
+
+以下原则来自新的智能化白皮书，只作为后续方向，不代表当前已经实现。
+
+| 原则 | 规划口径 |
+| --- | --- |
+| 高光门槛 | 自动高光不收录普通打卡和低价值流水账；必须能对应复杂问题、作品、交付或阶段成果。 |
+| 单日上限 | 单篇日报自动高光最多 2 条；没有重大突破时允许为 0。 |
+| 事实约束 | STAR 润色只能使用本地传入的高光摘要、待办描述、项目上下文，不得编造百分比、用户量、公司主体或工具链。 |
+| Bullet 上限 | 单个项目经历 AI 生成 bullet 最多 3 条，持久化时仍应代码层截断。 |
+| 纯文本输出 | AI 只输出纯文本或 `List<String>`，状态层过滤 HTML、Markdown 样式和布局指令。 |
+| 排版隔离 | 简历页面、图片导出和未来 PDF 排版全部由 Flutter 模板控制，AI 不参与字号、间距、分页和样式。 |
+| 高光解耦 | 在把高光绑定到项目经历前，应先设计 `milestones` 主表和 `milestone_relations` 多源关联表。 |
+| 多源追溯 | `milestone_relations.sourceType/sourceId` 首版可指向 `todo`、`daily_review`、`patting_log`、`manual` 等来源，便于反查证据。 |
+| 多态清理 | 多态关联无法由 SQLite 外键保障；Todo、Review、Collection 的物理删除必须在事务内清理对应 `milestone_relations`。 |
+| 项目关联 | 项目经历不要只放单个 `milestoneId`；应新增 `project_milestone_relations` 支持项目和高光多对多。 |
+| PDF 前置条件 | 当前无 PDF；未来 PDF 需要确定性模板、TextPainter 文本测量、分页保护和 golden/integration 测试。 |
+| 极端文本测试 | PDF/图片导出前应覆盖超长姓名、长 URL、无空格英文、中文长句、3 条 bullet 临界长度等案例。 |
+| 测试容差 | Golden 测试不做 1 像素绝对比对；采用合理像素容差、关键区域布局断言和语义树文本完整性检查。 |

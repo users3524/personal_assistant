@@ -1,187 +1,196 @@
-# AI 复盘、深夜日报与长效记忆规格
+# AI 复盘模块规格
 
 最后更新：2026-06-20
 
-本规格覆盖数据捕获与日常对话、深夜精炼、长效记忆和人生罗盘。白天低成本捕获，深夜集中精炼，长期再进入 RAG 与规划纠偏。
+本文记录当前 AI 复盘代码现状。深夜自动日报、15 轮熔断、RAG、人生罗盘等尚未实现，放在 `ROADMAP.md` / `TODO.md`。
 
-## 1. 当前实现基线
+## 1. 当前页面与入口
 
-当前已存在：
+| 路由 | 页面 | 当前功能 |
+| --- | --- | --- |
+| `/review/daily/new` | `DailyReviewChatPage` | 创建今日复盘。 |
+| `/review/daily/edit/:date` | `DailyReviewChatPage(dateStr)` | 加载已有复盘并继续对话/保存。 |
+| `/review/daily/:date` | `DailyReviewDetailPage` | 查看日报详情，编辑或删除。 |
+| `/review/weekly/:id` | `WeeklyReportPage` | 查看/生成某周周报。 |
 
-| 能力 | 现状 |
+`ReviewHomePage` 文件存在，但当前没有在主路由中注册为 Tab 或独立 `/review` 页面。
+
+## 2. 数据表
+
+### `daily_reviews`
+
+| 字段 | 当前用途 |
 | --- | --- |
-| AI 服务抽象 | `core/ai/ai_service.dart` |
-| OpenAI 兼容调用 | `core/ai/openai_service.dart`，基于 Dio |
-| 离线复盘 | `core/ai/offline_review_generator.dart` |
-| 日报表 | `daily_reviews` |
-| 周报表 | `weekly_reports` |
-| 复盘页面 | `DailyReviewChatPage`、`DailyReviewDetailPage`、`WeeklyReportPage` |
-| 语音输入依赖 | `speech_to_text` |
+| `id` | 主键。 |
+| `date` | 日期，声明唯一键。 |
+| `summary` | 今日总结。 |
+| `highlights` | 今日收获。 |
+| `improvements` | 今日不足。 |
+| `energy_level` | 能量水平 1-5。 |
+| `mood_level` | 情绪水平 1-5。 |
+| `completed_todo_ids` | 完成待办 ID 列表，`StringListConverter`。 |
+| `patting_minutes` | 盘玩分钟数，当前日报生成调用传入 0。 |
+| `ai_comment` | AI 评语。 |
+| `ai_suggestion` | AI 建议。 |
+| `is_ai_generated` | 是否 AI 生成。 |
+| `is_manually_edited` | 是否人工编辑。 |
+| `created_at` / `updated_at` | 时间戳。 |
 
-后续设计不废弃当前日报/周报，而是在其上扩展原始素材捕获、结构化输出和长效记忆。
+### `weekly_reports`
 
-## 2. 模块一：数据捕获与日常对话
-
-### 2.1 核心职责
-
-白天模块只负责收集当天发生的事实和短文本，严格控制 Token 与算力。
-
-| 功能 | 规范 |
+| 字段 | 当前用途 |
 | --- | --- |
-| 待办创建 | 标题最多 100 字，描述最多 1000 字，`startedAt` 默认当前时间，`dueDate` 可选。 |
-| 习惯打卡 | 支持即时完成状态，单次最多挂载 4 张图片相对路径。 |
-| 文玩打卡 | 保留现有盘玩日志，作为兴趣和放松素材进入日报。 |
-| 教练式追问 | 高优任务完成时触发单轮追问，捕获突破或卡点。 |
-| Prompt 上下文 | 白天请求上下文控制在 2K tokens 以内。 |
+| `id` | 主键。 |
+| `week_number` | 年内周数。 |
+| `year` | 年份。 |
+| `overview` | 本周概览。 |
+| `highlights` | 本周亮点。 |
+| `improvements` | 待改进。 |
+| `next_week_plan` | 下周计划。 |
+| `is_ai_generated` | 是否 AI 生成。 |
+| `is_manually_edited` | 是否人工编辑。 |
+| `created_at` / `updated_at` | 时间戳。 |
 
-### 2.2 硬性边界
+## 3. 当前 AI 服务
 
-| 边界 | 规则 |
+| 类型 | 当前实现 |
 | --- | --- |
-| 每日对话轮数 | 用户与 AI 实时交互每天最多 15 轮。 |
-| 熔断后行为 | 达到 15 轮后切断云端 API，请求框转为离线文本便签模式。 |
-| 熔断提示 | “今日复盘素材已足够，深夜将为您合并生成深度日报”。 |
-| 文本输入 | 单次最多 500 字。 |
-| 语音输入 | 单次录音最长 60 秒，超时自动截断并识别。 |
-| 白天上下文 | 只携带当天对话上下文和当天待办列表。 |
-| 禁止 RAG | 白天禁止检索历史日报、周报或向量库。 |
+| `AIService` | 定义 `generateDailyReview`、`generateWeeklyReport`、`chat`、`isAvailable`。 |
+| `OfflineReviewGenerator` | 本地模板生成聊天回复、日报、周报；无需网络和 Key。 |
+| `OpenAIService` | 调用 `/v1/chat/completions` 和 `/v1/models`。 |
+| `AIConfigProvider` | 从 `user_preferences` 加载 provider/baseUrl/model/apiKey。 |
+| `AIPrompts` | 日报和周报纯文本 Prompt。 |
 
-### 2.3 建议新增数据
+在线服务当前通过纯文本解析返回内容，没有结构化 JSON schema。
 
-| 表或字段 | 用途 |
+## 4. 当前对话式日报流程
+
+来源：`DailyReviewChatPage`
+
+| 步骤 | 当前实现 |
 | --- | --- |
-| `chat_turns` | 记录日期、角色、文本、是否云端生成、turn 序号。 |
-| `offline_notes` 或 `chat_turns.is_offline` | 熔断后的便签素材。 |
-| `habit_checkins` | 习惯打卡与图片路径。 |
-| `daily_capture_limits` | 记录当天 turn 计数和熔断状态，可由查询计算替代。 |
+| 欢迎 | 页面初始化后添加引导消息。 |
+| Step 0 | 首次输入作为 `summary`。 |
+| Step 1 | 收集 `highlights`。 |
+| Step 2 | 收集 `improvements`。 |
+| Step 3 | 解析“情绪N 能量N”或确认默认评分。 |
+| Step 4 | 调用 AI 生成评语和建议；生成后可继续聊天或保存。 |
+| Step 5 | 完成保存。 |
 
-## 3. 模块二：深夜精炼与日报生成
+AI 生成日报时读取 `todoRepo.getToday()`，筛选已完成任务标题作为 `completedTitles`。当前 `pattingMinutes` 固定传 0，没有读取文玩打卡时长。
 
-### 3.1 触发条件
+## 5. 当前语音输入
 
-| 条件 | 规则 |
+来源：`speech_to_text`
+
+| 能力 | 当前实现 |
 | --- | --- |
-| 时间窗口 | 凌晨 2:00 至 5:00。 |
-| 设备状态 | 手机必须正在充电。 |
-| 网络状态 | 必须连接 Wi-Fi。 |
-| 不满足条件 | 顺延至清晨用户首次打开 App，后台低优先级静默执行。 |
+| 初始化 | 点击麦克风时调用 `_speech.initialize()`。 |
+| 识别 | `_speech.listen(onResult: ...)` 保存 `_lastWords`。 |
+| 结束 | 停止后把 `_lastWords` 送入 `_sendMessage()`。 |
 
-### 3.2 打包输入
+当前没有代码层 60 秒硬截断限制。
 
-深夜任务从本地 SQLite 聚合当天素材：
+## 6. 当前日报保存
 
-| 数据 | 来源 |
+保存时构造 `DailyReviewEntity`：
+
+| 字段 | 当前赋值 |
 | --- | --- |
-| 待办 | `todos`，包含完成、取消、逾期、父子任务进度。 |
-| 文玩 | `patting_logs`、`antique_items`，包含时长、备注、藏品名称。 |
-| 习惯 | 未来 `habit_checkins`。 |
-| 对话 | 当日 15 轮内的原始对话与离线便签。 |
-| 情绪能量 | `daily_reviews` 现有字段或新输入。 |
+| `date` | 当前复盘日期。 |
+| `summary` | 对话收集。 |
+| `highlights` | 对话收集，空字符串转 null。 |
+| `improvements` | 对话收集，空字符串转 null。 |
+| `energyLevel` / `moodLevel` | 对话评分。 |
+| `aiComment` / `aiSuggestion` | AI 结果。 |
+| `isAiGenerated` | `aiComment.isNotEmpty`。 |
+| `isManuallyEdited` | 固定 false。 |
 
-打包为固定结构化 JSON，再传给高参数云端模型。
+若当天已有日报则 `updateDaily()`，否则 `createDaily()`。
 
-### 3.3 裁剪上限
+## 7. 当前周报
 
-| 项 | 上限 |
+| 能力 | 当前实现 |
 | --- | --- |
-| 原始文本 | 最多 8000 字。 |
-| 深夜 Input | 稳控在 10K tokens 内。 |
-| 裁剪优先级 | 优先保留 Todo 成果、教练式对话、高优任务卡点；剔除冗余随笔。 |
+| 查询 | 按 `year + weekNumber` 查询。 |
+| 数据来源 | `ReviewRepository.getDailyByWeek()`。 |
+| AI 输入 | `DailyReviewSummary` 列表，包含日报摘要、收获、不足、能量、情绪、完成数、盘玩分钟。 |
+| 输出 | overview/highlights/improvements/nextWeekPlan 纯文本。 |
 
-### 3.4 输出内容
+`getDailyByWeek()` 当前通过读取全部日报后用 `_getWeekNumber()` 在内存中过滤。
 
-模型必须生成第二人称 Markdown 日报，覆盖四个维度：
+## 8. 当前统计
 
-1. 执行进度
-2. 情绪状态
-3. 认知卡点
-4. 意外收获
-
-写入目标为 `daily_reviews.summary` / `ai_comment` / `ai_suggestion`，或后续扩展的日报详情字段。
-
-### 3.5 结构化高光输出
-
-深夜生成必须使用结构化输出，返回高光判定 JSON。
-
-```json
-{
-  "hasMilestone": true,
-  "milestones": [
-    {
-      "sourceType": "todo",
-      "sourceId": 1,
-      "summary": "完成关键功能设计并明确模块边界",
-      "resumeTag": true
-    }
-  ],
-  "calibrationRequired": false
-}
-```
-
-| 规则 | 说明 |
+| Provider | 当前含义 |
 | --- | --- |
-| 单日高光上限 | 最多 2 条。 |
-| 无重大突破 | 直接输出 0 条。 |
-| 标签写入 | 对应待办、打卡或里程碑记录打上 `#简历素材`。 |
-| 用户可控 | 高光进入简历前必须可查看和撤销。 |
+| `monthlyAvgMoodProvider` | 当前月平均情绪。 |
+| `monthlyAvgEnergyProvider` | 当前月平均能量。 |
+| `allDailyReviewsProvider` | 全部日报，供历史查看。 |
+| `weeklyListByYearProvider` | 当前年份所有周报。 |
+| `currentWeekNumberProvider` | 简单周数计算。 |
 
-### 3.6 异常降级
+## 9. 未实现边界
 
-| 场景 | 策略 |
+以下不是当前功能：
+
+1. 每日 15 轮云端对话限制。
+2. 熔断后的离线便签模式。
+3. 单次文本 500 字限制。
+4. 语音 60 秒自动截断。
+5. 深夜 2:00-5:00 后台生成。
+6. 充电/Wi-Fi 条件检测。
+7. 原始素材 8000 字裁剪器。
+8. 结构化 JSON 输出和两次重试策略。
+9. 向量库、RAG、人生罗盘。
+10. 自动高光里程碑与简历素材标签。
+
+## 10. 未来规划可吸收设计
+
+以下内容来自新的智能化白皮书，只作为后续实现方向。
+
+取舍原则：先修复当前复盘链路的输入边界、真实文玩分钟、周报日期范围和可见降级；再建设 `PromptBuilder`、`chat_turns` 和深夜补偿任务；最后再上向量记忆与人生罗盘。RAG、WorkManager 和向量表都不应早于本地数据债清理。
+
+### 白天捕获
+
+| 设计 | 规划口径 |
 | --- | --- |
-| JSON 解析失败 | 最多自动重试 2 次。 |
-| 连续失败 | 停止重试，保存原始文本。 |
-| 结构化得分 | 标记为“待手动校准”。 |
-| 成本控制 | 严禁死循环重试。 |
+| `LLMStrategyConfig` | 供应商和模型名不硬编码；首版落在 `user_preferences` JSON 配置字段，保持和当前 Drift 存储体系一致，不引入额外 KV 存储栈。 |
+| `PromptBuilder` | 新增业务服务层，负责 prompt 组装、token/字符预算估算、文本裁剪、turn 拦截和离线模式切换。 |
+| `chat_turns` 持久化 | 需要记录日期、角色、内容、是否离线、是否消耗云端请求，用于每日 turn 计数和离线便签。 |
+| 15 轮熔断 | 未达到上限时允许在线 AI；达到上限后停止云端请求，输入只作为本地离线便签落盘。 |
+| 零长历史上下文 | 白天请求只携带当天上下文和当天待办，不读取历史日报、周报或 RAG。 |
+| Prompt 预算 | 由 prompt builder/token 估算器控制，而不是依赖 HTTP 拦截器事后截断。 |
+| 输入限制 | 文本 500 字、STT 60 秒作为本地 UI 和状态层约束。 |
 
-## 4. 模块三：长效记忆与人生罗盘
+当前取舍：首版 `LLMStrategyConfig` 优先扩展 `user_preferences` 存 JSON，暂不新增 `system_configs`；首版 token 预算用字符/中英文比例估算，暂不引入本地 tokenizer。
 
-### 4.1 向量化规则
+### 深夜精炼
 
-| 项 | 规则 |
+| 设计 | 规划口径 |
 | --- | --- |
-| 输入 | 深夜生成的深度日报，不是白天碎片。 |
-| Embedding | 标准 1536 维向量。 |
-| 存储 | 本地轻量向量存储，后续选型。 |
-| 切片 | 每条检索切片最多 400 字。 |
+| 触发条件 | 2:00-5:00 作为目标窗口而非精确定时承诺；需要充电和 Wi-Fi 条件；不满足或系统漂移时在下次打开 App 后补偿执行。 |
+| Android 约束 | WorkManager 只使用充电和 unmetered network 等高可达约束；不把 `RequiresDeviceIdle` 作为硬条件。 |
+| `target_date` | 生成任务使用设备当前时区下的 `YYYY-MM-DD` 字符串，避免跨日补偿受 epoch/timezone 影响。 |
+| Catch-Up Guard | App 初始化时查询昨日 `review_generation_jobs.target_date/status`；不存在、pending 或 failed 时低优先级启动补偿任务。 |
+| 素材包 | 从待办、复盘对话、离线便签、文玩 `patting_logs` 中组装 raw context pack。 |
+| 裁剪优先级 | 优先保留高优完成任务、教练式追问、文玩盘玩备注；普通便签按时间倒序截断。 |
+| 结构化输出 | 优先要求 JSON schema；解析失败限制重试次数；最终失败写入原始素材并标记待手动校准。 |
+| 冷热数据分离 | 原始素材不直接塞入 `daily_reviews`，优先设计 `review_generation_jobs` 保存 `target_date`、`status`、`raw_assets_dump`、`failure_reason`、`processed_at`。 |
+| 日报热字段 | `daily_reviews` 可只扩展 `calibration_required` 等高频读取字段；原始素材由任务表定期清理或归档。 |
+| 热表保活 | 当前 `daily_reviews.date` 和 `summary` 不重命名、不改类型；深夜引擎只追加字段或关联冷表。 |
+| 原始素材留存 | 成功生成后 raw dump 默认保留 7 天再清理；失败任务不自动清理，等待用户手动处理。 |
+| 调度抽象 | domain 层定义 `AILogScheduler` 接口；Android 实现 WorkManager，Windows/Web 实现 No-Op 并依赖前台补偿。 |
 
-### 4.2 人生罗盘五维
+当前取舍：深夜引擎先实现前台 Catch-Up Guard 补偿闭环，再接 Android WorkManager。桌面/Web 不追求后台常驻。
 
-人生罗盘必须固定为 5 个宏观责任领域：
+### 长期记忆
 
-1. 职业技术
-2. 身心健康
-3. 个人爱好
-4. 财务财富
-5. 社会关系
-
-系统拒绝用户自定义增加第 6 个维度。底层待办任务必须绑定五维之一，以防目标体系失焦。
-
-### 4.3 目标修改冷却
-
-长期目标和愿景描述保存后，30 天内仅允许修改一次。后续代码阶段需要在数据层记录 `last_modified_at` 并做保存前校验。
-
-### 4.4 RAG 检索窗口
-
-| 场景 | 规则 |
+| 设计 | 规划口径 |
 | --- | --- |
-| 周报生成 | Top-K 最多 5。 |
-| 人生规划纠偏 | Top-K 最多 5。 |
-| 单条切片 | 最多 400 字。 |
-| Prompt 总量 | 周报整体控制在 12K tokens 内。 |
-| 禁止行为 | 不允许全量读入历史日报。 |
+| RAG 限窗 | 周报/规划只检索少量相关日报切片，限制 Top-K、单片长度和总 prompt 预算。 |
+| 人生罗盘 | 固定五个长期维度可以减少目标发散，但需要设计存量待办迁移和用户编辑冷却。 |
+| 向量化 | 当前没有向量表；后续需要记录 embeddingModel、dimension、sourceType/sourceId 和 vectorData 存储格式。 |
+| 检索守卫 | `VectorRepository` 检索前校验模型和维度兼容；不兼容时拒绝计算并触发重建或提示。 |
+| 性能分级 | 早期可用 SQLite BLOB + Dart O(N) 线性余弦检索；超过万级切片后再按年份/目标过滤并在 Isolate 中计算。 |
 
-## 5. 与文玩记录的关系
-
-文玩记录进入长效记忆时，应归入“个人爱好”维度。日报中可以总结盘玩持续性、审美变化、收藏管理，但不能把文玩模块降级为普通打卡。
-
-## 6. 代码落地优先级
-
-| 优先级 | 工作 |
-| --- | --- |
-| P0 | 每日 15 轮限制、500 字输入限制、白天禁 RAG。 |
-| P0 | 深夜结构化输出、2 次重试、失败降级。 |
-| P1 | 打包裁剪器，8000 字原文上限。 |
-| P1 | 高光 JSON 与 `#简历素材` 标记。 |
-| P2 | 1536 维向量存储与 Top-K 检索。 |
-| P2 | 人生罗盘 5 维与 30 天冷却。 |
+当前取舍：向量记忆是后置能力。`vector_embeddings.sourceType` 首版只允许当前已存在或已规划落表的业务源，避免把 `habit_log` 这类无现有表支撑的泛名提前写死。

@@ -2,85 +2,106 @@
 
 最后更新：2026-06-20
 
-本清单按最新功能设计重排。优先级：P0 为必须先做，P1 为重要，P2 为增强。
+本清单按当前代码事实整理。
 
-## P0：设计边界必须锁死
+## P0：文档校准
 
-- [x] 更新当前项目结构文档，修正为 3 Tab 主入口。
-- [x] 修正数据库文档为 `schemaVersion = 6` 与 14 张表。
-- [x] 明确保留文玩记录模块。
-- [x] 写入白天 15 轮对话限制。
-- [x] 写入输入 500 字、STT 60 秒限制。
-- [x] 写入白天禁 RAG 与 2K tokens 上下文目标。
-- [x] 写入深夜 2:00-5:00、充电、Wi-Fi 触发条件。
-- [x] 写入结构化输出失败最多重试 2 次。
-- [x] 写入人生罗盘固定 5 维。
-- [x] 写入 STAR 简历最多 3 条 bullet。
+- [x] 以现有代码为准重写架构和模块文档。
+- [x] 明确文玩估值模块当前存在，但后续不需要保留。
+- [x] 把未实现的深夜引擎、RAG、人生罗盘、STAR 生成移出当前规格主体。
 
-## P0：下一步代码任务
+## P0：代码债
 
-- [ ] 增加每日 AI turn 计数，达到 15 轮后停止云端请求。
-- [ ] 熔断后 UI 进入离线文本便签模式。
-- [ ] 输入框限制 500 字并给出明确提示。
-- [ ] STT 单次录音限制 60 秒。
-- [ ] 白天 Prompt 构造器只读取当天上下文和当天待办。
-- [ ] 禁止白天调用历史日报、周报或向量检索。
-- [ ] Todo Repository 树状组装改为父任务查询 + 子任务 IN 批量查询。
-- [ ] 父任务状态变更与软删除加入事务级联。
-- [ ] 仪表盘统计补测试，锁定 `parent_id IS NULL`。
+- [ ] 将 AI API Key 从 `user_preferences.ai_api_key` 明文迁移到平台安全存储，并设计兼容迁移。
+- [ ] 将 `todo_lists` 纳入 `BackupService` 导出和导入。
+- [ ] 补齐 `BackupService` 导入列清单：`user_preferences.todo_categories`。
+- [ ] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。
+- [ ] 补齐 `BackupService` 导入列清单：`work_experiences.responsibilities`。
+- [ ] 补齐 `BackupService` 导入列清单：`project_experiences.key_deliverables/badges`。
+- [ ] 决定并执行文玩估值模块移除方案。
+- [ ] 移除估值后同步更新 `pubspec.yaml` 中 `fl_chart` 是否仍需要。
+- [ ] 为 Drift 迁移和备份恢复补测试。
+- [ ] 为 `BackupService` 增加导出-导入镜像测试，覆盖 `todo_lists`、任务树、软删除、简历 List 字段、`daily_reviews.completed_todo_ids`、`weekly_reports` 当前文本字段和日期毫秒/秒转换。
 
-## P1：深夜日报引擎
+## P1：待办
 
-- [ ] 设计 `chat_turns` / `habit_checkins` / `milestones` 表。
-- [ ] 实现当天素材打包 JSON。
-- [ ] 实现原始文本 8000 字裁剪策略。
-- [ ] 实现深夜任务条件检测：2:00-5:00、充电、Wi-Fi。
-- [ ] 不满足条件时，顺延到次日首次打开 App 后后台执行。
-- [ ] 接入结构化输出 JSON schema。
-- [ ] Parser 失败最多重试 2 次。
-- [ ] 失败后保存原始素材并标记“待手动校准”。
-- [ ] 文玩当日盘玩日志进入日报素材包。
+- [ ] `TodoDao.getTree()` 改为父任务查询 + 子任务 IN 批量查询。
+- [ ] 为待办批量树查询评估并补充 `parent_id`、`list_id`、`deleted_at/status/due_date` 等索引。
+- [ ] 父任务状态和软删除改为事务级联。
+- [ ] 修复 `TodoEntity.copyWith` 无法显式置空 nullable 时间字段的问题。
+- [ ] 评估 `Value<T?>`、哨兵对象或独立 update command，选择一种统一 nullable 清空模式。
+- [ ] 完整接入 `todo_lists` 清单 UI。
+- [ ] 为今日统计、本周完成率、拖延率补单元测试。
+- [ ] 为备份恢复补待办树场景测试：清单、父任务、子任务、软删除、重复策略。
 
-## P1：长效记忆与人生罗盘
+## P1：文玩
 
-- [ ] 选型本地轻量向量存储。
-- [ ] 将深度日报切片为 1536 维向量。
-- [ ] 实现 Top-K=5 检索窗口。
-- [ ] 单条记忆切片限制 400 字。
-- [ ] 新增五维人生罗盘数据模型。
-- [ ] 拒绝新增第 6 个维度。
-- [ ] 长期目标增加 30 天修改冷却。
-- [ ] 底层待办强绑定五维之一。
+- [ ] 统一图片路径策略，避免绝对路径和相对路径混用。
+- [ ] 文玩默认分类新增“长串”，并补齐子类型、专属字段和备份/分类管理同步。
+- [ ] 文玩 UI、分享、保存、备份导出统一通过 `resolveImageFile()` 解析图片路径。
+- [ ] 移除或替换财富榜、潜力榜等估值相关榜单。
+- [ ] 移除估值图表页面/组件。
+- [ ] 确认估值历史数据迁移或导出策略。
+- [ ] 若迁移到文本归档，使用现有字段名 `amount`/`remark`/`date`，不要误用 `val`/`note`。
+- [ ] 估值模块物理删表前，先让旧备份中的 `valuation_records` 可导入并重定向归档到藏品描述/备注。
+- [ ] 图片备份恢复改为应用文档目录，而不是系统临时目录。
+- [ ] 评估文玩榜单从 Provider 循环计算迁移到 DAO 聚合查询，并按查询计划补 `patting_logs(item_id, date DESC)` 等索引。
+- [ ] 未来高光关联接入后，删除 `patting_logs`/`antique_items` 时同步事务清理 `milestone_relations`。
 
-## P1：高光与简历
+## P1：AI 复盘
 
-- [ ] 单篇日报高光最多 2 条。
-- [ ] 高光写入 `#简历素材` 标签前允许用户确认。
-- [ ] 本地关键词和时间过滤高光记录。
-- [ ] STAR 润色输出纯文本 bullet。
-- [ ] 数据持久化时强制保留最多 3 条 bullet。
-- [ ] 防止 AI 添加未经来源支持的数字或事实。
-- [ ] 项目经历技术栈继续用 `StringListConverter` 和 Chip 渲染。
+- [ ] 日报生成读取当日 `patting_logs` 实际盘玩分钟，而不是固定传 0。
+- [ ] 为 `DailyReviewChatPage` 文本输入增加 500 字限制，避免白天对话无边界膨胀。
+- [ ] 为 `speech_to_text` 录音增加 60 秒硬截断，到时自动 `stop()` 并发送已识别文本。
+- [ ] 周报周数计算统一为 ISO 周或明确的本地周规则，并让 `getDailyByWeek()` 改为日期范围查询，避免全表读取和跨年误差。
+- [ ] 增加 AI 输出解析失败的用户可见降级；当前纯文本解析失败时不能静默写入空内容。
+- [ ] 将 `ReviewHomePage` 注册为独立 `/review` 路由作为复盘历史入口，但不新增底部 Tab，避免主导航过重。
 
-## P1：文玩记录保留与增强
+## P1：简历
 
-- [ ] 保留 `antique_items`、`patting_logs`、`valuation_records`。
-- [ ] 明确估值展示如需瘦身，不默认删数据表。
-- [ ] 盘玩打卡单次图片建议限制 4 张。
-- [ ] 继续优化相对路径解析与备份恢复。
-- [ ] 确认图片备份从 JSON Base64 长期升级为专有备份包。
+- [ ] 为 `project_experiences.key_deliverables` 增加编辑 UI。
+- [ ] 为 `project_experiences.badges` 增加编辑 UI。
+- [ ] 将选中模板持久化到 `user_preferences.resume_template_id`。
+- [ ] 将简历 PNG 导出抽成服务，补齐 `debugNeedsPaint` 等待、分享前 mounted 检查和临时目录策略。
+- [ ] 将 PDF 导出列为简历模块后续交付能力；实现前先完成 `pdf`/`printing` 依赖评估、确定性 A4 模板设计和导出测试方案。
 
-## P2：工程质量
+## P2：未来 AI 助手设计
 
-- [ ] 统一错误处理和 `mounted` 检查风格。
-- [ ] 将常量抽取到独立文件。
-- [ ] 为共享 Widget 建立公共库。
-- [ ] 旧版 `categoryMetadata` 格式检测与编辑提示。
-- [ ] 为 AI prompt 构造器加入 token 预算测试。
-- [ ] 为 Drift migration 增加升级测试。
-
-## 协作提醒
-
-- 每次对话结束前提交本轮变更。
-- 提交时只 stage 本轮相关文件，避免混入用户现场改动。
-- 当前阶段默认只改文档，进入代码实现前先确认任务范围。
+- [ ] `LLMStrategyConfig` 首版落到 `user_preferences` 的 JSON 配置字段；暂不新增 `system_configs`，除非后续出现多配置 profile 需求。
+- [ ] `LLMStrategyConfig` 只保存供应商、模型、baseUrl、预算等非敏感配置；API Key 只读安全存储引用。
+- [ ] 设计下一版 schema 微迁移顺序：捕获层、生成/高光层、向量层分阶段释放。
+- [ ] 迁移时禁止重命名或变更 `daily_reviews.date` / `summary` 类型，只追加新列。
+- [ ] 设计 `PromptBuilder` 服务层：prompt 组装、预算估算、裁剪、turn 拦截、离线切换。
+- [ ] 设计 `chat_turns` 表或等价存储：日期、角色、内容、是否离线、是否消耗云端请求。
+- [ ] 实现每日 15 轮在线请求限制。
+- [ ] 熔断后进入离线便签模式，只本地落盘，不请求云端。
+- [ ] 设计 prompt builder 和 token/字符预算估算，首版用字符/中英文比例启发式，不引入本地 tokenizer；白天禁止读取历史日报、周报、RAG。
+- [ ] 设计深夜 raw context pack：待办、离线便签、复盘对话、文玩 `patting_logs`。
+- [ ] 实现素材 8000 字左右优先级裁剪策略。
+- [ ] 深夜引擎先实现前台 Catch-Up Guard 补偿闭环，再调研 Android 后台调度；目标窗口为 2:00-5:00、充电、Wi-Fi。
+- [ ] 抽象 `AILogScheduler` 域接口，Android WorkManager 与桌面/Web No-Op 实现放到 infrastructure 层。
+- [ ] Android WorkManager 只使用充电 + unmetered network 等可达约束，不把 `RequiresDeviceIdle` 作为硬条件。
+- [ ] 设计 `review_generation_jobs` 冷数据表：`target_date`、`status`、`raw_assets_dump`、`attempt_count`、`failure_reason`、`processed_at`、`created_at`。
+- [ ] `target_date` 使用本地时区 `YYYY-MM-DD` 字符串，不用 epoch milliseconds。
+- [ ] Catch-Up Guard 基于 `review_generation_jobs.target_date/status` 补偿，不只检查 `daily_reviews`。
+- [ ] `raw_assets_dump` 留存策略：success 保留 7 天，failed/pending 保留到用户手动清理。
+- [ ] 为 `daily_reviews` 设计 `calibration_required` 等热字段，避免把原始素材塞入日报表。
+- [ ] 深夜结构化输出总调用上限 3 次：初次 JSON、一次格式修复、一次纯文本降级；失败后标记待校准，禁止无限重试。
+- [ ] 设计 `milestones` 主表和 `milestone_relations` 多源关联表。
+- [ ] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。
+- [ ] 为 `milestone_relations.source_type = manual` 明确 `source_id` 可空策略或设计 `manual_milestone_sources`。
+- [ ] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
+- [ ] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
+- [ ] 高光判定：高门槛、单日最多 2 条、允许 0 条。
+- [ ] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。
+- [ ] 设计 `vector_embeddings`：sourceType/sourceId、embeddingModel、dimension、vectorData；sourceType 首版使用当前业务源名，避免写入尚无表支撑的 `habit_log`。
+- [ ] 明确 `vector_data` 编码格式：Float32/Float64、端序、归一化策略和版本字段。
+- [ ] 检索前校验 embedding 模型和维度，不兼容时拒绝相似度计算并触发重建。
+- [ ] 向量检索先实现 SQLite BLOB + Dart O(N) 余弦相似度，并记录性能基准。
+- [ ] 超过万级向量后按年份/人生罗盘维度过滤，并迁移计算到 Isolate。
+- [ ] 人生罗盘：固定维度、30 天修改冷却、存量根任务迁移策略。
+- [ ] RAG 周报限窗：Top-K <= 5、单片 <= 400 字、总 prompt 预算约 12k tokens。
+- [ ] STAR 润色事实约束、最多 3 条 bullet、代码层截断。
+- [ ] AI 简历输出清洗：只允许纯文本或字符串数组，不允许样式/布局指令。
+- [ ] PDF 导出前设计确定性模板、TextPainter 文本测量、分页保护和 golden 测试。
+- [ ] 简历导出测试采用 golden 容差、关键布局结构断言和语义树检查，避免 1 像素绝对比对。

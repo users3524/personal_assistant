@@ -1,96 +1,104 @@
 [English](./README_EN.md) | [中文](./README.md)
 
-<h1 align="center">📋 Personal Assistant</h1>
+# Personal Assistant
 
-<div align="center">
+A local-first Flutter app for todos, collection logs, AI reviews, and resume management.
 
-<h3>Todos · Collections · AI Review · Resume — Your Life & Work Management Hub</h3>
+> This README reflects the codebase as of 2026-06-20. Planned features such as midnight review generation, RAG, life compass, STAR resume writing, and PDF export are tracked in `docs/ROADMAP.md` and `docs/TODO.md`, not described as current functionality.
 
-<p>
-  <a href="https://github.com/users3524/personal_assistant/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/users3524/personal_assistant?color=blue" />
-  </a>
-  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter" />
-  <img alt="Dart" src="https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart" />
-  <img alt="Platform" src="https://img.shields.io/badge/Android-API_28+-3DDC84?logo=android" />
-</p>
+## Current Modules
 
-<p>
-A local-first all-in-one life management tool built with <strong>Flutter + Riverpod + Drift</strong>.
-One codebase covering Android / Windows / Web, with 100% local data storage.
-</p>
+| Module | Entry | Current status |
+| --- | --- | --- |
+| Collection | `/collection` | Items, category metadata, photos, patting logs, calendar, comparison, daily picks, rankings. Valuation code still exists, but valuation is not a long-term retained module. |
+| Todo | `/todos` | Tasks, subtasks, soft delete, archive, week/month views, stats, review entry points. |
+| AI Review | `/review/daily/*`, `/review/weekly/:id` | Conversational daily reviews, detail pages, weekly reports, offline generator, OpenAI-compatible service. |
+| Resume | `/resume` | Three preview templates, long-form editing, visibility toggles, ordering, PNG share export. |
+| Settings | `/settings` | AI config, notifications, category management, collection preferences, JSON backup import/export. |
 
-🚧 <strong>Work in progress</strong>
+## Global Direction
 
-</div>
+Current documentation separates implemented facts from future plans. The implementation order is:
 
----
+1. Fix data debt first: backup import/export, API key storage, valuation removal strategy, and image path handling.
+2. Then repair current feature flows: todo tree queries, real patting minutes in reviews, input/STT limits, weekly date-range queries, and resume editing gaps.
+3. Then add AI cost gates: `PromptBuilder`, `chat_turns`, 15-turn cutoff, and offline notes.
+4. Then build the midnight engine: foreground Catch-Up Guard first, Android WorkManager later.
+5. Finally add long-term intelligence: milestones, vectors, life compass, RAG, STAR resume writing, and PDF export.
 
-> [!WARNING]
-> This app is a personal tool. **It does not collect any user data** or upload to any server.
-> The AI Review feature only sends requests to the user-configured API endpoint.
-> Backup files are plaintext JSON — please keep them safe.
-
----
-
-## 📑 Table of Contents
-
-- [About](#-about)
-- [Quick Start](#-quick-start)
-- [Core Features](#-core-features)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Documentation](#-documentation)
-- [Roadmap](#-roadmap)
-- [Privacy & Security](#-privacy--security)
-- [Credits](#-credits)
-- [License](#-license)
-
----
-
-## 🎯 About
-
-**Personal Assistant** is a multi-functional life management app built on the principles of **local-first, privacy-first, practical utility**.
-
-| Core Principle | Description |
-|---------------|-------------|
-| 🏠 **Local First** | All data in local SQLite, no registration needed, no server uploads |
-| 🔒 **Privacy First** | No ad SDKs, no analytics, no crash reporting — configurable AI providers |
-| 🧩 **Modular** | Todo, Collection, AI Review, Resume modules work independently and together |
-| 📱 **Cross-platform** | Flutter — Android / Windows / Web |
-
----
-
-## 🚀 Quick Start
-
-### a. Download APK (recommended)
-
-Go to [GitHub Releases](https://github.com/users3524/personal_assistant/releases) and download the latest APK.
-
-### b. Build Locally
+## Quick Start
 
 ```bash
-git clone https://github.com/users3524/personal_assistant.git
-cd personal_assistant
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
----
+The current package version is `1.0.2+3`, with Dart SDK constraint `^3.10.0`.
 
-## ✨ Core Features
+## Database
 
-See the [Chinese README](./README.md) for full details.
+The current Drift `schemaVersion` is `6`, with 14 tables:
 
----
+| Table | Purpose |
+| --- | --- |
+| `user_preferences` | Theme, language, notifications, AI config, review reminders, resume template id, todo categories. |
+| `collection_categories` | Collection categories, subtypes, metadata fields, ordering. |
+| `todo_lists` | Todo lists. |
+| `todos` | Tasks, subtasks, status, tags, soft delete, recurrence rule. |
+| `antique_items` | Collection item records. |
+| `valuation_records` | Existing valuation records; valuation is not a long-term retained product module. |
+| `patting_logs` | Collection patting/check-in logs. |
+| `daily_reviews` | Daily reviews. |
+| `weekly_reports` | Weekly reports. |
+| `resume_profile` | Resume profile. |
+| `work_experiences` | Work experiences. |
+| `educations` | Education records. |
+| `skill_items` | Skills. |
+| `project_experiences` | Project experiences. |
 
-## 📄 License
+## Current Routes
 
-This project does not yet have a formal open-source license. All rights reserved.
+Bottom tabs:
 
----
+```text
+/collection
+/todos
+/resume
+```
 
-<p align="center">
-  <sub>Made with ❤️ for personal productivity</sub>
-</p>
+Fullscreen routes:
+
+```text
+/settings
+/review/daily/new
+/review/daily/edit/:date
+/review/daily/:date
+/review/weekly/:id
+```
+
+`/review` is currently only a route constant. The planned direction is to register it as an independent review history entry, without adding another bottom tab.
+
+## Tech Stack
+
+Flutter, Riverpod, go_router, Drift, Dio, flutter_local_notifications, image_picker, gal, share_plus, speech_to_text, and file_picker.
+
+`fl_chart` is still present for the current valuation chart. `pdf` and `printing` are not current dependencies.
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [Current spec](docs/SPEC_PERSONAL_AI_ASSISTANT.md) | Current features, database, AI boundaries, valuation policy. |
+| [Architecture](docs/ARCHITECTURE.md) | Project structure, routes, dependencies, database, platforms. |
+| [Todo spec](docs/SPEC_TODO.md) | Todo schema, DAO, repository, UI behavior, stats. |
+| [Collection spec](docs/SPEC_COLLECTION.md) | Collection schema, pages, logs, categories, valuation removal policy. |
+| [Review spec](docs/SPEC_REVIEW.md) | Daily/weekly reviews, AI service, flow, non-implemented boundaries. |
+| [Resume spec](docs/SPEC_RESUME.md) | Resume schema, templates, editing, export boundary. |
+| [Security](docs/SECURITY.md) | Local data, AI requests, JSON backup risks. |
+| [Roadmap](docs/ROADMAP.md) | Planned debt and future features. |
+| [TODO](docs/TODO.md) | Open implementation tasks. |
+
+## License
+
+No formal open-source license has been selected. All rights reserved.

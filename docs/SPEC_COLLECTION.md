@@ -1,103 +1,183 @@
-# 文玩记录模块规格
+# 文玩/盘串模块规格
 
 最后更新：2026-06-20
 
-文玩记录模块必须保留。AI 助手重构不会删除藏品、盘玩打卡、照片、估值、榜单等既有能力。后续如做体积或 UI 瘦身，只能在确认后做展示降噪或可选增强，不能直接销毁用户数据。
+本文记录当前代码中的文玩模块实现。注意：文玩记录功能保留，但估值模块后续不需要保留；当前代码存在估值表和图表，应按迁移计划移除，而不是继续扩展。
 
-## 1. 模块定位
+## 1. 当前页面与入口
 
-文玩模块负责沉淀用户的收藏与盘玩过程，是个人生活记录的重要组成部分，也会为每日复盘提供放松、兴趣、持续投入等素材。
+| 路由 | 页面 | 当前功能 |
+| --- | --- | --- |
+| `/collection` | `AntiqueListPage` | 文玩包列表，网格/月历双视图，每日翻牌，排序，趣味榜单。 |
+| `/collection/new` | `AntiqueFormPage` | 新增藏品。 |
+| `/collection/:id` | `AntiqueDetailPage` | 藏品详情、盘玩时间线、打卡、编辑/删除打卡、照片分享/保存、照片对比。 |
+| `/collection/:id/edit` | `AntiqueFormPage(editId)` | 编辑藏品。 |
 
-| 范围 | 说明 |
-| --- | --- |
-| 藏品档案 | 名称、分类、子类、购入日期、购入价格、来源、品相、备注、专属字段。 |
-| 图片记录 | 藏品主图与盘玩照片，数据库保存路径列表。 |
-| 盘玩打卡 | 每次盘玩日期、时长、方式、备注、照片。 |
-| 估值记录 | 保留 `valuation_records`，用于记录市场估值变化。 |
-| 趣味榜单 | 保留现有排行榜/运势等轻量互动功能。 |
-| 复盘素材 | 深夜日报读取当日盘玩总时长、打卡备注、照片路径摘要。 |
-
-## 2. 当前数据表
+## 2. 数据表
 
 ### `antique_items`
 
-| 字段 | 说明 |
+| 字段 | 当前用途 |
 | --- | --- |
-| `id` | 主键 |
-| `name` | 藏品名称 |
-| `category` | 大类 |
-| `subtype` | 子类 |
-| `description` | 描述 |
-| `acquired_date` | 入手日期 |
-| `acquired_price` | 入手价格 |
-| `source_seller` | 来源或卖家 |
-| `condition` | 品相 |
-| `current_valuation` | 当前估值 |
-| `image_paths` | 图片路径列表，`StringListConverter` |
-| `category_metadata` | 分类专属字段 JSON |
-| `fingerprints` | 指纹/特征记录 |
-| `notes` | 备注 |
-| `created_at` / `updated_at` | 时间戳 |
+| `id` | 主键。 |
+| `name` | 藏品名称。 |
+| `category` | 文玩大类。 |
+| `subtype` | 子类型。 |
+| `description` | 描述。 |
+| `acquired_date` | 入手日期，数据库层非空；表单默认当前日期。 |
+| `acquired_price` | 入手价格，可空；用于排序和单次成本榜。 |
+| `source_seller` | 来源/卖家。 |
+| `condition` | `perfect` / `good` / `fair` / `poor`。 |
+| `current_valuation` | 当前估值，当前代码使用，后续估值模块移除时需处理。 |
+| `image_paths` | 藏品照片路径列表，`StringListConverter`；Drift 字段非空，默认 `[]`。 |
+| `category_metadata` | 分类专属字段 JSON 字符串。 |
+| `fingerprints` | 特征记录。 |
+| `notes` | 备注。 |
+| `created_at` / `updated_at` | 时间戳。 |
 
 ### `patting_logs`
 
-| 字段 | 说明 |
+| 字段 | 当前用途 |
 | --- | --- |
-| `id` | 主键 |
-| `item_id` | 关联 `antique_items.id`，藏品删除时级联删除 |
-| `date` | 打卡时间 |
-| `duration_minutes` | 盘玩时长 |
-| `method` | 盘玩方式，如 bare_hand / glove |
-| `note` | 备注 |
-| `photo_paths` | 打卡照片路径列表，`StringListConverter` |
-| `created_at` | 创建时间 |
+| `id` | 主键。 |
+| `item_id` | 外键，关联 `antique_items.id`，藏品删除时级联删除。 |
+| `date` | 打卡时间。 |
+| `duration_minutes` | 盘玩时长。 |
+| `method` | `bare_hand` / `glove`，实体展示为“净手盘”/“手套盘”。 |
+| `note` | 打卡备注。 |
+| `photo_paths` | 打卡照片路径列表，`StringListConverter`；Drift 字段非空，默认 `[]`。 |
+| `created_at` | 创建时间。 |
 
 ### `valuation_records`
 
-估值记录表继续保留，用于记录藏品在不同日期的估值变化。若未来移除图表依赖，也只移除展示层，不默认删除历史估值数据。
+当前代码存在该表：
 
-## 3. 功能规格
-
-| 功能 | 规范 |
+| 字段 | 当前用途 |
 | --- | --- |
-| 新增藏品 | 支持基础信息、分类、子类、分类专属字段和多图。 |
-| 编辑藏品 | 允许修改字段、增删图片、更新估值与备注。 |
-| 藏品详情 | 展示图片轮播、基础信息、分类参数、盘玩时间线。 |
-| 盘玩打卡 | 支持时长、方式、备注和多张照片。 |
-| 打卡对比 | 支持选择不同时间点照片做前后对比。 |
-| 估值追踪 | 可记录多条估值，展示当前估值与历史变化。 |
-| 分类管理 | 使用 `collection_categories` 管理大类、子类和专属字段。 |
-| 备份恢复 | 文玩主表、估值、打卡、分类均纳入备份。 |
+| `id` | 主键。 |
+| `item_id` | 外键，关联 `antique_items.id`，藏品删除时级联删除。 |
+| `date` | 估值日期。 |
+| `amount` | 估值金额。 |
+| `remark` | 备注。 |
+| `created_at` | 创建时间。 |
 
-## 4. 图片存储边界
+后续口径：不保留估值模块。移除时需要处理 `valuation_records`、`current_valuation`、`ValuationChart`、`totalValuationProvider`、`fl_chart`、财富/潜力等依赖估值的榜单或展示。
 
-当前设计目标是数据库只保存路径，图片文件存放在应用沙盒或系统相册中。备份时可以将路径对应文件编码进导出文件，以保证换设备恢复。
+估值移除迁移原则：
 
-| 规则 | 说明 |
+1. 迁移前先确认是否需要将历史估值归档为文本，追加到 `antique_items.description` 或 `notes`。
+2. 若做文本归档，应使用当前真实字段：`valuation_records.date`、`amount`、`remark`。
+3. 文本归档需要按 `item_id` 分组，按 `date` 升序生成可读记录，避免把多个藏品的历史估值混到一起。
+4. 下线应分阶段进行：先在应用层隐藏/移除估值 UI、Provider、图表和 `fl_chart` 依赖，同时让导入旧备份时的 `valuation_records` 可重定向归档；待旧备份兼容路径稳定后，再评估物理移除表和列。
+5. 物理移除 `valuation_records` 或 `current_valuation` 前，必须更新 `BackupService._restoreData()`：遇到旧备份中的 `valuation_records` 时不直接插入已移除表，而是先按藏品归档到描述或备注，避免旧 JSON 备份恢复崩溃。
+6. 同步更新备份导入导出和迁移测试，避免旧备份恢复失败。
+
+## 3. 当前实体与仓库
+
+| 类型 | 当前内容 |
 | --- | --- |
-| 数据库存储 | `image_paths` / `photo_paths` 存字符串列表。 |
-| 路径解析 | UI 通过 `core/utils/image_utils.dart` 解析相对路径。 |
-| 单次打卡图片上限 | 建议与习惯打卡一致，单次最多 4 张。 |
-| EXIF | 不依赖 EXIF 元数据，避免隐私泄露。 |
-| 备份 | 当前 JSON 备份会尝试将图片编码为 `base64:` 内容；长期目标是专有备份包。 |
+| `AntiqueEntity` | 藏品主实体，包含图片路径、分类字段、价格、估值、备注。 |
+| `PattingLogEntity` | 盘玩日志，包含时长、方式、备注、照片路径。 |
+| `ValuationRecordEntity` | 当前估值记录实体，后续计划移除。 |
+| `AntiqueRepository` | CRUD、分类/品相/年份/搜索、估值、盘玩日志、统计、最新打卡照片。 |
+| `AntiqueDao` | Drift 查询与实体转换。 |
 
-## 5. 与 AI 日报的关系
+## 4. 当前列表页功能
 
-白天阶段，文玩模块只写本地记录，不主动调用云端模型。深夜日报打包时可读取：
+来源：`AntiqueListPage`、`antique_providers.dart`
 
-| 数据 | 用途 |
+| 功能 | 当前实现 |
 | --- | --- |
-| 当日盘玩总时长 | 反映兴趣投入与放松恢复。 |
-| 当日打卡备注 | 作为生活片段素材。 |
-| 藏品名称与分类 | 帮助日报生成具体上下文。 |
-| 照片路径数量 | 只作为结构化统计，不默认上传图片内容。 |
+| 网格视图 | 默认视图，卡片封面优先使用最新打卡照片，其次藏品照片。 |
+| 月历视图 | 按月份展示有照片的盘玩打卡日。 |
+| 分类筛选 | `categoryDisplayFilterProvider`。 |
+| 排序 | 默认、入手时间升/降、入手价格升/降、最近盘玩。 |
+| 每日翻牌 | 按配置从低频盘玩候选池随机推荐。默认核桃 2、手串 4。 |
+| 网格列数 | `gridColumnsProvider`，设置页可选 2/3/4 列。 |
+| 分类统计 | `categoryCountProvider`。 |
+| 最新打卡照片 | `latestPattingPhotosProvider`。 |
 
-文玩数据默认不进入白天对话 Prompt；只有深夜日报或用户主动要求分析文玩记录时，才可进入 AI 流程。
+## 5. 当前趣味榜单
 
-## 6. 不可破坏约束
+月历页包含每日随机展示的趣味榜单。当前代码中可选榜单包括：
 
-1. 不删除 `antique_items`、`patting_logs`、`valuation_records` 的既有数据。
-2. 不把文玩记录降级为普通习惯打卡；它仍是独立业务模块。
-3. 不在未经确认的迁移中物理清除估值历史。
-4. 不让 AI 直接改写文玩档案，AI 只能生成建议，最终写入需用户确认。
-5. 不把图片大批量送入云端模型；默认只上传文本摘要。
+| 榜单 | 依据 |
+| --- | --- |
+| 财富榜 | `currentValuation` 排序，后续随估值模块移除。 |
+| 贵妃榜 | 当月打卡次数。 |
+| 核桃榜 | 核桃分类的边宽等尺寸字段。 |
+| 老炮榜 | 入手时间。 |
+| 串串榜 | 手串尺寸/串型字段。 |
+| 缘分榜 | 来源/卖家聚类。 |
+| 冷宫幽怨榜 | 距离上次打卡天数。 |
+| 夜猫子榜 | 23:00-3:00 打卡次数。 |
+| 劳模榜 | 入手价 / 累计打卡次数。 |
+| 雨露均沾榜 | 近两周盘玩活跃度。 |
+
+当前榜单多数在 Provider/UI 层读取藏品和日志后用 Dart 循环计算，不是 SQLite 聚合查询。后续日志量变大时，可把当月打卡次数、最近打卡时间、夜猫子频次、单次成本等计算下沉到 DAO 层，并结合实际查询计划评估 `patting_logs(item_id, date DESC)` 等索引。
+
+## 6. 当前表单功能
+
+来源：`AntiqueFormPage`
+
+| 功能 | 当前实现 |
+| --- | --- |
+| 分类 | 使用 `collectionCategoriesProvider`，默认核桃、手串、把件。 |
+| 自定义分类 | 表单可输入自定义分类，保存后加入分类 Provider。 |
+| 子类型 | 来自分类配置。 |
+| 专属字段 | 来自分类配置；核桃有硬编码兜底字段。 |
+| 核桃字段 | 左右双输入，保存为逗号分隔值。 |
+| 图片 | 拍照/相册选图后保存到应用文档目录下 `antique_images/`，新路径返回相对 token。 |
+| 新建首条打卡 | 新建藏品时自动用藏品照片创建入手当天打卡记录。 |
+
+## 7. 当前详情页与打卡功能
+
+来源：`AntiqueDetailPage`
+
+| 功能 | 当前实现 |
+| --- | --- |
+| 图片查看 | 支持全屏查看。 |
+| 图片操作 | 长按可分享或保存到系统相册。 |
+| 盘玩打卡 | 支持拍照、相册、仅文字打卡。 |
+| 打卡时间 | 可选择日期和时间。 |
+| 编辑打卡 | 可修改备注、替换/删除照片。 |
+| 删除打卡 | 二次确认后删除。 |
+| 照片对比 | 至少两条有照片打卡后，可选择左右照片生成时光对比。 |
+| 对比图保存 | 使用 `RepaintBoundary` 生成图片并分享。 |
+| 删除藏品 | 二次确认；代码提示会删除图片和盘玩记录，数据库外键会级联日志和估值。 |
+
+## 8. 分类管理
+
+来源：`CategoryManagementPage`、`CollectionCategoriesNotifier`
+
+| 功能 | 当前实现 |
+| --- | --- |
+| 默认分类 | 当前代码默认核桃、手串、把件；后续新增需求为加入“长串”。 |
+| 分类排序 | 文玩分类可拖拽排序。 |
+| 子类型管理 | 可增删、拖拽排序；正在被藏品使用的子类型禁止删除。 |
+| 专属字段管理 | 可增删、拖拽排序。 |
+| 分类删除 | 若分类下有藏品，禁止删除。 |
+| 持久化 | 同时使用 `AppSettingsPersistence` 和 `collection_categories` 备份同步。 |
+
+## 9. 图片路径
+
+当前新图片保存函数将文件写入应用文档目录的 `antique_images/` 子目录，并返回 `antique_images/xxx.jpg` 形式的相对路径；旧数据和部分导入数据仍可能是绝对路径。`core/utils/image_utils.dart` 可以解析绝对路径和相对路径，但部分 UI 仍直接使用 `File(path)`，这会让相对路径在某些展示、分享或保存入口中破图。
+
+后续图片路径统一原则：
+
+1. 数据库存储统一收敛为相对路径 token。
+2. UI、分享、保存、备份导出统一复用现有 `resolveImageFile()` 或等价单一服务解析路径，避免再造多个路径解析入口。
+3. 备份恢复解码 `base64:` 图片时写入应用文档目录，而不是系统临时目录。
+4. 迁移旧绝对路径前先校验文件是否存在，能复制到 `antique_images/` 的再转相对路径，不能复制的保留原值并提示用户。
+
+注意：当前 `resolveImageFile()` 是异步函数，返回 `Future<File>`。页面层不能按同步 helper 直接塞给 `Image.file()`；改造时需要在 Provider 中预解析、用 `FutureBuilder` 包裹，或提供统一的异步图片组件。
+
+## 10. 备份与 AI 复盘衔接
+
+当前 `BackupService` 已导出 `antique_items`、`valuation_records`、`patting_logs` 和 `collection_categories`，但恢复图片会写入系统临时目录，且导出图片时仍直接 `File(path)`，对相对路径不稳定。后续需要让备份服务复用图片解析 helper，保证相对路径和绝对路径都能被正确打包。
+
+AI 复盘侧当前 `DailyReviewChatPage` 生成日报时 `pattingMinutes` 固定传 0。后续深夜素材包应从 `patting_logs` 读取当天 `duration_minutes` 总和、打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入；白天文玩打卡本身不应触发云端请求。
+
+## 11. 后续多态关联清理
+
+未来如果 `milestone_relations` 支持 `source_type = 'patting_log'` 或 `source_type = 'antique_item'`，SQLite 无法对这种多态来源建立真实外键。删除盘玩日志、物理删除藏品或导入覆盖数据时，Repository/DAO 需要在同一个事务中清理对应高光关联，避免留下孤儿高光来源。

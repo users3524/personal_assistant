@@ -42,5 +42,8 @@ class RouteNames {
   static String todoEditPath(int id) => '/todos/$id/edit';
   static String collectionDetailPath(int id) => '/collection/$id';
   static String dailyReviewDetailPath(String date) => '/review/daily/$date';
-  static String weeklyReportDetailPath(int id) => '/review/weekly/$id';
+  static String weeklyReportDetailPath(int weekNumber, {int? year}) {
+    final query = year != null ? '?year=$year' : '';
+    return '/review/weekly/$weekNumber$query';
+  }
 }

@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../domain/entities/review_entity.dart';
+import '../../domain/services/iso_week.dart';
 import '../providers/review_providers.dart';
 
 class ReviewHomePage extends ConsumerWidget {
@@ -14,9 +16,13 @@ class ReviewHomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 归一化到午夜，确保 family provider 参数稳定、不重复加载
-    final now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final now = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
     final todayReview = ref.watch(dailyReviewProvider(now));
-    final weekNumber = ref.watch(currentWeekNumberProvider);
+    final isoWeek = ref.watch(currentIsoWeekProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,7 +47,7 @@ class ReviewHomePage extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // 本周周报
-          _buildWeeklySection(context, ref, weekNumber),
+          _buildWeeklySection(context, ref, isoWeek),
           const SizedBox(height: 24),
 
           // 历史日报
@@ -66,7 +72,9 @@ class ReviewHomePage extends ConsumerWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
@@ -138,30 +146,29 @@ class ReviewHomePage extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'AI 每日复盘',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text('AI 每日复盘', style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              hasReviewed
-                  ? '今日复盘已完成，可以查看或继续对话。'
-                  : '回顾今天的工作与生活，让 AI 帮你总结和提升。',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
-                  ),
+              hasReviewed ? '今日复盘已完成，可以查看或继续对话。' : '回顾今天的工作与生活，让 AI 帮你总结和提升。',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
             // 显示可改进点（如有）
-            if (hasReviewed && review!.improvements != null && review.improvements!.isNotEmpty) ...[
+            if (hasReviewed &&
+                review!.improvements != null &&
+                review.improvements!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +178,10 @@ class ReviewHomePage extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         '📌 ${review.improvements}',
-                        style: const TextStyle(fontSize: 13, color: Colors.brown),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.brown,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -198,11 +208,13 @@ class ReviewHomePage extends ConsumerWidget {
   Widget _buildWeeklySection(
     BuildContext context,
     WidgetRef ref,
-    int weekNumber,
+    IsoWeek isoWeek,
   ) {
-    final weeklyAsync = ref.watch(weeklyReportProvider(weekNumber));
+    final key = isoWeek.year * 100 + isoWeek.weekNumber;
+    final weeklyAsync = ref.watch(weeklyReportByYearWeekProvider(key));
     final now = DateTime.now();
-    final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
+    final isWeekend =
+        now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
 
     return Card(
       child: Padding(
@@ -218,7 +230,7 @@ class ReviewHomePage extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '第 $weekNumber 周周报',
+                  '${isoWeek.year} 年第 ${isoWeek.weekNumber} 周周报',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Spacer(),
@@ -240,20 +252,25 @@ class ReviewHomePage extends ConsumerWidget {
             const SizedBox(height: 4),
             if (!weeklyAsync.hasValue || weeklyAsync.valueOrNull == null)
               Text(
-                isWeekend
-                    ? '📊 周末了！本周有足够的数据，可以生成周报了。'
-                    : '每天坚持复盘，周末自动汇总生成周报。',
+                isWeekend ? '📊 周末了！本周有足够的数据，可以生成周报了。' : '每天坚持复盘，周末自动汇总生成周报。',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/review/weekly/$weekNumber'),
+                onPressed: () => context.push(
+                  RouteNames.weeklyReportDetailPath(
+                    isoWeek.weekNumber,
+                    year: isoWeek.year,
+                  ),
+                ),
                 icon: const Icon(Icons.auto_awesome),
-                label: Text(isWeekend && (weeklyAsync.valueOrNull == null)
-                    ? '生成周报'
-                    : '查看 / 生成周报'),
+                label: Text(
+                  isWeekend && (weeklyAsync.valueOrNull == null)
+                      ? '生成周报'
+                      : '查看 / 生成周报',
+                ),
               ),
             ),
           ],
@@ -310,7 +327,9 @@ class ReviewHomePage extends ConsumerWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: _moodColor(r.moodLevel).withValues(alpha: 0.15),
+                          color: _moodColor(
+                            r.moodLevel,
+                          ).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
@@ -356,30 +375,42 @@ class ReviewHomePage extends ConsumerWidget {
 
   void _showMonthlyCalendar(BuildContext context) {
     // TODO: 月度日历视图
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('月度视图即将上线')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('月度视图即将上线')));
   }
 
   Color _moodColor(int level) {
     switch (level) {
-      case 1: return Colors.red;
-      case 2: return Colors.orange;
-      case 3: return Colors.amber;
-      case 4: return Colors.lightGreen;
-      case 5: return Colors.green;
-      default: return Colors.grey;
+      case 1:
+        return Colors.red;
+      case 2:
+        return Colors.orange;
+      case 3:
+        return Colors.amber;
+      case 4:
+        return Colors.lightGreen;
+      case 5:
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   String _moodEmoji(int level) {
     switch (level) {
-      case 1: return '😞';
-      case 2: return '😐';
-      case 3: return '🙂';
-      case 4: return '😊';
-      case 5: return '😄';
-      default: return '😐';
+      case 1:
+        return '😞';
+      case 2:
+        return '😐';
+      case 3:
+        return '🙂';
+      case 4:
+        return '😊';
+      case 5:
+        return '😄';
+      default:
+        return '😐';
     }
   }
 }
@@ -404,9 +435,19 @@ class _StatsSheet extends ConsumerWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _statCard(context, '平均情绪', avgMood.toStringAsFixed(1), Icons.face),
+              _statCard(
+                context,
+                '平均情绪',
+                avgMood.toStringAsFixed(1),
+                Icons.face,
+              ),
               const SizedBox(width: 12),
-              _statCard(context, '平均能量', avgEnergy.toStringAsFixed(1), Icons.bolt),
+              _statCard(
+                context,
+                '平均能量',
+                avgEnergy.toStringAsFixed(1),
+                Icons.bolt,
+              ),
               const SizedBox(width: 12),
               _statCard(context, '复盘天数', '0', Icons.calendar_today),
             ],
@@ -441,11 +482,14 @@ class _StatsSheet extends ConsumerWidget {
           children: [
             Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(label,
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
           ],
         ),
       ),

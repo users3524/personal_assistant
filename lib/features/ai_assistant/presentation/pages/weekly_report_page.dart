@@ -10,9 +10,10 @@ import '../../domain/entities/review_entity.dart';
 import '../providers/review_providers.dart';
 
 class WeeklyReportPage extends ConsumerStatefulWidget {
+  final int? year;
   final int weekNumber;
 
-  const WeeklyReportPage({super.key, required this.weekNumber});
+  const WeeklyReportPage({super.key, this.year, required this.weekNumber});
 
   @override
   ConsumerState<WeeklyReportPage> createState() => _WeeklyReportPageState();
@@ -25,6 +26,8 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
   late TextEditingController _improvementsCtrl;
   late TextEditingController _planCtrl;
   bool _isLoaded = false;
+
+  int get _reportYear => widget.year ?? ref.read(currentIsoWeekProvider).year;
 
   @override
   void initState() {
@@ -47,10 +50,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
   Future<void> _loadExisting() async {
     if (_isLoaded) return;
     final repo = await ref.read(reviewRepositoryProvider.future);
-    final existing = await repo.getWeekly(
-      DateTime.now().year,
-      widget.weekNumber,
-    );
+    final existing = await repo.getWeekly(_reportYear, widget.weekNumber);
     if (existing != null && mounted) {
       setState(() {
         _overviewCtrl.text = existing.overview;
@@ -68,17 +68,19 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
     setState(() => _isGenerating = true);
     try {
       final reviewRepo = await ref.read(reviewRepositoryProvider.future);
-      final now = DateTime.now();
+      final year = _reportYear;
 
       // 获取本周日报
-      final weekReviews =
-          await reviewRepo.getDailyByWeek(now.year, widget.weekNumber);
+      final weekReviews = await reviewRepo.getDailyByWeek(
+        year,
+        widget.weekNumber,
+      );
 
       if (weekReviews.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('本周暂无日报数据，请先填写每日复盘')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('本周暂无日报数据，请先填写每日复盘')));
         }
         return;
       }
@@ -101,9 +103,9 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
       final ai = ref.read(aiServiceProvider);
       if (ai == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('请先在设置中配置 AI API Key')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('请先在设置中配置 AI API Key')));
         }
         setState(() => _isGenerating = false);
         return;
@@ -111,7 +113,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
 
       final result = await ai.generateWeeklyReport(
         weekNumber: widget.weekNumber,
-        year: now.year,
+        year: year,
         weekReviews: summaries,
       );
 
@@ -125,9 +127,9 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('生成失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -140,7 +142,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
       final now = DateTime.now();
       final report = WeeklyReportEntity(
         weekNumber: widget.weekNumber,
-        year: now.year,
+        year: _reportYear,
         overview: _overviewCtrl.text.trim(),
         highlights: _highlightsCtrl.text.trim(),
         improvements: _improvementsCtrl.text.trim(),
@@ -153,15 +155,15 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
       await repo.createWeekly(report);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('周报已保存')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('周报已保存')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -172,7 +174,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('第 ${widget.weekNumber} 周周报'),
+        title: Text('$_reportYear 年第 ${widget.weekNumber} 周周报'),
         actions: [
           TextButton.icon(
             onPressed: _save,
@@ -196,18 +198,18 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.auto_awesome),
-                label: Text(
-                    _isGenerating ? 'AI 生成中...' : 'AI 生成周报'),
+                label: Text(_isGenerating ? 'AI 生成中...' : 'AI 生成周报'),
               ),
             ),
             const SizedBox(height: 24),
 
             // 本周概览
-            Text('本周概览',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('本周概览', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextFormField(
               controller: _overviewCtrl,
@@ -220,8 +222,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
             const SizedBox(height: 20),
 
             // 本周亮点
-            Text('本周亮点',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('本周亮点', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextFormField(
               controller: _highlightsCtrl,
@@ -234,8 +235,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
             const SizedBox(height: 20),
 
             // 待改进
-            Text('待改进',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('待改进', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextFormField(
               controller: _improvementsCtrl,
@@ -248,8 +248,7 @@ class _WeeklyReportPageState extends ConsumerState<WeeklyReportPage> {
             const SizedBox(height: 20),
 
             // 下周计划
-            Text('下周计划',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('下周计划', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextFormField(
               controller: _planCtrl,

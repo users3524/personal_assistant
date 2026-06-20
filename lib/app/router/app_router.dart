@@ -24,17 +24,22 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
-  const MainShell({
-    super.key,
-    required this.navigationShell,
-  });
+  const MainShell({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {
     final items = [
       (icon: Icons.diamond_outlined, selectedIcon: Icons.diamond, label: '盘串'),
-      (icon: Icons.check_circle_outline, selectedIcon: Icons.check_circle, label: '待办'),
-      (icon: Icons.description_outlined, selectedIcon: Icons.description, label: '简历'),
+      (
+        icon: Icons.check_circle_outline,
+        selectedIcon: Icons.check_circle,
+        label: '待办',
+      ),
+      (
+        icon: Icons.description_outlined,
+        selectedIcon: Icons.description,
+        label: '简历',
+      ),
     ];
 
     return Scaffold(
@@ -102,7 +107,8 @@ class MainShell extends StatelessWidget {
                               size: isSelected ? 28 : 24,
                               color: isSelected
                                   ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  : Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -111,10 +117,13 @@ class MainShell extends StatelessWidget {
                             curve: Curves.easeInOut,
                             style: TextStyle(
                               fontSize: isSelected ? 13 : 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: isSelected
                                   ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  : Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                             ),
                             child: Text(item.label),
                           ),
@@ -160,8 +169,13 @@ GoRouter createRouter() {
                     path: ':id',
                     builder: (context, state) {
                       final id = int.parse(state.pathParameters['id']!);
-                      final highlightLogId = int.tryParse(state.uri.queryParameters['highlightLog'] ?? '');
-                      return AntiqueDetailPage(itemId: id, highlightLogId: highlightLogId);
+                      final highlightLogId = int.tryParse(
+                        state.uri.queryParameters['highlightLog'] ?? '',
+                      );
+                      return AntiqueDetailPage(
+                        itemId: id,
+                        highlightLogId: highlightLogId,
+                      );
                     },
                     routes: [
                       GoRoute(
@@ -247,7 +261,8 @@ GoRouter createRouter() {
         path: RouteNames.weeklyReportDetail,
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return WeeklyReportPage(weekNumber: id);
+          final year = int.tryParse(state.uri.queryParameters['year'] ?? '');
+          return WeeklyReportPage(year: year, weekNumber: id);
         },
       ),
     ],

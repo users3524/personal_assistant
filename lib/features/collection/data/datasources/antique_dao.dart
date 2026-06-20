@@ -312,4 +312,90 @@ class AntiqueDao {
     }
     return map;
   }
+
+  Future<Map<int, int>> countPattingLogsByItem() async {
+    final itemId = _db.pattingLogs.itemId;
+    final count = itemId.count();
+    final rows =
+        await (_db.selectOnly(_db.pattingLogs)
+              ..addColumns([itemId, count])
+              ..groupBy([itemId]))
+            .get();
+
+    return {
+      for (final row in rows)
+        if (row.read(itemId) != null) row.read(itemId)!: row.read(count) ?? 0,
+    };
+  }
+
+  Future<Map<int, int>> countPattingLogsByItemInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final itemId = _db.pattingLogs.itemId;
+    final count = itemId.count();
+    final rows =
+        await (_db.selectOnly(_db.pattingLogs)
+              ..addColumns([itemId, count])
+              ..where(_dateInHalfOpenRange(_db.pattingLogs.date, start, end))
+              ..groupBy([itemId]))
+            .get();
+
+    return {
+      for (final row in rows)
+        if (row.read(itemId) != null) row.read(itemId)!: row.read(count) ?? 0,
+    };
+  }
+
+  Future<Map<int, int>> sumPattingMinutesByItem() async {
+    final itemId = _db.pattingLogs.itemId;
+    final totalMinutes = _db.pattingLogs.durationMinutes.sum();
+    final rows =
+        await (_db.selectOnly(_db.pattingLogs)
+              ..addColumns([itemId, totalMinutes])
+              ..groupBy([itemId]))
+            .get();
+
+    return {
+      for (final row in rows)
+        if (row.read(itemId) != null)
+          row.read(itemId)!: row.read(totalMinutes) ?? 0,
+    };
+  }
+
+  Future<Map<int, DateTime>> latestPattingDateByItem() async {
+    final itemId = _db.pattingLogs.itemId;
+    final latestDate = _db.pattingLogs.date.max();
+    final rows =
+        await (_db.selectOnly(_db.pattingLogs)
+              ..addColumns([itemId, latestDate])
+              ..groupBy([itemId]))
+            .get();
+
+    return {
+      for (final row in rows)
+        if (row.read(itemId) != null && row.read(latestDate) != null)
+          row.read(itemId)!: row.read(latestDate)!,
+    };
+  }
+
+  Future<Map<int, int>> countNightPattingLogsByItem() async {
+    final rows = await _db.select(_db.pattingLogs).get();
+    final result = <int, int>{};
+    for (final row in rows) {
+      final hour = row.date.hour;
+      if (hour >= 23 || hour < 3) {
+        result[row.itemId] = (result[row.itemId] ?? 0) + 1;
+      }
+    }
+    return result;
+  }
+
+  Expression<bool> _dateInHalfOpenRange(
+    DateTimeColumn column,
+    DateTime start,
+    DateTime end,
+  ) {
+    return column.isBiggerOrEqualValue(start) & column.isSmallerThanValue(end);
+  }
 }

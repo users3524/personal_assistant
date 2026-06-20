@@ -4,7 +4,7 @@
 
 待办、文玩记录、AI 复盘、动态简历集成在一个 Flutter 本地优先应用里。当前代码以 Android 为主要运行目标，同时保留 Windows / Web 工程。
 
-> 本文按 2026-06-20 的代码现状整理。未实现的深夜日报、RAG、人生罗盘、STAR 简历生成、PDF 导出等，只记录在 `docs/ROADMAP.md` 和 `docs/TODO.md`。
+> 本文按 2026-06-21 的代码现状整理。未实现的深夜日报、RAG、人生罗盘、STAR 简历生成、PDF 导出等，只记录在 `docs/ROADMAP.md` 和 `docs/TODO.md`。
 
 ## 当前原则
 
@@ -44,13 +44,13 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 当前已实现：
 
 - 藏品建档：名称、分类、子类型、入手日期、入手价格、来源、品相、图片、备注、分类专属字段。
-- 文玩分类管理：默认核桃、手串、把件；支持子类型和专属字段管理。
+- 文玩分类管理：默认核桃、手串、把件、长串；支持子类型和专属字段管理。
 - 盘玩打卡：照片、时长、方式、备注、时间线展示。
-- 列表与月历：网格视图、月历视图、最新打卡照片、每日翻牌、趣味榜单。
+- 列表与月历：网格视图、月历视图、最新打卡照片、每日翻牌、趣味榜单；日志重型榜单已下沉到 DAO 批量聚合。
 - 照片能力：全屏查看、分享、保存、打卡照片对比。
 - 估值下线：估值图表、估值 Provider、估值实体/仓库接口、财富/潜力榜和 `fl_chart` 依赖已移除。
 
-兼容口径：`valuation_records` 表和 `antique_items.current_valuation` 字段仍保留在 schema v7 中，作为旧数据库/旧备份兼容壳；新导出的 `valuation_records` 为空，旧备份导入时会把估值历史按藏品归档到 `antique_items.notes`。
+兼容口径：`valuation_records` 表和 `antique_items.current_valuation` 字段仍保留在 schema v8 中，作为旧数据库/旧备份兼容壳；新导出的 `valuation_records` 为空，旧备份导入时会把估值历史按藏品归档到 `antique_items.notes`。
 
 ### 待办
 
@@ -134,7 +134,7 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 
 ## 数据库
 
-当前 `schemaVersion = 7`，注册 14 张表：
+当前 `schemaVersion = 8`，注册 14 张表：
 
 | 表 | 用途 |
 | --- | --- |
@@ -152,6 +152,8 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 | `educations` | 教育经历。 |
 | `skill_items` | 技能项。 |
 | `project_experiences` | 项目经历。 |
+
+schema v8 已为文玩榜单补充 `patting_logs(item_id, date DESC)` 与 `patting_logs(date, item_id)` 查询索引；schema v7 已为待办树查询和统计补充 `todos` 索引。
 
 ## 当前路由
 

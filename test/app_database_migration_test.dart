@@ -1,22 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
+import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
 import 'package:drift/native.dart';
 
 void main() {
   group('AppDatabase migrations', () {
-    test('new schema contains todo indexes', () async {
+    test('new schema contains query indexes', () async {
       final db = AppDatabase.createInMemory();
       addTearDown(db.close);
 
       expect(await _todoIndexNames(db), _expectedTodoIndexNames);
+      expect(await _pattingLogIndexNames(db), _expectedPattingLogIndexNames);
     });
 
-    test('upgrades v6 databases with todo indexes', () async {
+    test('upgrades v6 databases with query indexes', () async {
       final db = AppDatabase(
         NativeDatabase.memory(
           setup: (rawDb) {
             rawDb.execute(_createV6TodosTableSql);
+            rawDb.execute(_createV6PattingLogsTableSql);
             rawDb.execute('PRAGMA user_version = 6');
           },
         ),
@@ -24,11 +27,15 @@ void main() {
       addTearDown(db.close);
 
       expect(await _todoIndexNames(db), _expectedTodoIndexNames);
+      expect(await _pattingLogIndexNames(db), _expectedPattingLogIndexNames);
     });
   });
 }
 
 final _expectedTodoIndexNames = todoIndexStatements.map(_indexNameOf).toSet();
+final _expectedPattingLogIndexNames = pattingLogIndexStatements
+    .map(_indexNameOf)
+    .toSet();
 
 String _indexNameOf(String createIndexStatement) {
   final match = RegExp(
@@ -45,6 +52,15 @@ Future<Set<String>> _todoIndexNames(AppDatabase db) async {
 SELECT name FROM sqlite_master
 WHERE type = 'index' AND tbl_name = 'todos'
 AND name LIKE 'idx_todos_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _pattingLogIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'patting_logs'
+AND name LIKE 'idx_patting_logs_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
 }
@@ -71,5 +87,18 @@ CREATE TABLE todos (
   delay_count INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+''';
+
+const _createV6PattingLogsTableSql = '''
+CREATE TABLE patting_logs (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL,
+  date INTEGER NOT NULL,
+  duration_minutes INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  note TEXT NULL,
+  photo_paths TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 ''';

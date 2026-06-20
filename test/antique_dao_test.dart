@@ -46,13 +46,92 @@ void main() {
       expect(dayLogs.map((log) => log.durationMinutes), [30]);
       expect(monthLogs.map((log) => log.durationMinutes), [30]);
     });
+
+    test('aggregates patting log counts by item', () async {
+      final first = await dao.insert(_antique(name: 'First'));
+      final second = await dao.insert(_antique(name: 'Second'));
+
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 20), 10));
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 21), 20));
+      await dao.addPattingLog(_log(second.id!, DateTime(2026, 6, 22), 30));
+
+      final counts = await dao.countPattingLogsByItem();
+
+      expect(counts, {first.id!: 2, second.id!: 1});
+    });
+
+    test('aggregates patting log counts by half-open date range', () async {
+      final first = await dao.insert(_antique(name: 'First'));
+      final second = await dao.insert(_antique(name: 'Second'));
+      final start = DateTime(2026, 6, 20);
+      final end = DateTime(2026, 6, 22);
+
+      await dao.addPattingLog(
+        _log(first.id!, start.subtract(const Duration(minutes: 1)), 5),
+      );
+      await dao.addPattingLog(_log(first.id!, start, 10));
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 21, 12), 20));
+      await dao.addPattingLog(_log(first.id!, end, 30));
+      await dao.addPattingLog(_log(second.id!, DateTime(2026, 6, 21), 40));
+
+      final counts = await dao.countPattingLogsByItemInRange(start, end);
+
+      expect(counts, {first.id!: 2, second.id!: 1});
+    });
+
+    test('aggregates total patting minutes by item', () async {
+      final first = await dao.insert(_antique(name: 'First'));
+      final second = await dao.insert(_antique(name: 'Second'));
+
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 20), 10));
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 21), 25));
+      await dao.addPattingLog(_log(second.id!, DateTime(2026, 6, 22), 30));
+
+      final minutes = await dao.sumPattingMinutesByItem();
+
+      expect(minutes, {first.id!: 35, second.id!: 30});
+    });
+
+    test('finds latest patting date by item', () async {
+      final first = await dao.insert(_antique(name: 'First'));
+      final second = await dao.insert(_antique(name: 'Second'));
+      final latest = DateTime(2026, 6, 22, 9);
+
+      await dao.addPattingLog(_log(first.id!, DateTime(2026, 6, 20), 10));
+      await dao.addPattingLog(_log(first.id!, latest, 20));
+      await dao.addPattingLog(_log(second.id!, DateTime(2026, 6, 21), 30));
+
+      final dates = await dao.latestPattingDateByItem();
+
+      expect(dates[first.id!], latest);
+      expect(dates[second.id!], DateTime(2026, 6, 21));
+    });
+
+    test(
+      'counts night owl logs from 23:00 inclusive to 03:00 exclusive',
+      () async {
+        final item = await dao.insert(_antique());
+        final itemId = item.id!;
+
+        await dao.addPattingLog(
+          _log(itemId, DateTime(2026, 6, 20, 22, 59), 10),
+        );
+        await dao.addPattingLog(_log(itemId, DateTime(2026, 6, 20, 23), 10));
+        await dao.addPattingLog(_log(itemId, DateTime(2026, 6, 21, 2, 59), 10));
+        await dao.addPattingLog(_log(itemId, DateTime(2026, 6, 21, 3), 10));
+
+        final counts = await dao.countNightPattingLogsByItem();
+
+        expect(counts, {itemId: 2});
+      },
+    );
   });
 }
 
-AntiqueEntity _antique() {
+AntiqueEntity _antique({String name = 'Walnut'}) {
   final now = DateTime(2026, 6, 20, 9);
   return AntiqueEntity(
-    name: 'Walnut',
+    name: name,
     category: 'walnut',
     acquiredDate: now,
     createdAt: now,

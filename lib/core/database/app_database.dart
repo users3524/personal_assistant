@@ -50,7 +50,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,11 +76,20 @@ class AppDatabase extends _$AppDatabase {
       if (from < 7) {
         await _createTodoIndexes();
       }
+      if (from < 8) {
+        await _createPattingLogIndexes();
+      }
     },
   );
 
   Future<void> _createTodoIndexes() async {
     for (final statement in todoIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createPattingLogIndexes() async {
+    for (final statement in pattingLogIndexStatements) {
       await customStatement(statement);
     }
   }

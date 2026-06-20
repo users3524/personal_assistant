@@ -4,7 +4,7 @@
 
 A local-first Flutter app for todos, collection logs, AI reviews, and resume management.
 
-> This README reflects the codebase as of 2026-06-20. Planned features such as midnight review generation, RAG, life compass, STAR resume writing, and PDF export are tracked in `docs/ROADMAP.md` and `docs/TODO.md`, not described as current functionality.
+> This README reflects the codebase as of 2026-06-21. Planned features such as midnight review generation, RAG, life compass, STAR resume writing, and PDF export are tracked in `docs/ROADMAP.md` and `docs/TODO.md`, not described as current functionality.
 
 ## Current Modules
 

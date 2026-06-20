@@ -1,6 +1,6 @@
 # TODO
 
-最后更新：2026-06-20
+最后更新：2026-06-21
 
 本清单按当前代码事实整理。
 
@@ -47,7 +47,7 @@
 - [x] 估值模块物理删表前，先让旧备份中的 `valuation_records` 可导入并重定向归档到藏品描述/备注。
 - [ ] 旧估值兼容路径稳定后，再评估是否在下一版 schema 物理移除 `valuation_records` 和 `current_valuation`。
 - [ ] 图片备份恢复改为应用文档目录，而不是系统临时目录。
-- [ ] 评估文玩榜单从 Provider 循环计算迁移到 DAO 聚合查询，并按查询计划补 `patting_logs(item_id, date DESC)` 等索引。
+- [x] 评估文玩榜单从 Provider 循环计算迁移到 DAO 聚合查询，并按查询计划补 `patting_logs(item_id, date DESC)`、`patting_logs(date, item_id)` 索引。
 - [ ] 未来高光关联接入后，删除 `patting_logs`/`antique_items` 时同步事务清理 `milestone_relations`。
 
 ## P1：AI 复盘

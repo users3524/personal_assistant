@@ -1,6 +1,6 @@
 # 个人全能助手当前功能规格总览
 
-最后更新：2026-06-20
+最后更新：2026-06-21
 
 本文按当前代码填写，不把未实现设计写成已实现功能。后续 AI 助手增强、深夜引擎、RAG、STAR 生成等规划见 `ROADMAP.md` 和 `TODO.md`。
 
@@ -16,7 +16,7 @@
 
 ## 2. 当前数据库表
 
-当前 `schemaVersion = 7`，表结构来自 Drift 手写表定义。
+当前 `schemaVersion = 8`，表结构来自 Drift 手写表定义。
 
 | 表 | 所属模块 | 当前状态 |
 | --- | --- | --- |
@@ -34,6 +34,8 @@
 | `educations` | 简历 | 使用中。 |
 | `skill_items` | 简历 | 使用中。 |
 | `project_experiences` | 简历 | 使用中。 |
+
+schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引。
 
 ## 3. 当前已实现的数据关系
 
@@ -86,7 +88,7 @@ work_experiences.responsibilities/tech_stack -> List<String>
 4. `AntiqueEntity` 不再暴露 `currentValuation`。
 5. `BackupService` 新导出的 `valuation_records` 为空；旧备份导入时将 `valuation_records.date/amount/remark` 和旧 `current_valuation` 归档到 `antique_items.notes`。
 
-暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v7 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
+暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v8 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
 
 ## 6. 已吸收的未来设计原则
 

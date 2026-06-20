@@ -28,6 +28,14 @@ abstract class AntiqueRepository {
   // ===== 统计 =====
   Future<Map<String, int>> countByCategory();
   Future<int> sumPattingMinutesByDate(DateTime date);
+  Future<Map<int, int>> countPattingLogsByItem();
+  Future<Map<int, int>> countPattingLogsByItemInRange(
+    DateTime start,
+    DateTime end,
+  );
+  Future<Map<int, int>> sumPattingMinutesByItem();
+  Future<Map<int, DateTime>> latestPattingDateByItem();
+  Future<Map<int, int>> countNightPattingLogsByItem();
 
   // ===== 批量查询 =====
   /// 返回 Map<itemId, 最新一张打卡照片路径>

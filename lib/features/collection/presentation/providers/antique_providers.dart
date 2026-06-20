@@ -1,37 +1,31 @@
-/// 文玩模块状态管理 Provider。
+/// Collection module state providers.
 library;
 
 export '../../data/repositories/antique_repository_impl.dart'
     show antiqueRepositoryProvider;
 
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/app_settings_persistence.dart';
 import '../../data/repositories/antique_repository_impl.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../../domain/repositories/antique_repository.dart';
-import '../../../../core/database/app_settings_persistence.dart';
-import 'dart:math';
 
-// 排序模式
 final antiqueSortModeProvider = StateProvider<String>((ref) => '');
 
-// 视图模式：grid / calendar
 enum CollectionViewMode { grid, calendar }
 
 final collectionViewModeProvider = StateProvider<CollectionViewMode>(
   (ref) => CollectionViewMode.grid,
 );
 
-// 月历当前查看的月份
 final calendarMonthProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
-// 月历分类筛选
 final calendarFilterProvider = StateProvider<String?>((ref) => null);
 
-/// 网格显示分类筛选（空=全部）
 final categoryDisplayFilterProvider = StateProvider<String>((ref) => '');
-
-// ===== 列表 Provider（可刷新） =====
 
 final antiqueListProvider =
     AsyncNotifierProvider<AntiqueListNotifier, List<AntiqueEntity>>(
@@ -43,7 +37,6 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
   Future<List<AntiqueEntity>> build() async {
     final repo = await ref.watch(antiqueRepositoryProvider.future);
     final items = await repo.getAll();
-    // Apply current sort mode on initial load
     final sortMode = ref.watch(antiqueSortModeProvider);
     if (sortMode.isNotEmpty) {
       return _applySort(items, sortMode, repo);
@@ -52,7 +45,6 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
   }
 
   Future<void> refresh() async {
-    // Don't invalidate self — instead keep the current sort and re-fetch
     final repo = await ref.watch(antiqueRepositoryProvider.future);
     final items = await repo.getAll();
     final sortMode = ref.watch(antiqueSortModeProvider);
@@ -65,47 +57,39 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
     ref.invalidate(pattingCalendarProvider);
     ref.invalidate(pattingFrequencyProvider);
     ref.invalidate(monthlyPattingFrequencyProvider);
+    ref.invalidate(totalPattingDurationProvider);
+    ref.invalidate(coldPalaceRankProvider);
+    ref.invalidate(nightOwlRankProvider);
+    ref.invalidate(costPerPlayProvider);
+    ref.invalidate(recentVarietyProvider);
+    ref.invalidate(dailyPickProvider);
   }
 
-  /// Apply sort algorithm, return sorted list
   Future<List<AntiqueEntity>> _applySort(
     List<AntiqueEntity> items,
     String mode,
-    repo,
+    AntiqueRepository repo,
   ) async {
     switch (mode) {
       case 'acquired_asc':
-        items..sort((a, b) => a.acquiredDate.compareTo(b.acquiredDate));
+        items.sort((a, b) => a.acquiredDate.compareTo(b.acquiredDate));
         break;
       case 'acquired_desc':
-        items..sort((a, b) => b.acquiredDate.compareTo(a.acquiredDate));
+        items.sort((a, b) => b.acquiredDate.compareTo(a.acquiredDate));
         break;
       case 'price_asc':
-        items..sort(
+        items.sort(
           (a, b) => (a.acquiredPrice ?? 0).compareTo(b.acquiredPrice ?? 0),
         );
         break;
       case 'price_desc':
-        items..sort(
+        items.sort(
           (a, b) => (b.acquiredPrice ?? 0).compareTo(a.acquiredPrice ?? 0),
         );
         break;
       case 'patting':
-        final pattingMap = <int, DateTime>{};
-        for (final item in items) {
-          final logs = await repo.getPattingLogs(item.id!);
-          if (logs.isNotEmpty) {
-            pattingMap[item.id!] = logs.first.date;
-          }
-        }
-        items.sort((a, b) {
-          final logA = pattingMap[a.id];
-          final logB = pattingMap[b.id];
-          if (logA == null && logB == null) return 0;
-          if (logA == null) return 1;
-          if (logB == null) return -1;
-          return logB.compareTo(logA);
-        });
+        final latestByItem = await repo.latestPattingDateByItem();
+        items.sort((a, b) => _compareByLatestPatting(a, b, latestByItem));
         break;
     }
     return items;
@@ -116,52 +100,46 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
 
   Future<void> sortBySortMode(String mode) async {
     final repo = await _getRepo();
-    List<AntiqueEntity> sorted;
+    final sorted = await repo.getAll();
     switch (mode) {
       case 'acquired_asc':
-        sorted = await repo.getAll();
         sorted.sort((a, b) => a.acquiredDate.compareTo(b.acquiredDate));
         break;
       case 'acquired_desc':
-        sorted = await repo.getAll();
         sorted.sort((a, b) => b.acquiredDate.compareTo(a.acquiredDate));
         break;
       case 'price_asc':
-        sorted = await repo.getAll();
         sorted.sort(
           (a, b) => (a.acquiredPrice ?? 0).compareTo(b.acquiredPrice ?? 0),
         );
         break;
       case 'price_desc':
-        sorted = await repo.getAll();
         sorted.sort(
           (a, b) => (b.acquiredPrice ?? 0).compareTo(a.acquiredPrice ?? 0),
         );
         break;
       case 'patting':
-        sorted = await repo.getAll();
-        // 有盘玩记录的排前面，按最近盘玩时间
-        final pattingMap = <int, DateTime>{};
-        for (final item in sorted) {
-          final logs = await repo.getPattingLogs(item.id!);
-          if (logs.isNotEmpty) {
-            pattingMap[item.id!] = logs.first.date;
-          }
-        }
-        sorted.sort((a, b) {
-          final logA = pattingMap[a.id];
-          final logB = pattingMap[b.id];
-          if (logA == null && logB == null) return 0;
-          if (logA == null) return 1;
-          if (logB == null) return -1;
-          return logB.compareTo(logA);
-        });
+        final latestByItem = await repo.latestPattingDateByItem();
+        sorted.sort((a, b) => _compareByLatestPatting(a, b, latestByItem));
         break;
       default:
-        state = AsyncValue.data(await repo.getAll());
+        state = AsyncValue.data(sorted);
         return;
     }
     state = AsyncValue.data(sorted);
+  }
+
+  int _compareByLatestPatting(
+    AntiqueEntity a,
+    AntiqueEntity b,
+    Map<int, DateTime> latestByItem,
+  ) {
+    final logA = latestByItem[a.id];
+    final logB = latestByItem[b.id];
+    if (logA == null && logB == null) return 0;
+    if (logA == null) return 1;
+    if (logB == null) return -1;
+    return logB.compareTo(logA);
   }
 
   Future<void> addItem(AntiqueEntity item) async {
@@ -183,15 +161,11 @@ class AntiqueListNotifier extends AsyncNotifier<List<AntiqueEntity>> {
   }
 }
 
-// ===== 分类统计 =====
-
 final categoryCountProvider = FutureProvider<Map<String, int>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) {
     return repo.countByCategory();
   });
 });
-
-// ===== 最新打卡照片（列表页封面） =====
 
 final latestPattingPhotosProvider = FutureProvider<Map<int, String>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) {
@@ -199,9 +173,6 @@ final latestPattingPhotosProvider = FutureProvider<Map<int, String>>((ref) {
   });
 });
 
-// ===== 月历打卡数据 =====
-
-/// 按月份返回 Map<day, List<PattingLogEntity>>（仅含照片的日志）
 final pattingCalendarProvider =
     FutureProvider.family<Map<int, List<PattingLogEntity>>, DateTime>((
       ref,
@@ -220,140 +191,83 @@ final pattingCalendarProvider =
       });
     });
 
-/// 所有藏品的打卡频率计数（用于每日推荐）
 final pattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
-  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
-    final items = await repo.getAll();
-    final freq = <int, int>{};
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      freq[item.id!] = logs.length;
-    }
-    return freq;
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.countPattingLogsByItem();
   });
 });
 
-/// 当月打卡频率计数（用于侍寝榜）
 final monthlyPattingFrequencyProvider = FutureProvider<Map<int, int>>((ref) {
   final now = DateTime.now();
-  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
-    final items = await repo.getAll();
-    final freq = <int, int>{};
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
     final monthStart = DateTime(now.year, now.month, 1);
     final monthEnd = DateTime(now.year, now.month + 1, 1);
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      // 只统计当月
-      final monthLogs = logs
-          .where((l) => l.date.isAfter(monthStart) && l.date.isBefore(monthEnd))
-          .length;
-      if (monthLogs > 0) {
-        freq[item.id!] = monthLogs;
-      }
-    }
-    return freq;
+    return repo.countPattingLogsByItemInRange(monthStart, monthEnd);
   });
 });
 
-/// 累计盘玩时长（用于把玩王）
 final totalPattingDurationProvider = FutureProvider<Map<int, int>>((ref) {
-  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
-    final items = await repo.getAll();
-    final duration = <int, int>{};
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      final total = logs.fold(0, (sum, l) => sum + l.durationMinutes);
-      if (total > 0) duration[item.id!] = total;
-    }
-    return duration;
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.sumPattingMinutesByItem();
   });
 });
 
-/// 冷宫幽怨榜：距离上次打卡的天数
 final coldPalaceRankProvider = FutureProvider<Map<int, int>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
+    final latestByItem = await repo.latestPattingDateByItem();
     final daysMap = <int, int>{};
     final now = DateTime.now();
     for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      if (logs.isEmpty) {
-        // 从未打卡：从入手日算起
-        daysMap[item.id!] = now.difference(item.acquiredDate).inDays;
-      } else {
-        final lastLog = logs.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
-        daysMap[item.id!] = now.difference(lastLog.date).inDays;
-      }
+      final itemId = item.id;
+      if (itemId == null) continue;
+      final latestDate = latestByItem[itemId];
+      daysMap[itemId] = now.difference(latestDate ?? item.acquiredDate).inDays;
     }
     return daysMap;
   });
 });
 
-/// 夜猫子榜：深夜(23:00-3:00)打卡次数
 final nightOwlRankProvider = FutureProvider<Map<int, int>>((ref) {
-  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
-    final items = await repo.getAll();
-    final nightCount = <int, int>{};
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      final count = logs
-          .where((l) => l.date.hour >= 23 || l.date.hour < 3)
-          .length;
-      if (count > 0) nightCount[item.id!] = count;
-    }
-    return nightCount;
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.countNightPattingLogsByItem();
   });
 });
 
-/// 性价比/劳模榜：购入价 ÷ 累计打卡次数（单次成本）
 final costPerPlayProvider = FutureProvider<Map<int, double>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
+    final pattingCounts = await repo.countPattingLogsByItem();
     final costMap = <int, double>{};
     for (final item in items) {
-      if (item.id == null ||
+      final itemId = item.id;
+      if (itemId == null ||
           item.acquiredPrice == null ||
-          item.acquiredPrice! <= 0)
+          item.acquiredPrice! <= 0) {
         continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      final playCount = logs.length;
+      }
+      final playCount = pattingCounts[itemId] ?? 0;
       if (playCount == 0) continue;
-      costMap[item.id!] = item.acquiredPrice! / playCount;
+      costMap[itemId] = item.acquiredPrice! / playCount;
     }
     return costMap;
   });
 });
 
-/// 雨露均沾榜：近两周打卡的品类数
 final recentVarietyProvider = FutureProvider<Map<int, int>>((ref) {
   final now = DateTime.now();
   final twoWeeksAgo = now.subtract(const Duration(days: 14));
-  return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
-    final items = await repo.getAll();
-    // 先统计每个 id 近两周的记录数
-    final recentCount = <int, int>{};
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      final recent = logs.where((l) => l.date.isAfter(twoWeeksAgo)).length;
-      if (recent > 0) recentCount[item.id!] = recent;
-    }
-    return recentCount;
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.countPattingLogsByItemInRange(twoWeeksAgo, now);
   });
 });
 
-// ===== 每日翻牌推荐配置 =====
-
-/// 翻牌推荐配置：每个类别推荐的数量
 class DailyPickConfig {
   final Map<String, int> counts;
 
-  const DailyPickConfig({this.counts = const {'核桃': 2, '手串': 4}});
+  const DailyPickConfig({
+    this.counts = const {'\u6838\u6843': 2, '\u624b\u4e32': 4},
+  });
 
   DailyPickConfig copyWith({Map<String, int>? counts}) =>
       DailyPickConfig(counts: counts ?? this.counts);
@@ -362,7 +276,6 @@ class DailyPickConfig {
 final dailyPickConfigProvider =
     StateNotifierProvider<DailyPickConfigNotifier, DailyPickConfig>((ref) {
       final notifier = DailyPickConfigNotifier();
-      // 异步从持久化加载配置
       Future.microtask(() => notifier.loadFromStorage());
       return notifier;
     });
@@ -407,37 +320,24 @@ class DailyPickConfigNotifier extends StateNotifier<DailyPickConfig> {
   }
 }
 
-// ===== 每日翻牌推荐（按配置） =====
-
 final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();
     final config = ref.watch(dailyPickConfigProvider);
     final now = DateTime.now();
     final monthAgo = DateTime(now.year, now.month - 1, now.day);
+    final freq = await repo.countPattingLogsByItemInRange(monthAgo, now);
 
-    // 统计最近一个月（从今天往前推 30 天）每件藏品的打卡次数
-    final freq = <int, int>{};
-    for (final item in items) {
-      if (item.id == null) continue;
-      final logs = await repo.getPattingLogs(item.id!);
-      final recentLogs = logs.where((l) => l.date.isAfter(monthAgo)).length;
-      freq[item.id!] = recentLogs;
-    }
-
-    // 按打卡频率升序排列（最少的排前面）
     items.sort((a, b) {
       final fa = freq[a.id] ?? 0;
       final fb = freq[b.id] ?? 0;
-      return fa.compareTo(fb); // 升序：最少优先
+      return fa.compareTo(fb);
     });
 
-    // 按配置取每个类别指定数量（从最低频的 2 倍 N 中随机选取）
     final picks = <AntiqueEntity>[];
     final rand = Random(DateTime.now().microsecondsSinceEpoch);
     for (final entry in config.counts.entries) {
       final pool = items.where((i) => i.category == entry.key).toList();
-      // 取最低频的 2×count 个作为候选池，从中随机选
       final takeCount = entry.value;
       final poolSize = (takeCount * 2).clamp(1, pool.length);
       final candidatePool = pool.take(poolSize).toList();
@@ -448,5 +348,4 @@ final dailyPickProvider = FutureProvider<List<AntiqueEntity>>((ref) {
   });
 });
 
-/// 盘串网格列数（默认 2 列）
 final gridColumnsProvider = StateProvider<int>((ref) => 2);

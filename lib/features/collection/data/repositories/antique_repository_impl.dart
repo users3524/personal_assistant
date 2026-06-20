@@ -76,6 +76,28 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
   @override
   Future<int> sumPattingMinutesByDate(DateTime date) =>
       _dao.sumPattingMinutesByDate(date);
+
+  @override
+  Future<Map<int, int>> countPattingLogsByItem() =>
+      _dao.countPattingLogsByItem();
+
+  @override
+  Future<Map<int, int>> countPattingLogsByItemInRange(
+    DateTime start,
+    DateTime end,
+  ) => _dao.countPattingLogsByItemInRange(start, end);
+
+  @override
+  Future<Map<int, int>> sumPattingMinutesByItem() =>
+      _dao.sumPattingMinutesByItem();
+
+  @override
+  Future<Map<int, DateTime>> latestPattingDateByItem() =>
+      _dao.latestPattingDateByItem();
+
+  @override
+  Future<Map<int, int>> countNightPattingLogsByItem() =>
+      _dao.countNightPattingLogsByItem();
 }
 
 // ===== Riverpod Providers =====

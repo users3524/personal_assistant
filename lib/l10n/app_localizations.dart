@@ -16,7 +16,7 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  String get appName => _t('appName', '个人全能助手', 'Personal Assistant');
+  String get appName => _t('appName', '寸积', 'Cunji');
   String get todoList => _t('todoList', '待办清单', 'Todo List');
   String get collection => _t('collection', '文玩记录', 'Collection');
   String get review => _t('review', 'AI 复盘', 'AI Review');
@@ -42,8 +42,7 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      ['zh', 'en'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => ['zh', 'en'].contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) =>

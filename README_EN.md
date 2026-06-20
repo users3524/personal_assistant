@@ -1,8 +1,8 @@
 [English](./README_EN.md) | [中文](./README.md)
 
-# Personal Assistant
+# Cunji
 
-A local-first Flutter app for todos, collection logs, AI reviews, and resume management.
+Cunji makes time tangible: todos, collection logs, AI reviews, and resume management are treated as traces accumulated day by day.
 
 > This README reflects the codebase as of 2026-06-21. Planned features such as midnight review generation, RAG, life compass, STAR resume writing, and PDF export are tracked in `docs/ROADMAP.md` and `docs/TODO.md`, not described as current functionality.
 
@@ -38,7 +38,7 @@ The current package version is `1.0.2+3`, with Dart SDK constraint `^3.10.0`.
 
 ## Database
 
-The current Drift `schemaVersion` is `6`, with 14 tables:
+The current Drift `schemaVersion` is `8`, with 14 tables:
 
 | Table | Purpose |
 | --- | --- |
@@ -77,7 +77,7 @@ Fullscreen routes:
 /review/weekly/:id
 ```
 
-`/review` is currently only a route constant. The planned direction is to register it as an independent review history entry, without adding another bottom tab.
+`/review` is registered as an independent review history entry without adding another bottom tab.
 
 ## Tech Stack
 

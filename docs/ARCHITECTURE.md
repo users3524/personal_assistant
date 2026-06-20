@@ -6,7 +6,7 @@
 
 ## 1. 项目定位
 
-`personal_assistant` 当前是一个 Flutter 本地优先个人工具，已实现四个业务域：
+`寸积` 当前是一个 Flutter 本地优先个人工具，主打“时间的实体化”，已实现四个业务域：
 
 | 业务域 | 当前形态 |
 | --- | --- |
@@ -174,7 +174,7 @@ Resume
 | --- | --- |
 | Android | `compileSdk = 36`，`minSdk = 24`，`targetSdk = 36`，debug 签名用于 release。 |
 | Web | Flutter 默认 Web 壳，manifest 仍是默认描述。 |
-| Windows | 默认 Flutter Windows runner，窗口标题 `personal_assistant`，初始 1280x720。 |
+| Windows | 默认 Flutter Windows runner，窗口标题 `寸积`，初始 1280x720。 |
 
 ## 8. 测试现状
 

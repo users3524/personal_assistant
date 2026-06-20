@@ -1,5 +1,5 @@
 name: personal_assistant
-description: 个人全能助手 - 待办/文玩/AI复盘/动态简历
+description: 寸积 - 时间的实体化
 publish_to: 'none'
 version: 1.0.2+3
 
@@ -68,3 +68,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/cunji_logo.jpg

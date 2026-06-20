@@ -1,8 +1,8 @@
 [English](./README_EN.md) | [中文](./README.md)
 
-# 个人全能助手
+# 寸积
 
-待办、文玩记录、AI 复盘、动态简历集成在一个 Flutter 本地优先应用里。当前代码以 Android 为主要运行目标，同时保留 Windows / Web 工程。
+“寸积”主打时间的实体化：待办推进、文玩盘玩、AI 复盘、动态简历都被视作一寸一寸积累出来的痕迹。当前代码以 Android 为主要运行目标，同时保留 Windows / Web 工程。
 
 > 本文按 2026-06-21 的代码现状整理。未实现的深夜日报、RAG、人生罗盘、STAR 简历生成、PDF 导出等，只记录在 `docs/ROADMAP.md` 和 `docs/TODO.md`。
 

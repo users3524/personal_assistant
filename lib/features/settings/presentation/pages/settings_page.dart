@@ -18,11 +18,7 @@ import '../providers/category_management_providers.dart';
 
 // AI 供应商预设
 const _aiProviders = {
-  '离线模式': {
-    'baseUrl': '',
-    'models': [],
-    'defaultModel': '',
-  },
+  '离线模式': {'baseUrl': '', 'models': [], 'defaultModel': ''},
   'OpenAI': {
     'baseUrl': 'https://api.openai.com/v1',
     'models': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
@@ -43,11 +39,7 @@ const _aiProviders = {
     'models': ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V3'],
     'defaultModel': 'Qwen/Qwen2.5-7B-Instruct',
   },
-  '自定义': {
-    'baseUrl': '',
-    'models': [],
-    'defaultModel': '',
-  },
+  '自定义': {'baseUrl': '', 'models': [], 'defaultModel': ''},
 };
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -130,14 +122,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(children: [
-          Icon(Icons.notifications_outlined, color: Colors.blue),
-          SizedBox(width: 8),
-          Text('通知提醒'),
-        ]),
-        content: const Text('如需接收每日复盘和每周周报的推送提醒，请在系统设置中允许「个人全能助手」的通知权限。'),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_outlined, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('通知提醒'),
+          ],
+        ),
+        content: const Text('如需接收每日复盘和每周周报的推送提醒，请在系统设置中允许「寸积」的通知权限。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('知道了')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
         ],
       ),
     );
@@ -181,7 +178,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _modelCtrl.text = _savedModel;
       });
 
-      ref.read(aiConfigProvider.notifier).update(
+      ref
+          .read(aiConfigProvider.notifier)
+          .update(
             provider: _savedProvider,
             baseUrl: _savedBaseUrl,
             model: _savedModel,
@@ -201,7 +200,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         model: _savedModel,
         apiKey: _savedApiKey,
       );
-      ref.read(aiConfigProvider.notifier).update(
+      ref
+          .read(aiConfigProvider.notifier)
+          .update(
             provider: _savedProvider,
             baseUrl: _savedBaseUrl,
             model: _savedModel,
@@ -209,9 +210,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -248,7 +249,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       const ListTile(
                         leading: Icon(Icons.wifi_off, color: Colors.green),
                         title: Text('离线模式已启用'),
-                        subtitle: Text('无需网络，App 内置模板引擎即时生成日报/周报', style: TextStyle(fontSize: 12)),
+                        subtitle: Text(
+                          '无需网络，App 内置模板引擎即时生成日报/周报',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         trailing: Icon(Icons.check_circle, color: Colors.green),
                       ),
                     ],
@@ -267,18 +271,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ListTile(
                         leading: const Icon(Icons.dns),
                         title: const Text('API 地址'),
-                        subtitle: Text(_savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl),
-                        trailing: const Icon(Icons.edit),
-                        onTap: () => _showTextEditor(
-                          'API 地址', _baseUrlCtrl,
-                          (v) { setState(() => _savedBaseUrl = v); _baseUrlCtrl.text = v; },
+                        subtitle: Text(
+                          _savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl,
                         ),
+                        trailing: const Icon(Icons.edit),
+                        onTap: () =>
+                            _showTextEditor('API 地址', _baseUrlCtrl, (v) {
+                              setState(() => _savedBaseUrl = v);
+                              _baseUrlCtrl.text = v;
+                            }),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       ListTile(
                         leading: const Icon(Icons.model_training),
                         title: const Text('模型'),
-                        subtitle: Text(_savedModel.isEmpty ? '未设置' : _savedModel),
+                        subtitle: Text(
+                          _savedModel.isEmpty ? '未设置' : _savedModel,
+                        ),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _showModelPicker(),
                       ),
@@ -290,18 +299,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           _savedApiKey.isEmpty
                               ? '未配置'
                               : _showApiKey
-                                  ? _savedApiKey
-                                  : _savedApiKey.length > 12
-                                      ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
-                                      : _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****'),
-                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                              ? _savedApiKey
+                              : _savedApiKey.length > 12
+                              ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
+                              : _savedApiKey.replaceRange(
+                                  1,
+                                  _savedApiKey.length - 1,
+                                  '****',
+                                ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility, size: 20),
-                              onPressed: () => setState(() => _showApiKey = !_showApiKey),
+                              icon: Icon(
+                                _showApiKey
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                size: 20,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _showApiKey = !_showApiKey),
                             ),
                             const Icon(Icons.edit, size: 20),
                           ],
@@ -380,7 +402,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CategoryManagementPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const CategoryManagementPage(),
+                    ),
                   ),
                 ),
               ],
@@ -391,75 +415,107 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _sectionHeader('文玩'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Consumer(builder: (context, ref, _) {
-              final config = ref.watch(dailyPickConfigProvider);
-              return Column(
-                children: [
-                  const ListTile(
-                    leading: Icon(Icons.auto_awesome),
-                    title: Text('每日翻牌推荐'),
-                    subtitle: Text('配置每日推荐的种类和数量'),
-                  ),
-                  ...config.counts.entries.map((entry) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          child: Text(entry.key, style: const TextStyle(fontSize: 14)),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, size: 20),
-                          onPressed: () async {
-                            final notifier = ref.read(dailyPickConfigProvider.notifier);
-                            if (entry.value > 1) {
-                              notifier.setCount(entry.key, entry.value - 1);
-                              await _appSettings.setDailyPickCounts(
-                                ref.read(dailyPickConfigProvider).counts,
-                              );
-                            }
-                          },
-                        ),
-                        SizedBox(
-                          width: 24,
-                          child: Text('${entry.value}', textAlign: TextAlign.center),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, size: 20),
-                          onPressed: () async {
-                            ref.read(dailyPickConfigProvider.notifier).setCount(entry.key, entry.value + 1);
-                            await _appSettings.setDailyPickCounts(
-                              ref.read(dailyPickConfigProvider).counts,
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 24),
-                      ],
+            child: Consumer(
+              builder: (context, ref, _) {
+                final config = ref.watch(dailyPickConfigProvider);
+                return Column(
+                  children: [
+                    const ListTile(
+                      leading: Icon(Icons.auto_awesome),
+                      title: Text('每日翻牌推荐'),
+                      subtitle: Text('配置每日推荐的种类和数量'),
                     ),
-                  )),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: const Icon(Icons.grid_view),
-                    title: const Text('盘串网格列数'),
-                    subtitle: Text('当前 ${_gridColumns} 列'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [2, 3, 4].map((n) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: ChoiceChip(
-                          label: Text('$n', style: const TextStyle(fontSize: 12)),
-                          selected: _gridColumns == n,
-                          onSelected: (_) => _setGridColumns(n),
-                          visualDensity: VisualDensity.compact,
+                    ...config.counts.entries.map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
                         ),
-                      )).toList(),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              child: Text(
+                                entry.key,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                size: 20,
+                              ),
+                              onPressed: () async {
+                                final notifier = ref.read(
+                                  dailyPickConfigProvider.notifier,
+                                );
+                                if (entry.value > 1) {
+                                  notifier.setCount(entry.key, entry.value - 1);
+                                  await _appSettings.setDailyPickCounts(
+                                    ref.read(dailyPickConfigProvider).counts,
+                                  );
+                                }
+                              },
+                            ),
+                            SizedBox(
+                              width: 24,
+                              child: Text(
+                                '${entry.value}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                size: 20,
+                              ),
+                              onPressed: () async {
+                                ref
+                                    .read(dailyPickConfigProvider.notifier)
+                                    .setCount(entry.key, entry.value + 1);
+                                await _appSettings.setDailyPickCounts(
+                                  ref.read(dailyPickConfigProvider).counts,
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 24),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            }),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    ListTile(
+                      leading: const Icon(Icons.grid_view),
+                      title: const Text('盘串网格列数'),
+                      subtitle: Text('当前 ${_gridColumns} 列'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [2, 3, 4]
+                            .map(
+                              (n) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    '$n',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  selected: _gridColumns == n,
+                                  onSelected: (_) => _setGridColumns(n),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -517,10 +573,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget _sectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Text(title, style: TextStyle(
-        fontSize: 13, fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.primary,
-      )),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
     );
   }
 
@@ -533,32 +593,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('选择 AI 平台', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                '选择 AI 平台',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
-            ..._aiProviders.keys.map((provider) => RadioListTile<String>(
-                  title: Text(provider),
-                  subtitle: provider == '离线模式'
-                      ? const Text('App 内置模板引擎，无需网络')
-                      : Text(_aiProviders[provider]!['baseUrl']!.toString()),
-                  value: provider,
-                  groupValue: _selectedProvider,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() {
-                      _selectedProvider = v;
-                      final info = _aiProviders[v]!;
-                      _savedBaseUrl = info['baseUrl']!.toString();
-                      _baseUrlCtrl.text = _savedBaseUrl;
-                      if (info['defaultModel']!.toString().isNotEmpty) {
-                        _savedModel = info['defaultModel']!.toString();
-                        _modelCtrl.text = _savedModel;
-                      }
-                      _savedProvider = v;
-                    });
-                    _saveAIConfigToDb();
-                    Navigator.pop(ctx);
-                  },
-                )),
+            ..._aiProviders.keys.map(
+              (provider) => RadioListTile<String>(
+                title: Text(provider),
+                subtitle: provider == '离线模式'
+                    ? const Text('App 内置模板引擎，无需网络')
+                    : Text(_aiProviders[provider]!['baseUrl']!.toString()),
+                value: provider,
+                groupValue: _selectedProvider,
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() {
+                    _selectedProvider = v;
+                    final info = _aiProviders[v]!;
+                    _savedBaseUrl = info['baseUrl']!.toString();
+                    _baseUrlCtrl.text = _savedBaseUrl;
+                    if (info['defaultModel']!.toString().isNotEmpty) {
+                      _savedModel = info['defaultModel']!.toString();
+                      _modelCtrl.text = _savedModel;
+                    }
+                    _savedProvider = v;
+                  });
+                  _saveAIConfigToDb();
+                  Navigator.pop(ctx);
+                },
+              ),
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -567,9 +632,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showModelPicker() {
-    final models = _aiProviders[_selectedProvider]?['models'] as List<String>? ?? [];
+    final models =
+        _aiProviders[_selectedProvider]?['models'] as List<String>? ?? [];
     if (models.isEmpty) {
-      _showTextEditor('模型名称', _modelCtrl, (v) => setState(() => _savedModel = v));
+      _showTextEditor(
+        '模型名称',
+        _modelCtrl,
+        (v) => setState(() => _savedModel = v),
+      );
       return;
     }
     showModalBottomSheet(
@@ -580,19 +650,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('选择模型', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                '选择模型',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
-            ...models.map((model) => RadioListTile<String>(
-                  title: Text(model),
-                  value: model,
-                  groupValue: _savedModel,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() { _savedModel = v; _modelCtrl.text = v; });
-                    _saveAIConfigToDb();
-                    Navigator.pop(ctx);
-                  },
-                )),
+            ...models.map(
+              (model) => RadioListTile<String>(
+                title: Text(model),
+                value: model,
+                groupValue: _savedModel,
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() {
+                    _savedModel = v;
+                    _modelCtrl.text = v;
+                  });
+                  _saveAIConfigToDb();
+                  Navigator.pop(ctx);
+                },
+              ),
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -612,10 +690,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                const Text('平台：', style: TextStyle(fontSize: 13)),
-                Text(_selectedProvider, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              ]),
+              Row(
+                children: [
+                  const Text('平台：', style: TextStyle(fontSize: 13)),
+                  Text(
+                    _selectedProvider,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: ctrl,
@@ -623,21 +709,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   hintText: '输入 API Key',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_showKeyInDialog ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setDialogState(() => _showKeyInDialog = !_showKeyInDialog),
+                    icon: Icon(
+                      _showKeyInDialog
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () => setDialogState(
+                      () => _showKeyInDialog = !_showKeyInDialog,
+                    ),
                   ),
                 ),
                 obscureText: !_showKeyInDialog,
               ),
               const SizedBox(height: 8),
-              Text('Key 存储在本地设备上', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(
+                'Key 存储在本地设备上',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
             TextButton(
               onPressed: () {
-                setState(() { _savedApiKey = ctrl.text.trim(); });
+                setState(() {
+                  _savedApiKey = ctrl.text.trim();
+                });
                 _saveAIConfigToDb();
                 Navigator.pop(ctx);
               },
@@ -649,19 +749,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _showTextEditor(String title, TextEditingController ctrl, Function(String) onSave) {
+  void _showTextEditor(
+    String title,
+    TextEditingController ctrl,
+    Function(String) onSave,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: TextField(
           controller: ctrl,
-          decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           TextButton(
-            onPressed: () { onSave(ctrl.text.trim()); _saveAIConfigToDb(); Navigator.pop(ctx); },
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              onSave(ctrl.text.trim());
+              _saveAIConfigToDb();
+              Navigator.pop(ctx);
+            },
             child: const Text('保存'),
           ),
         ],
@@ -672,15 +786,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   // ===== 通知时间选择 =====
   Future<void> _pickTime(BuildContext context, bool isDaily) async {
     final initial = isDaily ? _notificationTime : _weeklyTime;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null) {
       setState(() {
         if (isDaily) {
           _notificationTime = picked;
-          _prefsDao?.setDailyReviewTime('${picked.hour}:${picked.minute.toString().padLeft(2, '0')}');
+          _prefsDao?.setDailyReviewTime(
+            '${picked.hour}:${picked.minute.toString().padLeft(2, '0')}',
+          );
         } else {
           _weeklyTime = picked;
           _prefsDao?.setWeeklyReminder(true);
@@ -709,7 +822,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         content: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
             SizedBox(width: 16),
             Text('正在连接 Ollama 服务…'),
           ],
@@ -718,11 +835,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 5),
-        receiveTimeout: const Duration(seconds: 10),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
 
       // 调用 Ollama 的 /api/tags 获取本地已下载的模型列表
       final response = await dio.get('/api/tags');
@@ -732,13 +851,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       Navigator.of(context).pop(); // 关闭加载对话框
 
       // 构建可用模型列表字符串
-      final modelNames = models.map((m) {
-        final name = m['name'] ?? m['model'] ?? '未知';
-        final size = m['size'] != null
-            ? ' (${_formatBytes(m['size'] as int)})'
-            : '';
-        return '  • $name$size';
-      }).join('\n');
+      final modelNames = models
+          .map((m) {
+            final name = m['name'] ?? m['model'] ?? '未知';
+            final size = m['size'] != null
+                ? ' (${_formatBytes(m['size'] as int)})'
+                : '';
+            return '  • $name$size';
+          })
+          .join('\n');
 
       if (!mounted) return;
       showDialog(
@@ -759,9 +880,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Text('Ollama 服务运行正常。'),
                 const SizedBox(height: 12),
                 if (models.isNotEmpty) ...[
-                  const Text('已安装的模型：', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    '已安装的模型：',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
-                  Text(modelNames, style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
+                  Text(
+                    modelNames,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     '当前推荐模型：${_aiProviders["本地模型 (Ollama)"]!["defaultModel"]}',
@@ -810,7 +940,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             children: [
               const Text('无法连接到 Ollama 服务。'),
               const SizedBox(height: 8),
-              Text('错误：${e.toString().replaceFirst(RegExp(r'^.+Exception: '), '')}'),
+              Text(
+                '错误：${e.toString().replaceFirst(RegExp(r'^.+Exception: '), '')}',
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -821,7 +953,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('💡 排查方法：', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '💡 排查方法：',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(height: 4),
                     Text('1. 确保已安装 Ollama (ollama.com)'),
                     Text('2. 启动 Ollama 桌面应用或运行 ollama serve'),
@@ -893,17 +1028,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (mounted) {
         if (path != null && path.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已导出：$path'), duration: const Duration(seconds: 4)),
+            SnackBar(
+              content: Text('已导出：$path'),
+              duration: const Duration(seconds: 4),
+            ),
           );
         } else {
           // SAF 写入成功但没返回路径（部分 Android 版本）
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已导出'), duration: const Duration(seconds: 2)),
+            const SnackBar(
+              content: Text('已导出'),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
     }
   }
 
@@ -921,7 +1065,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           title: const Text('导入备份'),
           content: const Text('确定要恢复数据吗？\n\n⚠️ 当前所有数据将被覆盖！'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -940,18 +1087,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         final db = await ref.read(appDatabaseProvider.future);
         await ref.read(collectionCategoriesProvider.notifier).restoreFromDb(db);
       } catch (_) {}
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('数据已恢复！')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败: $e')));
     }
   }
 
   void _showLicenses() {
     showLicensePage(
       context: context,
-      applicationName: '个人全能助手',
+      applicationName: '寸积',
       applicationVersion: '1.0.0',
-      applicationLegalese: '© 2025 Personal Assistant',
+      applicationLegalese: '© 2026 Cunji',
     );
   }
 }

@@ -1,4 +1,4 @@
-# Changelog — 个人全能助手
+# Changelog — 寸积
 
 > 自动构建 APK 下载地址：
 > [GitHub Releases](https://github.com/users3524/personal_assistant/releases)

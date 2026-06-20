@@ -62,6 +62,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                 onSelected: (value) => _handleAction(context, todo, value),
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                  if (todo.isParent) const PopupMenuItem(value: 'addSubtask', child: Text('添加子任务')),
                   const PopupMenuItem(value: 'delete', child: Text('删除')),
                 ],
               ),
@@ -91,6 +92,8 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                 _buildInfoSection(todo),
                 const SizedBox(height: 24),
 
+                // 子任务列表
+                if (todo.isParent) _buildSubtasksSection(todo),
                 // 操作按钮
                 _buildActionButtons(todo),
               ],
@@ -311,6 +314,9 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
       case 'edit':
         context.push('/todos/${todo.id}/edit');
         break;
+      case 'addSubtask':
+        _showAddSubtaskDialog(context, todo);
+        break;
       case 'delete':
         _confirmDelete(context, todo);
         break;
@@ -359,5 +365,107 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ===== 子任务 =====
+
+  Widget _buildSubtasksSection(TodoEntity todo) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text('子任务', style: Theme.of(context).textTheme.titleMedium),
+              if (todo.subtasks.isNotEmpty)
+                Text(' (${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length})',
+                    style: TextStyle(fontSize: 12, color: Colors.teal.shade600)),
+              const Spacer(),
+              TextButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('添加'),
+                onPressed: () => _showAddSubtaskDialog(context, todo),
+              ),
+            ]),
+            if (todo.subtasks.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('暂无子任务，点击上方添加', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              )
+            else
+              ...todo.subtasks.map((s) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: GestureDetector(
+                  onTap: () {
+                    if (s.isDone) {
+                      ref.read(todoListProvider.notifier).reopenTodo(s.id!);
+                    } else {
+                      ref.read(todoListProvider.notifier).completeTodo(s.id!);
+                    }
+                    setState(() {});
+                  },
+                  child: Container(
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: s.isDone ? Colors.teal : Colors.transparent,
+                      border: Border.all(color: s.isDone ? Colors.teal : Colors.grey, width: 1.5),
+                    ),
+                    child: s.isDone ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+                  ),
+                ),
+                title: Text(s.title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      decoration: s.isDone ? TextDecoration.lineThrough : null,
+                      color: s.isDone ? Colors.grey : null,
+                    )),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                  onPressed: () async {
+                    await ref.read(todoListProvider.notifier).deleteTodo(s.id!);
+                    setState(() {});
+                  },
+                ),
+              )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddSubtaskDialog(BuildContext context, TodoEntity todo) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加子任务'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '子任务名称', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () async {
+            if (ctrl.text.trim().isEmpty) return;
+            final now = DateTime.now();
+            final subtask = TodoEntity(
+              title: ctrl.text.trim(),
+              category: todo.category,
+              priority: todo.priority,
+              createdAt: now,
+              updatedAt: now,
+            );
+            await ref.read(todoListProvider.notifier).addSubtask(todo.id!, subtask);
+            if (ctx.mounted) Navigator.pop(ctx);
+            if (mounted) setState(() {});
+          }, child: const Text('创建')),
+        ],
+      ),
+    );
   }
 }

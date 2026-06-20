@@ -54,6 +54,13 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
     await refresh();
   }
 
+  /// 添加子任务
+  Future<void> addSubtask(int parentId, TodoEntity subtask) async {
+    final repo = await _getRepo();
+    await repo.addSubtask(parentId, subtask);
+    await refresh();
+  }
+
   Future<void> updateTodo(TodoEntity todo) async {
     final repo = await _getRepo();
     await repo.update(todo);

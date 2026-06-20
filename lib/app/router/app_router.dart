@@ -16,6 +16,7 @@ import '../../features/collection/presentation/pages/antique_form_page.dart';
 import '../../features/collection/presentation/pages/antique_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
+import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
 import '../../features/resume/presentation/pages/resume_home_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -142,9 +143,9 @@ class MainShell extends StatelessWidget {
 }
 
 /// 创建路由配置
-GoRouter createRouter() {
+GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
   return GoRouter(
-    initialLocation: RouteNames.todoList,
+    initialLocation: initialLocation,
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -239,6 +240,10 @@ GoRouter createRouter() {
         builder: (context, state) => const SettingsPage(),
       ),
       // 复盘页面（全屏，不显示底部导航）
+      GoRoute(
+        path: RouteNames.reviewHome,
+        builder: (context, state) => const ReviewHomePage(),
+      ),
       GoRoute(
         path: RouteNames.dailyReviewNew,
         builder: (context, state) => const DailyReviewChatPage(),

@@ -71,6 +71,7 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 
 入口：
 
+- `/review`
 - `/review/daily/new`
 - `/review/daily/edit/:date`
 - `/review/daily/:date`
@@ -166,13 +167,14 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 
 ```text
 /settings
+/review
 /review/daily/new
 /review/daily/edit/:date
 /review/daily/:date
 /review/weekly/:id
 ```
 
-`RouteNames` 中保留了 `/review`、`/resume/preview`、`/resume/templates` 常量，但当前路由表没有注册这些独立页面。后续计划将 `ReviewHomePage` 注册为独立 `/review` 历史入口，但不新增底部 Tab。
+`/review` 已注册为独立全屏复盘历史入口，不占用底部 Tab。`RouteNames` 中仍保留 `/resume/preview`、`/resume/templates` 常量，但当前路由表没有注册这些独立页面。
 
 ## 项目结构
 

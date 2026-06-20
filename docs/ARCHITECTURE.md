@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 任务、清单、子任务、软删除、归档、统计、周/月视图。 |
 | 文玩/盘串 | 藏品档案、分类字段、照片、盘玩打卡、打卡对比、月历、趣味榜单；估值功能已应用层下线，schema v6 遗留表/列暂留兼容。 |
-| AI 复盘 | 对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入。 |
+| AI 复盘 | 独立复盘历史入口、对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入。 |
 | 动态简历 | 三模板预览、长表单编辑、可见性开关、拖拽排序、图片导出分享。 |
 
 ## 2. 技术栈
@@ -58,13 +58,14 @@ Tab 2: /resume        简历
 
 ```text
 /settings
+/review
 /review/daily/new
 /review/daily/edit/:date
 /review/daily/:date
 /review/weekly/:id
 ```
 
-注意：`RouteNames` 中保留了 `/review`、`/resume/preview`、`/resume/templates` 常量，但当前 `app_router.dart` 没有注册这些独立页面路由。
+注意：`/review` 是独立全屏复盘历史入口，不进入底部导航。`RouteNames` 中仍保留 `/resume/preview`、`/resume/templates` 常量，但当前 `app_router.dart` 没有注册这些独立页面路由。
 
 ## 4. 目录结构
 

@@ -8,12 +8,11 @@
 
 | 路由 | 页面 | 当前功能 |
 | --- | --- | --- |
+| `/review` | `ReviewHomePage` | 独立全屏复盘历史入口，不占用底部 Tab；展示今日复盘入口、本周周报入口和本月历史记录。 |
 | `/review/daily/new` | `DailyReviewChatPage` | 创建今日复盘。 |
 | `/review/daily/edit/:date` | `DailyReviewChatPage(dateStr)` | 加载已有复盘并继续对话/保存。 |
 | `/review/daily/:date` | `DailyReviewDetailPage` | 查看日报详情，编辑或删除。 |
 | `/review/weekly/:id` | `WeeklyReportPage` | 查看/生成某周周报。 |
-
-`ReviewHomePage` 文件存在，但当前没有在主路由中注册为 Tab 或独立 `/review` 页面。
 
 ## 2. 数据表
 

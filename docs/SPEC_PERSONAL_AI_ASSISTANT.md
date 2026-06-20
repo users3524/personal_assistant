@@ -59,6 +59,7 @@ work_experiences.responsibilities/tech_stack -> List<String>
 | 多供应商配置 | `settings_page.dart` |
 | 日报 Prompt | `AIPrompts.dailyReviewSystemPrompt` |
 | 周报 Prompt | `AIPrompts.weeklyReportSystemPrompt` |
+| 纯文本解析降级 | `AIOutputParser` 保留未按格式返回的原始输出，并生成用户可见提示。 |
 | 日报文玩分钟输入 | `DailyReviewChatPage` 通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取当日盘玩分钟。 |
 | 单次文本 500 字限制 | `DailyReviewChatPage` 输入框和发送入口共同限制。 |
 | STT 60 秒截断 | `DailyReviewChatPage` 本地计时器自动停止识别并发送已识别文本。 |
@@ -69,7 +70,7 @@ work_experiences.responsibilities/tech_stack -> List<String>
 | --- | --- |
 | 每日 15 轮熔断 | 无持久化 turn 计数和熔断 UI。 |
 | 深夜 2:00-5:00 后台引擎 | 当前无后台调度实现。 |
-| 结构化 JSON 输出/重试 | 当前 OpenAI 输出按纯文本解析。 |
+| 结构化 JSON 输出/重试 | 当前 OpenAI 输出仍按纯文本解析，未接入 JSON schema 和重试。 |
 | RAG / 向量存储 / 人生罗盘 | 当前无表、无检索实现。 |
 | STAR 简历生成 | 当前无 AI 简历润色流程。 |
 

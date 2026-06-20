@@ -60,8 +60,9 @@
 | `OpenAIService` | 调用 `/v1/chat/completions` 和 `/v1/models`。 |
 | `AIConfigProvider` | 从 `user_preferences` 加载 provider/baseUrl/model/apiKey。 |
 | `AIPrompts` | 日报和周报纯文本 Prompt。 |
+| `AIOutputParser` | 解析日报/周报纯文本输出；格式缺失时保留原始内容并写入用户可见的降级提示。 |
 
-在线服务当前通过纯文本解析返回内容，没有结构化 JSON schema。
+在线服务当前通过纯文本解析返回内容，没有结构化 JSON schema。若模型未按提示词分段输出，系统不会静默写入空内容，而是把原始输出放入评语/周报字段并提示用户手动整理。
 
 ## 4. 当前对话式日报流程
 

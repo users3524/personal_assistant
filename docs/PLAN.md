@@ -20,10 +20,9 @@
 ## 2. 下一步建议顺序
 
 1. 处理文玩图片路径统一和默认“长串”分类。
-2. 接着补 AI 输出解析失败的用户可见降级。
-3. 为待办今日统计、本周完成率、拖延率补专项单元测试，并评估是否需要索引迁移。
-4. AI 智能化前先做 schema RFC：`chat_turns`、`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
-5. 再进入 15 轮限制、前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
+2. 为待办今日统计、本周完成率、拖延率补专项单元测试，并评估是否需要索引迁移。
+3. AI 智能化前先做 schema RFC：`chat_turns`、`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
+4. 再进入 15 轮限制、前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
 
 ## 3. 已吸收的智能化规划优点
 

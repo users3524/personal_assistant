@@ -259,6 +259,7 @@ personal_assistant/
 | 文档 | 内容 | 适合读者 |
 |------|------|---------|
 | [📄 完整开发计划](docs/PLAN.md) | 各 Phase 的开发和完成状态 | 贡献者、维护者 |
+| [🗺️ 核心路线图](docs/ROADMAP.md) | v1.1.0+ 规划、当前进行中、已废弃 | 贡献者 |
 | [⏳ 待实现功能](docs/TODO.md) | 已知问题与后续优化项（含优先级） | 贡献者 |
 | [🏗️ 架构设计](docs/ARCHITECTURE.md) | 技术栈选型、分层架构、路由、数据库 ER | 开发者 |
 | [✅ 待办模块规格](docs/SPEC_TODO.md) | 数据模型、DAO 接口、筛选查询、统计 | 模块开发者 |
@@ -284,11 +285,12 @@ personal_assistant/
 
 ### 🔜 规划中
 
-详见 [TODO.md](docs/TODO.md)，主要方向：
+详见 [ROADMAP.md](docs/ROADMAP.md) 和 [TODO.md](docs/TODO.md)，主要方向：
 
-- 旧版格式兼容提示（P2）
-- 导出功能扩展：CSV / 选择性导出 / 云备份（P3）
-- 代码结构持续整理
+- **Phase 8 — 文玩轻量化**：下线估值模块，移除 fl_chart 依赖
+- **Phase 9 — 四层架构**：分类→清单→任务→子任务，AI 复盘状态机
+- **APK 体积瘦身**：限制单架构构建，清理 assets 目录，移除无用依赖
+- **图片存储规范化**：废除 Base64 入 JSON 备份，全部改为沙盒文件存储
 
 ---
 

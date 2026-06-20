@@ -37,6 +37,171 @@ void main() {
       expect(hydratedParent.subtasks.map((todo) => todo.title), ['Child B']);
       expect(hydratedOther.subtasks.map((todo) => todo.title), ['Other child']);
     });
+
+    test(
+      'counts today total from parent tasks only with half-open day',
+      () async {
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+        final todayNoon = todayStart.add(const Duration(hours: 12));
+        final yesterday = todayStart.subtract(const Duration(days: 1));
+        final tomorrowStart = todayStart.add(const Duration(days: 1));
+
+        await dao.insert(
+          _todo('Active today', todayNoon, startedAt: todayNoon),
+        );
+        await dao.insert(
+          _todo('Rolled over active', yesterday, startedAt: yesterday),
+        );
+        await dao.insert(
+          _todo(
+            'Completed today',
+            yesterday,
+            status: TodoStatus.done,
+            completedAt: todayNoon,
+          ),
+        );
+        await dao.insert(
+          _todo(
+            'Completed tomorrow boundary',
+            todayNoon,
+            status: TodoStatus.done,
+            completedAt: tomorrowStart,
+          ),
+        );
+        await dao.insert(
+          _todo('Future active', tomorrowStart, startedAt: tomorrowStart),
+        );
+        await dao.insert(
+          _todo('Deleted active', todayNoon, deletedAt: todayNoon),
+        );
+        await dao.insert(
+          _todo('Cancelled today', todayNoon, status: TodoStatus.cancelled),
+        );
+
+        final parent = await dao.insert(_todo('Parent', todayNoon));
+        await dao.addSubtask(
+          parent.id!,
+          _todo('Child active today', todayNoon, startedAt: todayNoon),
+        );
+        await dao.addSubtask(
+          parent.id!,
+          _todo(
+            'Child completed today',
+            todayNoon,
+            status: TodoStatus.done,
+            completedAt: todayNoon,
+          ),
+        );
+
+        expect(await dao.countTodayCompleted(), 1);
+        expect(await dao.countTodayTotal(), 4);
+      },
+    );
+
+    test(
+      'calculates weekly completion rate from current week parent tasks',
+      () async {
+        final now = DateTime.now();
+        final weekStartRaw = now.subtract(Duration(days: now.weekday - 1));
+        final weekStart = DateTime(
+          weekStartRaw.year,
+          weekStartRaw.month,
+          weekStartRaw.day,
+        );
+        final weekMid = weekStart.add(const Duration(days: 2));
+        final weekEnd = weekStart.add(const Duration(days: 7));
+        final previousWeek = weekStart.subtract(const Duration(days: 1));
+
+        await dao.insert(
+          _todo('Done this week', weekMid, status: TodoStatus.done),
+        );
+        await dao.insert(_todo('Pending this week', weekMid));
+        await dao.insert(
+          _todo('Done previous week', previousWeek, status: TodoStatus.done),
+        );
+        await dao.insert(
+          _todo('Done next week boundary', weekEnd, status: TodoStatus.done),
+        );
+        await dao.insert(
+          _todo(
+            'Deleted done this week',
+            weekMid,
+            status: TodoStatus.done,
+            deletedAt: weekMid,
+          ),
+        );
+
+        final parent = await dao.insert(_todo('Parent', weekMid));
+        await dao.addSubtask(
+          parent.id!,
+          _todo('Child done this week', weekMid, status: TodoStatus.done),
+        );
+
+        expect(await dao.weeklyCompletionRate(), 1 / 3);
+      },
+    );
+
+    test('calculates delay rate from completed parent tasks only', () async {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final yesterday = todayStart.subtract(const Duration(days: 1));
+      final todayNoon = todayStart.add(const Duration(hours: 12));
+
+      await dao.insert(
+        _todo(
+          'Delayed done',
+          yesterday,
+          status: TodoStatus.done,
+          dueDate: yesterday,
+          completedAt: todayNoon,
+        ),
+      );
+      await dao.insert(
+        _todo(
+          'On time done',
+          todayStart,
+          status: TodoStatus.done,
+          dueDate: todayNoon,
+          completedAt: todayNoon,
+        ),
+      );
+      await dao.insert(
+        _todo('Done without due date', todayStart, status: TodoStatus.done),
+      );
+      await dao.insert(
+        _todo(
+          'Deleted delayed done',
+          yesterday,
+          status: TodoStatus.done,
+          dueDate: yesterday,
+          completedAt: todayNoon,
+          deletedAt: todayNoon,
+        ),
+      );
+      await dao.insert(
+        _todo(
+          'Pending overdue',
+          yesterday,
+          dueDate: yesterday,
+          completedAt: todayNoon,
+        ),
+      );
+
+      final parent = await dao.insert(_todo('Parent', todayStart));
+      await dao.addSubtask(
+        parent.id!,
+        _todo(
+          'Delayed child done',
+          yesterday,
+          status: TodoStatus.done,
+          dueDate: yesterday,
+          completedAt: todayNoon,
+        ),
+      );
+
+      expect(await dao.delayRate(), 1 / 3);
+    });
   });
 
   group('TodoRepositoryImpl', () {
@@ -116,6 +281,7 @@ TodoEntity _todo(
   DateTime? startedAt,
   DateTime? completedAt,
   DateTime? cancelledAt,
+  DateTime? deletedAt,
   int? actualMinutes,
   String? recurrenceRule,
 }) {
@@ -127,6 +293,7 @@ TodoEntity _todo(
     startedAt: startedAt ?? now,
     completedAt: completedAt,
     cancelledAt: cancelledAt,
+    deletedAt: deletedAt,
     actualMinutes: actualMinutes,
     recurrenceRule: recurrenceRule,
     createdAt: now,

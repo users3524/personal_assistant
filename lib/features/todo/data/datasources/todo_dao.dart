@@ -542,7 +542,7 @@ class TodoDao {
         await (_db.select(_db.todos)..where(
               (t) =>
                   t.status.equals('done') &
-                  t.completedAt.isBetweenValues(todayStart, todayEnd) &
+                  _dateInHalfOpenRange(t.completedAt, todayStart, todayEnd) &
                   t.deletedAt.isNull() &
                   t.parentId.isNull(),
             ))
@@ -579,7 +579,11 @@ class TodoDao {
     final all =
         await (_db.select(_db.todos)..where(
               (t) =>
-                  t.createdAt.isBetweenValues(weekStartDate, weekEndDate) &
+                  _dateInHalfOpenRange(
+                    t.createdAt,
+                    weekStartDate,
+                    weekEndDate,
+                  ) &
                   t.deletedAt.isNull() &
                   t.parentId.isNull(),
             ))
@@ -604,5 +608,13 @@ class TodoDao {
       return t.completedAt!.isAfter(t.dueDate!);
     }).length;
     return delayed / done.length;
+  }
+
+  Expression<bool> _dateInHalfOpenRange(
+    DateTimeColumn column,
+    DateTime start,
+    DateTime end,
+  ) {
+    return column.isBiggerOrEqualValue(start) & column.isSmallerThanValue(end);
   }
 }

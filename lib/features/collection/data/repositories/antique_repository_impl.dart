@@ -44,14 +44,6 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
   Future<List<AntiqueEntity>> search(String keyword) => _dao.search(keyword);
 
   @override
-  Future<List<ValuationRecordEntity>> getValuations(int itemId) =>
-      _dao.getValuations(itemId);
-
-  @override
-  Future<ValuationRecordEntity> addValuation(ValuationRecordEntity record) =>
-      _dao.addValuation(record);
-
-  @override
   Future<List<PattingLogEntity>> getPattingLogs(int itemId) =>
       _dao.getPattingLogs(itemId);
 
@@ -72,8 +64,7 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
       _dao.updatePattingLog(log);
 
   @override
-  Future<void> deletePattingLog(int id) =>
-      _dao.deletePattingLog(id);
+  Future<void> deletePattingLog(int id) => _dao.deletePattingLog(id);
 
   @override
   Future<Map<int, String>> getLatestPattingPhotos() =>
@@ -81,9 +72,6 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
 
   @override
   Future<Map<String, int>> countByCategory() => _dao.countByCategory();
-
-  @override
-  Future<double> totalValuation() => _dao.totalValuation();
 }
 
 // ===== Riverpod Providers =====
@@ -93,8 +81,9 @@ final antiqueDaoProvider = FutureProvider<AntiqueDao>((ref) async {
   return AntiqueDao(db);
 });
 
-final antiqueRepositoryProvider =
-    FutureProvider<AntiqueRepository>((ref) async {
+final antiqueRepositoryProvider = FutureProvider<AntiqueRepository>((
+  ref,
+) async {
   final dao = await ref.watch(antiqueDaoProvider.future);
   return AntiqueRepositoryImpl(dao);
 });

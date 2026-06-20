@@ -13,7 +13,6 @@ class AntiqueEntity {
   final double? acquiredPrice;
   final String? sourceSeller;
   final AntiqueCondition condition;
-  final double? currentValuation;
   final List<String> imagePaths;
   final Map<String, String>? categoryMetadata; // 分类专属字段 (边宽/重量/尺寸等)
   final String? fingerprints;
@@ -31,7 +30,6 @@ class AntiqueEntity {
     this.acquiredPrice,
     this.sourceSeller,
     this.condition = AntiqueCondition.good,
-    this.currentValuation,
     this.imagePaths = const [],
     this.categoryMetadata,
     this.fingerprints,
@@ -50,7 +48,6 @@ class AntiqueEntity {
     double? acquiredPrice,
     String? sourceSeller,
     AntiqueCondition? condition,
-    double? currentValuation,
     List<String>? imagePaths,
     Map<String, String>? categoryMetadata,
     String? fingerprints,
@@ -68,7 +65,6 @@ class AntiqueEntity {
       acquiredPrice: acquiredPrice ?? this.acquiredPrice,
       sourceSeller: sourceSeller ?? this.sourceSeller,
       condition: condition ?? this.condition,
-      currentValuation: currentValuation ?? this.currentValuation,
       imagePaths: imagePaths ?? this.imagePaths,
       categoryMetadata: categoryMetadata ?? this.categoryMetadata,
       fingerprints: fingerprints ?? this.fingerprints,
@@ -92,23 +88,6 @@ class AntiqueEntity {
   }
 }
 
-/// 估值记录领域实体。
-class ValuationRecordEntity {
-  final int? id;
-  final int itemId;
-  final DateTime date;
-  final double amount;
-  final String? remark;
-
-  const ValuationRecordEntity({
-    this.id,
-    required this.itemId,
-    required this.date,
-    required this.amount,
-    this.remark,
-  });
-}
-
 /// 盘玩日志领域实体。
 class PattingLogEntity {
   final int? id;
@@ -129,8 +108,7 @@ class PattingLogEntity {
     this.photoPaths = const [],
   });
 
-  String get methodLabel =>
-      method == 'bare_hand' ? '净手盘' : '手套盘';
+  String get methodLabel => method == 'bare_hand' ? '净手盘' : '手套盘';
 
   PattingLogEntity copyWith({
     int? id,

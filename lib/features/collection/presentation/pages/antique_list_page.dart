@@ -27,7 +27,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final categoryCount = ref.watch(categoryCountProvider).valueOrNull ?? {};
     final viewMode = ref.watch(collectionViewModeProvider);
     final gridColumns = ref.watch(gridColumnsProvider);
-    final aspectRatio = gridColumns == 2 ? 0.78 : (gridColumns == 3 ? 0.85 : 0.9);
+    final aspectRatio = gridColumns == 2
+        ? 0.78
+        : (gridColumns == 3 ? 0.85 : 0.9);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,15 +41,18 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         actions: [
           // 月历切换
           IconButton(
-            icon: Icon(viewMode == CollectionViewMode.grid
-                ? Icons.calendar_month
-                : Icons.grid_view),
+            icon: Icon(
+              viewMode == CollectionViewMode.grid
+                  ? Icons.calendar_month
+                  : Icons.grid_view,
+            ),
             tooltip: viewMode == CollectionViewMode.grid ? '月历' : '网格',
             onPressed: () {
-              ref.read(collectionViewModeProvider.notifier).state =
-                  viewMode == CollectionViewMode.grid
-                      ? CollectionViewMode.calendar
-                      : CollectionViewMode.grid;
+              ref
+                  .read(collectionViewModeProvider.notifier)
+                  .state = viewMode == CollectionViewMode.grid
+                  ? CollectionViewMode.calendar
+                  : CollectionViewMode.grid;
             },
           ),
           PopupMenuButton<String>(
@@ -61,12 +66,36 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             itemBuilder: (context) {
               final cur = ref.watch(antiqueSortModeProvider);
               return [
-                CheckedPopupMenuItem(value: '', checked: cur == '', child: const Text('默认排序')),
-                CheckedPopupMenuItem(value: 'acquired_desc', checked: cur == 'acquired_desc', child: const Text('入手时间 ↓')),
-                CheckedPopupMenuItem(value: 'acquired_asc', checked: cur == 'acquired_asc', child: const Text('入手时间 ↑')),
-                CheckedPopupMenuItem(value: 'price_desc', checked: cur == 'price_desc', child: const Text('入手价格 ↓')),
-                CheckedPopupMenuItem(value: 'price_asc', checked: cur == 'price_asc', child: const Text('入手价格 ↑')),
-                CheckedPopupMenuItem(value: 'patting', checked: cur == 'patting', child: const Text('最近盘玩')),
+                CheckedPopupMenuItem(
+                  value: '',
+                  checked: cur == '',
+                  child: const Text('默认排序'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'acquired_desc',
+                  checked: cur == 'acquired_desc',
+                  child: const Text('入手时间 ↓'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'acquired_asc',
+                  checked: cur == 'acquired_asc',
+                  child: const Text('入手时间 ↑'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'price_desc',
+                  checked: cur == 'price_desc',
+                  child: const Text('入手价格 ↓'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'price_asc',
+                  checked: cur == 'price_asc',
+                  child: const Text('入手价格 ↑'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'patting',
+                  checked: cur == 'patting',
+                  child: const Text('最近盘玩'),
+                ),
               ];
             },
           ),
@@ -83,7 +112,14 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         },
         child: viewMode == CollectionViewMode.calendar
             ? _buildCalendarView(context)
-            : _buildGridView(context, ref, listAsync, categoryCount, gridColumns, aspectRatio),
+            : _buildGridView(
+                context,
+                ref,
+                listAsync,
+                categoryCount,
+                gridColumns,
+                aspectRatio,
+              ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/collection/new'),
@@ -118,7 +154,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 : items.where((i) => i.category == filter).toList();
 
             if (filtered.isEmpty) {
-              return const SliverFillRemaining(child: Center(child: Text('该分类暂无藏品')));
+              return const SliverFillRemaining(
+                child: Center(child: Text('该分类暂无藏品')),
+              );
             }
 
             return SliverPadding(
@@ -130,28 +168,28 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                   crossAxisSpacing: 12,
                   childAspectRatio: aspectRatio,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = filtered[index];
-                    return _buildGridCard(context, ref, item);
-                  },
-                  childCount: filtered.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final item = filtered[index];
+                  return _buildGridCard(context, ref, item);
+                }, childCount: filtered.length),
               ),
             );
           },
           loading: () => const SliverFillRemaining(
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (err, _) => SliverFillRemaining(
-            child: Center(child: Text('加载失败: $err')),
-          ),
+          error: (err, _) =>
+              SliverFillRemaining(child: Center(child: Text('加载失败: $err'))),
         ),
       ],
     );
   }
 
-  Widget _buildGridCard(BuildContext context, WidgetRef ref, AntiqueEntity item) {
+  Widget _buildGridCard(
+    BuildContext context,
+    WidgetRef ref,
+    AntiqueEntity item,
+  ) {
     final photosAsync = ref.watch(latestPattingPhotosProvider);
     final latestPhoto = photosAsync.valueOrNull?[item.id];
 
@@ -177,20 +215,30 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(width: 4),
-                  Text('今日伴手推荐',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade800)),
+                  Text(
+                    '今日伴手推荐',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
                       ref.invalidate(dailyPickProvider);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.shade50,
                         borderRadius: BorderRadius.circular(12),
@@ -198,9 +246,19 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.replay, size: 14, color: Colors.orange.shade700),
+                          Icon(
+                            Icons.replay,
+                            size: 14,
+                            color: Colors.orange.shade700,
+                          ),
                           const SizedBox(width: 2),
-                          Text('换一换', style: TextStyle(fontSize: 11, color: Colors.orange.shade700)),
+                          Text(
+                            '换一换',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -232,36 +290,56 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   Widget _buildPickCard(BuildContext context, AntiqueEntity item) {
     final photosAsync = ref.watch(latestPattingPhotosProvider);
     final latestPhoto = photosAsync.valueOrNull?[item.id];
-    final cover = latestPhoto ?? (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
+    final cover =
+        latestPhoto ??
+        (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
 
     return GestureDetector(
       onTap: () => context.push('/collection/${item.id}'),
       child: Container(
         width: 100,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
               child: cover != null
-                  ? Image.file(File(cover),
-                      width: 100, height: 72, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPickIcon(item.category))
+                  ? Image.file(
+                      File(cover),
+                      width: 100,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _buildPickIcon(item.category),
+                    )
                   : _buildPickIcon(item.category),
             ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(item.name,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(
+                item.name,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            Text(item.subtype ?? item.category,
-                style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              item.subtype ?? item.category,
+              style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 4),
           ],
         ),
@@ -271,11 +349,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   Widget _buildPickIcon(String category) {
     return Container(
-      width: 100, height: 72,
+      width: 100,
+      height: 72,
       color: Colors.grey.shade200,
       child: Icon(
         category == '核桃' ? Icons.circle : Icons.grain,
-        size: 32, color: Colors.grey.shade400,
+        size: 32,
+        color: Colors.grey.shade400,
       ),
     );
   }
@@ -296,10 +376,12 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             calendarData.when(
               data: (dayLogs) => _buildCalendarGrid(context, month, dayLogs),
               loading: () => const SizedBox(
-                height: 300, child: Center(child: CircularProgressIndicator()),
+                height: 300,
+                child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => SizedBox(
-                height: 300, child: Center(child: Text('加载失败: $err')),
+                height: 300,
+                child: Center(child: Text('加载失败: $err')),
               ),
             ),
             const Divider(height: 24),
@@ -317,7 +399,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   }
 
   Widget _buildCalendarGrid(
-      BuildContext context, DateTime month, Map<int, List<PattingLogEntity>> dayLogs) {
+    BuildContext context,
+    DateTime month,
+    Map<int, List<PattingLogEntity>> dayLogs,
+  ) {
     final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final startWeekday = firstDay.weekday - 1;
@@ -326,7 +411,20 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final rows = (totalCells + 6) ~/ 7;
     final today = DateTime.now();
     final now = DateTime(today.year, today.month, today.day);
-    final monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+    final monthNames = [
+      '一月',
+      '二月',
+      '三月',
+      '四月',
+      '五月',
+      '六月',
+      '七月',
+      '八月',
+      '九月',
+      '十月',
+      '十一月',
+      '十二月',
+    ];
 
     // 建立 itemId → itemName 映射
     final itemsAsync = ref.watch(antiqueListProvider);
@@ -349,17 +447,28 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
-                  ref.read(calendarMonthProvider.notifier).state =
-                      DateTime(month.year, month.month - 1, 1);
+                  ref.read(calendarMonthProvider.notifier).state = DateTime(
+                    month.year,
+                    month.month - 1,
+                    1,
+                  );
                 },
               ),
-              Text('${month.year}年${monthNames[month.month - 1]}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                '${month.year}年${monthNames[month.month - 1]}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
-                  ref.read(calendarMonthProvider.notifier).state =
-                      DateTime(month.year, month.month + 1, 1);
+                  ref.read(calendarMonthProvider.notifier).state = DateTime(
+                    month.year,
+                    month.month + 1,
+                    1,
+                  );
                 },
               ),
             ],
@@ -369,11 +478,16 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
-            children: ['一','二','三','四','五','六','日'].map((d) {
+            children: ['一', '二', '三', '四', '五', '六', '日'].map((d) {
               return Expanded(
                 child: Center(
-                  child: Text(d, style: TextStyle(fontSize: 12,
-                      color: (d == '六' || d == '日') ? Colors.grey : null)),
+                  child: Text(
+                    d,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: (d == '六' || d == '日') ? Colors.grey : null,
+                    ),
+                  ),
                 ),
               );
             }).toList(),
@@ -399,27 +513,37 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                     final hasPhoto = logs.any((l) => l.photoPaths.isNotEmpty);
 
                     return GestureDetector(
-                      onTap: () => hasPhoto ? _onDayTap(context, date, logs) : null,
+                      onTap: () =>
+                          hasPhoto ? _onDayTap(context, date, logs) : null,
                       child: Container(
                         height: 72,
                         margin: const EdgeInsets.all(1),
                         decoration: BoxDecoration(
                           color: isToday
-                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.08)
                               : null,
                           borderRadius: BorderRadius.circular(8),
                           border: hasPhoto
-                              ? Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1)
+                              ? Border.all(
+                                  color: Colors.orange.withValues(alpha: 0.4),
+                                  width: 1,
+                                )
                               : null,
                         ),
                         child: Column(
                           children: [
-                            Text('$dayNum',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isToday ? FontWeight.bold : null,
-                                  color: isToday ? Theme.of(context).colorScheme.primary : null,
-                                )),
+                            Text(
+                              '$dayNum',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isToday ? FontWeight.bold : null,
+                                color: isToday
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                              ),
+                            ),
                             if (hasPhoto && logs.first.photoPaths.isNotEmpty)
                               Expanded(
                                 child: Stack(
@@ -428,15 +552,26 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                       borderRadius: BorderRadius.circular(4),
                                       child: Image.file(
                                         File(logs.first.photoPaths.first),
-                                        fit: BoxFit.cover, width: double.infinity,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 16, color: Colors.grey),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(
+                                              Icons.image,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
                                       ),
                                     ),
                                     // 物品名称叠加
                                     Positioned(
-                                      bottom: 0, left: 0, right: 0,
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 2,
+                                          vertical: 1,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.black54,
                                           borderRadius: const BorderRadius.only(
@@ -446,8 +581,12 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                         ),
                                         child: Text(
                                           itemNames[logs.first.itemId] ?? '',
-                                          style: const TextStyle(color: Colors.white, fontSize: 8),
-                                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.center,
                                         ),
                                       ),
@@ -458,7 +597,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                             else if (logs.isNotEmpty)
                               const Padding(
                                 padding: EdgeInsets.only(top: 2),
-                                child: Icon(Icons.touch_app, size: 14, color: Colors.grey),
+                                child: Icon(
+                                  Icons.touch_app,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
                               ),
                           ],
                         ),
@@ -537,7 +680,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [Colors.purple.shade50.withValues(alpha: 0.3), Colors.white],
+            colors: [
+              Colors.purple.shade50.withValues(alpha: 0.3),
+              Colors.white,
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -548,15 +694,27 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           children: [
             Row(
               children: [
-                Text('🔮 文玩老道今日批注',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.purple.shade800)),
+                Text(
+                  '🔮 文玩老道今日批注',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple.shade800,
+                  ),
+                ),
                 const Spacer(),
-                Text('📅 农历干支玄学', style: TextStyle(fontSize: 10, color: Colors.purple.shade300)),
+                Text(
+                  '📅 农历干支玄学',
+                  style: TextStyle(fontSize: 10, color: Colors.purple.shade300),
+                ),
               ],
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Divider(height: 1, color: Colors.purple.withValues(alpha: 0.1)),
+              child: Divider(
+                height: 1,
+                color: Colors.purple.withValues(alpha: 0.1),
+              ),
             ),
             Row(
               children: [
@@ -564,22 +722,65 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('【 宜 】', style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.bold)),
+                      Text(
+                        '【 宜 】',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(yi.$1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      Text(yi.$2, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                      Text(
+                        yi.$1,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        yi.$2,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                Container(width: 1, height: 40, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 8)),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey.shade200,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('【 忌 】', style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                      Text(
+                        '【 忌 】',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(ji.$1, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      Text(ji.$2, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                      Text(
+                        ji.$1,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        ji.$2,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -600,7 +801,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                     Expanded(
                       child: Text(
                         '后宫怨气警告：怨气值 +$maxColdDays％！「${coldestItem.name}」已被打入冷宫 $maxColdDays 天，今晚不摸一把说不过去了吧？',
-                        style: TextStyle(fontSize: 11, color: Colors.blue.shade900, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue.shade900,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
@@ -609,8 +814,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             ],
             if (todoCount > 0) ...[
               const SizedBox(height: 6),
-              Text('💡 提示：今日还有 $todoCount 项正事没干。盘串虽爽，可别耽误搬砖买新串！',
-                  style: TextStyle(fontSize: 10, color: Colors.orange.shade800)),
+              Text(
+                '💡 提示：今日还有 $todoCount 项正事没干。盘串虽爽，可别耽误搬砖买新串！',
+                style: TextStyle(fontSize: 10, color: Colors.orange.shade800),
+              ),
             ],
           ],
         ),
@@ -636,12 +843,21 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     _initDailyRandomRanks();
 
     const allRankTabs = [
-      ('💰 财富榜', 0), ('👑 贵妃榜', 1), ('🥜 核桃榜', 2),
-      ('🏆 老炮榜', 3), ('🧵 串串榜', 4), ('🤝 缘分榜', 5),
-      ('❄️ 冷宫幽怨', 6), ('🌙 夜猫子', 7), ('🧮 劳模榜', 8), ('🌧️ 端水大师', 9),
+      ('👑 贵妃榜', 0),
+      ('🥜 核桃榜', 1),
+      ('🏆 老炮榜', 2),
+      ('🧵 串串榜', 3),
+      ('🤝 缘分榜', 4),
+      ('❄️ 冷宫幽怨', 5),
+      ('💪 把玩王', 6),
+      ('🌙 夜猫子', 7),
+      ('🧮 劳模榜', 8),
+      ('🌧️ 端水大师', 9),
     ];
 
-    final displayedTabs = allRankTabs.where((tab) => _dailySelectedRankIndices.contains(tab.$2)).toList();
+    final displayedTabs = allRankTabs
+        .where((tab) => _dailySelectedRankIndices.contains(tab.$2))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -652,9 +868,19 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              Text('✨ 今日限定内卷榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+              Text(
+                '✨ 今日限定内卷榜',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber.shade900,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text('(每日随机精选)', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+              Text(
+                '(每日随机精选)',
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+              ),
             ],
           ),
         ),
@@ -688,8 +914,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     return GestureDetector(
       onTap: () {
         setState(() => _rankTabIndex = pageIndex);
-        _rankPageController.animateToPage(pageIndex,
-            duration: const Duration(milliseconds: 250), curve: Curves.decelerate);
+        _rankPageController.animateToPage(
+          pageIndex,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.decelerate,
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
@@ -697,31 +926,48 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         decoration: BoxDecoration(
           color: selected ? Colors.amber.shade700 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: selected ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: Colors.amber.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
-          style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.bold : null, color: selected ? Colors.white : Colors.grey.shade700),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.bold : null,
+            color: selected ? Colors.white : Colors.grey.shade700,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRankContent(List<AntiqueEntity> items, List<int> selectedIndices) {
+  Widget _buildRankContent(
+    List<AntiqueEntity> items,
+    List<int> selectedIndices,
+  ) {
     final allWidgets = <int, Widget>{
-      0: _buildWealthRank(context, items),
-      1: _buildPattingRank(context, items),
-      2: _buildSizeRank(context, items),
-      3: _buildVeteranRank(context, items),
-      4: _buildStringRank(context, items),
-      5: _buildSourceRank(context, items),
-      6: _buildColdPalaceRank(context, items),
+      0: _buildPattingRank(context, items),
+      1: _buildSizeRank(context, items),
+      2: _buildVeteranRank(context, items),
+      3: _buildStringRank(context, items),
+      4: _buildSourceRank(context, items),
+      5: _buildColdPalaceRank(context, items),
+      6: _buildDurationsRank(context, items),
       7: _buildNightOwlRank(context, items),
       8: _buildCostPerPlayRank(context, items),
       9: _buildRecentVarietyRank(context, items),
     };
 
-    final activeWidgets = selectedIndices.map((index) => allWidgets[index]!).toList();
+    final activeWidgets = selectedIndices
+        .map((index) => allWidgets[index]!)
+        .toList();
 
     return SizedBox(
       height: 520,
@@ -733,22 +979,6 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildWealthRank(BuildContext context, List<AntiqueEntity> items) {
-    final ranked = List<AntiqueEntity>.from(items)
-      ..sort((a, b) => (b.currentValuation ?? b.acquiredPrice ?? 0)
-          .compareTo(a.currentValuation ?? a.acquiredPrice ?? 0));
-    final top = ranked.where((i) => (i.currentValuation ?? i.acquiredPrice ?? 0) > 0).take(10).toList();
-    if (top.isEmpty) return const SizedBox.shrink();
-
-    return _buildRankCard(
-      title: '💰 财富榜',
-      subtitle: '按当前估价排序',
-      items: top,
-      label: (i) => '¥${(i.currentValuation ?? i.acquiredPrice ?? 0).toStringAsFixed(0)}',
-      icon: Icons.monetization_on,
-    );
-  }
-
   Widget _buildPattingRank(BuildContext context, List<AntiqueEntity> items) {
     return FutureBuilder<Map<int, int>>(
       future: ref.read(monthlyPattingFrequencyProvider.future),
@@ -756,7 +986,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         final freq = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)
           ..sort((a, b) => (freq[b.id] ?? 0).compareTo(freq[a.id] ?? 0));
-        final top = ranked.where((i) => (freq[i.id] ?? 0) > 0).take(10).toList();
+        final top = ranked
+            .where((i) => (freq[i.id] ?? 0) > 0)
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -773,11 +1006,21 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   Widget _buildSizeRank(BuildContext context, List<AntiqueEntity> items) {
     // 只考虑核桃品类
     final walnutItems = items.where((i) => i.category == '核桃').toList();
-    final withSize = walnutItems.where((i) =>
-        i.categoryMetadata != null &&
-        i.categoryMetadata!.keys.any((k) => k.contains('边宽') || k.contains('尺寸'))).toList();
-    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, '边宽')
-        .compareTo(_extractSize(a.categoryMetadata!, '边宽')));
+    final withSize = walnutItems
+        .where(
+          (i) =>
+              i.categoryMetadata != null &&
+              i.categoryMetadata!.keys.any(
+                (k) => k.contains('边宽') || k.contains('尺寸'),
+              ),
+        )
+        .toList();
+    withSize.sort(
+      (a, b) => _extractSize(
+        b.categoryMetadata!,
+        '边宽',
+      ).compareTo(_extractSize(a.categoryMetadata!, '边宽')),
+    );
 
     if (withSize.isEmpty) {
       return Padding(
@@ -789,8 +1032,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               children: [
                 Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
                 const SizedBox(width: 8),
-                Text('暂无核桃尺寸数据，请在藏品详情中添加尺寸信息',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text(
+                  '暂无核桃尺寸数据，请在藏品详情中添加尺寸信息',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ],
             ),
           ),
@@ -810,11 +1055,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-
   double _extractSize(Map<String, String> metadata, String fieldKey) {
     for (final entry in metadata.entries) {
       if (entry.key.contains(fieldKey)) {
-        return double.tryParse(entry.value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+        return double.tryParse(
+              entry.value.replaceAll(RegExp(r'[^0-9.]'), ''),
+            ) ??
+            0;
       }
     }
     return 0;
@@ -838,38 +1085,24 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildPotentialRank(BuildContext context, List<AntiqueEntity> items) {
-    final withPrice = items.where((i) =>
-        i.acquiredPrice != null && i.acquiredPrice! > 0 &&
-        i.currentValuation != null && i.currentValuation! > 0).toList();
-    withPrice.sort((a, b) {
-      final aRate = (b.currentValuation! - b.acquiredPrice!) / b.acquiredPrice!;
-      final bRate = (a.currentValuation! - a.acquiredPrice!) / a.acquiredPrice!;
-      return aRate.compareTo(bRate);
-    });
-    final top = withPrice.take(5).toList();
-    if (top.isEmpty) return const SizedBox.shrink();
-
-    return _buildRankCard(
-      title: '📈 潜力榜',
-      subtitle: '按升值幅度排序',
-      items: top,
-      label: (i) {
-        final rate = ((i.currentValuation! - i.acquiredPrice!) / i.acquiredPrice! * 100);
-        return '${rate.toStringAsFixed(0)}%';
-      },
-      icon: Icons.trending_up,
-    );
-  }
-
   Widget _buildStringRank(BuildContext context, List<AntiqueEntity> items) {
     // 手串按尺寸排序
     final braceletItems = items.where((i) => i.category == '手串').toList();
-    final withSize = braceletItems.where((i) =>
-        i.categoryMetadata != null &&
-        i.categoryMetadata!.keys.any((k) => k.contains('尺寸') || k.contains('串型'))).toList();
-    withSize.sort((a, b) => _extractSize(b.categoryMetadata!, '尺寸')
-        .compareTo(_extractSize(a.categoryMetadata!, '尺寸')));
+    final withSize = braceletItems
+        .where(
+          (i) =>
+              i.categoryMetadata != null &&
+              i.categoryMetadata!.keys.any(
+                (k) => k.contains('尺寸') || k.contains('串型'),
+              ),
+        )
+        .toList();
+    withSize.sort(
+      (a, b) => _extractSize(
+        b.categoryMetadata!,
+        '尺寸',
+      ).compareTo(_extractSize(a.categoryMetadata!, '尺寸')),
+    );
 
     if (withSize.isEmpty) {
       return Padding(
@@ -881,8 +1114,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
               children: [
                 Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
                 const SizedBox(width: 8),
-                Text('暂无手串尺寸数据',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text(
+                  '暂无手串尺寸数据',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ],
             ),
           ),
@@ -904,7 +1139,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
   Widget _buildSourceRank(BuildContext context, List<AntiqueEntity> items) {
     // 按入手渠道聚类
-    final withSource = items.where((i) => i.sourceSeller != null && i.sourceSeller!.isNotEmpty).toList();
+    final withSource = items
+        .where((i) => i.sourceSeller != null && i.sourceSeller!.isNotEmpty)
+        .toList();
     final grouped = <String, List<AntiqueEntity>>{};
     for (final item in withSource) {
       grouped.putIfAbsent(item.sourceSeller!, () => []).add(item);
@@ -921,13 +1158,25 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.people, size: 16, color: Colors.amber.shade700),
-              const SizedBox(width: 6),
-              Text('🤝 缘分榜', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
-              const Spacer(),
-              Text('按来源聚类', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.people, size: 16, color: Colors.amber.shade700),
+                const SizedBox(width: 6),
+                Text(
+                  '🤝 缘分榜',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade800,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '按来源聚类',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             ...top.asMap().entries.map((entry) {
               final rank = entry.key + 1;
@@ -938,11 +1187,29 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   radius: 14,
-                  backgroundColor: rank <= 3 ? Colors.amber.shade100 : Colors.grey.shade100,
-                  child: Text('$rank', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: rank <= 3 ? Colors.amber.shade800 : Colors.grey)),
+                  backgroundColor: rank <= 3
+                      ? Colors.amber.shade100
+                      : Colors.grey.shade100,
+                  child: Text(
+                    '$rank',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: rank <= 3 ? Colors.amber.shade800 : Colors.grey,
+                    ),
+                  ),
                 ),
-                title: Text(source, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                trailing: Text('${items.length}件', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                title: Text(
+                  source,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                trailing: Text(
+                  '${items.length}件',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
               );
             }),
           ],
@@ -956,9 +1223,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       future: ref.read(totalPattingDurationProvider.future),
       builder: (context, snapshot) {
         final duration = snapshot.data ?? {};
-        final ranked = List<AntiqueEntity>.from(items)
-          ..sort((a, b) => (duration[b.id] ?? 0).compareTo(duration[a.id] ?? 0));
-        final top = ranked.where((i) => (duration[i.id] ?? 0) > 0).take(10).toList();
+        final ranked = List<AntiqueEntity>.from(
+          items,
+        )..sort((a, b) => (duration[b.id] ?? 0).compareTo(duration[a.id] ?? 0));
+        final top = ranked
+            .where((i) => (duration[i.id] ?? 0) > 0)
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -983,7 +1254,10 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         final daysMap = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)
           ..sort((a, b) => (daysMap[b.id] ?? 0).compareTo(daysMap[a.id] ?? 0));
-        final top = ranked.where((i) => (daysMap[i.id] ?? 0) > 3).take(10).toList();
+        final top = ranked
+            .where((i) => (daysMap[i.id] ?? 0) > 3)
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -1007,8 +1281,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       builder: (context, snapshot) {
         final nightCount = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)
-          ..sort((a, b) => (nightCount[b.id] ?? 0).compareTo(nightCount[a.id] ?? 0));
-        final top = ranked.where((i) => (nightCount[i.id] ?? 0) > 0).take(10).toList();
+          ..sort(
+            (a, b) => (nightCount[b.id] ?? 0).compareTo(nightCount[a.id] ?? 0),
+          );
+        final top = ranked
+            .where((i) => (nightCount[i.id] ?? 0) > 0)
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -1022,15 +1301,25 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildCostPerPlayRank(BuildContext context, List<AntiqueEntity> items) {
+  Widget _buildCostPerPlayRank(
+    BuildContext context,
+    List<AntiqueEntity> items,
+  ) {
     return FutureBuilder<Map<int, double>>(
       future: ref.read(costPerPlayProvider.future),
       builder: (context, snapshot) {
         final costMap = snapshot.data ?? {};
         // 按单次成本从低到高（劳模）排序
         final ranked = List<AntiqueEntity>.from(items)
-          ..sort((a, b) => (costMap[a.id] ?? double.infinity).compareTo(costMap[b.id] ?? double.infinity));
-        final top = ranked.where((i) => costMap.containsKey(i.id)).take(10).toList();
+          ..sort(
+            (a, b) => (costMap[a.id] ?? double.infinity).compareTo(
+              costMap[b.id] ?? double.infinity,
+            ),
+          );
+        final top = ranked
+            .where((i) => costMap.containsKey(i.id))
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -1048,14 +1337,23 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildRecentVarietyRank(BuildContext context, List<AntiqueEntity> items) {
+  Widget _buildRecentVarietyRank(
+    BuildContext context,
+    List<AntiqueEntity> items,
+  ) {
     return FutureBuilder<Map<int, int>>(
       future: ref.read(recentVarietyProvider.future),
       builder: (context, snapshot) {
         final recentCount = snapshot.data ?? {};
         final ranked = List<AntiqueEntity>.from(items)
-          ..sort((a, b) => (recentCount[b.id] ?? 0).compareTo(recentCount[a.id] ?? 0));
-        final top = ranked.where((i) => (recentCount[i.id] ?? 0) > 0).take(10).toList();
+          ..sort(
+            (a, b) =>
+                (recentCount[b.id] ?? 0).compareTo(recentCount[a.id] ?? 0),
+          );
+        final top = ranked
+            .where((i) => (recentCount[i.id] ?? 0) > 0)
+            .take(10)
+            .toList();
         if (top.isEmpty) return const SizedBox.shrink();
 
         return _buildRankCard(
@@ -1087,13 +1385,25 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(icon, size: 16, color: Colors.amber.shade700),
-              const SizedBox(width: 6),
-              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
-              const Spacer(),
-              Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ]),
+            Row(
+              children: [
+                Icon(icon, size: 16, color: Colors.amber.shade700),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade800,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             // 前三名阶梯展示
             if (items.isEmpty)
@@ -1102,10 +1412,19 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.inbox_outlined, size: 40, color: Colors.grey.shade300),
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 40,
+                        color: Colors.grey.shade300,
+                      ),
                       const SizedBox(height: 8),
-                      Text('虚位以待',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+                      Text(
+                        '虚位以待',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1144,15 +1463,38 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
-                            leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                            title: Text(item.name, style: const TextStyle(fontSize: 12)),
-                            subtitle: Text(item.subtype ?? item.category, style: const TextStyle(fontSize: 10)),
+                            leading: Text(
+                              '$rank.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                            title: Text(
+                              item.name,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            subtitle: Text(
+                              item.subtype ?? item.category,
+                              style: const TextStyle(fontSize: 10),
+                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(label(item), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.green)),
+                                Text(
+                                  label(item),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                    color: Colors.green,
+                                  ),
+                                ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
                               ],
                             ),
                             onTap: () => context.push('/collection/${item.id}'),
@@ -1165,9 +1507,27 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
-                            leading: Text('$rank.', style: TextStyle(fontSize: 11, color: Colors.grey.shade300)),
-                            title: Text('—', style: TextStyle(fontSize: 12, color: Colors.grey.shade300)),
-                            subtitle: Text('虚位以待', style: TextStyle(fontSize: 10, color: Colors.grey.shade300)),
+                            leading: Text(
+                              '$rank.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            title: Text(
+                              '—',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '虚位以待',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
                           );
                         }),
                       ],
@@ -1182,7 +1542,12 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  Widget _buildPodiumItem(AntiqueEntity item, int rank, double baseHeight, String Function(AntiqueEntity) label) {
+  Widget _buildPodiumItem(
+    AntiqueEntity item,
+    int rank,
+    double baseHeight,
+    String Function(AntiqueEntity) label,
+  ) {
     final medals = ['🥇', '🥈', '🥉'];
     final podiumColors = [
       [Colors.amber.shade400, Colors.orange.shade300],
@@ -1206,30 +1571,67 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: podiumColors[rank - 1][0], width: 2),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))],
+                  border: Border.all(
+                    color: podiumColors[rank - 1][0],
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: CircleAvatar(
                   radius: rank == 1 ? 26 : 22,
                   backgroundColor: Colors.grey.shade100,
-                  backgroundImage: displayImage != null ? FileImage(File(displayImage)) : null,
-                  child: displayImage == null ? Text(medals[rank - 1], style: const TextStyle(fontSize: 18)) : null,
+                  backgroundImage: displayImage != null
+                      ? FileImage(File(displayImage))
+                      : null,
+                  child: displayImage == null
+                      ? Text(
+                          medals[rank - 1],
+                          style: const TextStyle(fontSize: 18),
+                        )
+                      : null,
                 ),
               ),
               if (displayImage != null)
                 Positioned(
                   bottom: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(color: podiumColors[rank - 1][0], borderRadius: BorderRadius.circular(8)),
-                    child: Text(medals[rank - 1], style: const TextStyle(fontSize: 9)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: podiumColors[rank - 1][0],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      medals[rank - 1],
+                      style: const TextStyle(fontSize: 9),
+                    ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(item.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(label(item), style: TextStyle(fontSize: 9, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+          Text(
+            item.name,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            label(item),
+            style: TextStyle(
+              fontSize: 9,
+              color: Colors.green.shade800,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           Container(
             height: baseHeight - 45,
@@ -1240,11 +1642,26 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, -1))],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 2,
+                  offset: const Offset(0, -1),
+                ),
+              ],
             ),
             child: Center(
-              child: Text('$rank', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white38)),
+              child: Text(
+                '$rank',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white38,
+                ),
+              ),
             ),
           ),
         ],
@@ -1252,7 +1669,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     );
   }
 
-  void _onDayTap(BuildContext context, DateTime date, List<PattingLogEntity> logs) {
+  void _onDayTap(
+    BuildContext context,
+    DateTime date,
+    List<PattingLogEntity> logs,
+  ) {
     if (logs.isEmpty) return;
     // 只有一条记录 → 直接跳转
     if (logs.length == 1) {
@@ -1270,29 +1691,49 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$dateStr 打卡记录',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              '$dateStr 打卡记录',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             ...logs.take(10).map((log) {
-              final days = log.date.difference(DateTime(log.date.year, log.date.month, log.date.day)).inDays;
+              final days = log.date
+                  .difference(
+                    DateTime(log.date.year, log.date.month, log.date.day),
+                  )
+                  .inDays;
               final dayLabel = days == 0 ? '入手当天' : '第$days天';
               return ListTile(
                 dense: true,
                 leading: log.photoPaths.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.file(File(log.photoPaths.first),
-                            width: 40, height: 40, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 24, color: Colors.grey)),
+                        child: Image.file(
+                          File(log.photoPaths.first),
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image,
+                            size: 24,
+                            color: Colors.grey,
+                          ),
+                        ),
                       )
                     : const Icon(Icons.touch_app, color: Colors.grey),
                 title: Text(dayLabel, style: const TextStyle(fontSize: 13)),
-                subtitle: Text(log.note ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11)),
+                subtitle: Text(
+                  log.note ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
                 trailing: const Icon(Icons.chevron_right, size: 16),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.push('/collection/${log.itemId}?highlightLog=${log.id ?? ''}');
+                  context.push(
+                    '/collection/${log.itemId}?highlightLog=${log.id ?? ''}',
+                  );
                 },
               );
             }),
@@ -1317,8 +1758,14 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          Text('🏛️ $displayLabel',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
+          Text(
+            '🏛️ $displayLabel',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
           const Spacer(),
           _buildCategoryFilter(context),
         ],
@@ -1336,13 +1783,15 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
       },
       itemBuilder: (ctx) => [
         const PopupMenuItem(value: '', child: Text('🗂️ 全部分类')),
-        ...categories.map((c) => PopupMenuItem(
-          value: c.name,
-          child: Text(c.name),
-        )),
+        ...categories.map(
+          (c) => PopupMenuItem(value: c.name, child: Text(c.name)),
+        ),
       ],
       child: Chip(
-        label: Text(selectedFilter.isEmpty ? '筛选' : selectedFilter, style: const TextStyle(fontSize: 11)),
+        label: Text(
+          selectedFilter.isEmpty ? '筛选' : selectedFilter,
+          style: const TextStyle(fontSize: 11),
+        ),
         avatar: const Icon(Icons.filter_list, size: 14),
         visualDensity: VisualDensity.compact,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1353,12 +1802,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
   // ===== 搜索 =====
 
   void _showSearch(BuildContext context, WidgetRef ref) {
-    showSearch(
-      context: context,
-      delegate: _AntiqueSearchDelegate(ref),
-    );
+    showSearch(context: context, delegate: _AntiqueSearchDelegate(ref));
   }
-
 }
 
 class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {
@@ -1368,17 +1813,14 @@ class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
-        IconButton(
-          icon: const Icon(Icons.clear),
-          onPressed: () => query = '',
-        ),
-      ];
+    IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
+  ];
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => close(context, null),
-      );
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () => close(context, null),
+  );
 
   @override
   Widget buildResults(BuildContext context) => _buildList(context);
@@ -1391,7 +1833,9 @@ class _AntiqueSearchDelegate extends SearchDelegate<AntiqueEntity?> {
       return const Center(child: Text('输入名称或分类搜索'));
     }
     return FutureBuilder<List<AntiqueEntity>>(
-      future: ref.read(antiqueRepositoryProvider.future).then((r) => r.search(query)),
+      future: ref
+          .read(antiqueRepositoryProvider.future)
+          .then((r) => r.search(query)),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('未找到匹配的藏品'));

@@ -7,7 +7,7 @@
 ## P0：文档校准
 
 - [x] 以现有代码为准重写架构和模块文档。
-- [x] 明确文玩估值模块当前存在，但后续不需要保留。
+- [x] 明确文玩估值模块不再作为产品功能保留，遗留表/列仅作兼容。
 - [x] 把未实现的深夜引擎、RAG、人生罗盘、STAR 生成移出当前规格主体。
 
 ## P0：代码债
@@ -18,8 +18,8 @@
 - [x] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。
 - [x] 补齐 `BackupService` 导入列清单：`work_experiences.responsibilities`。
 - [x] 补齐 `BackupService` 导入列清单：`project_experiences.key_deliverables/badges`。
-- [ ] 决定并执行文玩估值模块移除方案。
-- [ ] 移除估值后同步更新 `pubspec.yaml` 中 `fl_chart` 是否仍需要。
+- [x] 决定并执行文玩估值模块应用层下线方案，schema v6 表/列暂留作兼容壳。
+- [x] 移除估值后同步更新 `pubspec.yaml`，删除不再使用的 `fl_chart`。
 - [ ] 为 Drift 迁移和备份恢复补测试。
 - [x] 为 `BackupService` 增加导出-导入镜像测试，覆盖 `todo_lists`、任务树、软删除、简历 List 字段、`daily_reviews.completed_todo_ids`、`weekly_reports` 当前文本字段和日期毫秒/秒转换。
 
@@ -39,11 +39,12 @@
 - [ ] 统一图片路径策略，避免绝对路径和相对路径混用。
 - [ ] 文玩默认分类新增“长串”，并补齐子类型、专属字段和备份/分类管理同步。
 - [ ] 文玩 UI、分享、保存、备份导出统一通过 `resolveImageFile()` 解析图片路径。
-- [ ] 移除或替换财富榜、潜力榜等估值相关榜单。
-- [ ] 移除估值图表页面/组件。
-- [ ] 确认估值历史数据迁移或导出策略。
-- [ ] 若迁移到文本归档，使用现有字段名 `amount`/`remark`/`date`，不要误用 `val`/`note`。
-- [ ] 估值模块物理删表前，先让旧备份中的 `valuation_records` 可导入并重定向归档到藏品描述/备注。
+- [x] 移除财富榜、潜力榜等估值相关榜单，保留贵妃、核桃、老炮、串串、缘分、冷宫、把玩王、夜猫子、劳模、端水大师等非估值榜单。
+- [x] 移除估值图表页面/组件。
+- [x] 确认估值历史数据迁移或导出策略：新备份不再导出估值历史，旧备份导入时归档到 `antique_items.notes`。
+- [x] 若迁移到文本归档，使用现有字段名 `amount`/`remark`/`date`，不要误用 `val`/`note`。
+- [x] 估值模块物理删表前，先让旧备份中的 `valuation_records` 可导入并重定向归档到藏品描述/备注。
+- [ ] 旧估值兼容路径稳定后，再评估是否在下一版 schema 物理移除 `valuation_records` 和 `current_valuation`。
 - [ ] 图片备份恢复改为应用文档目录，而不是系统临时目录。
 - [ ] 评估文玩榜单从 Provider 循环计算迁移到 DAO 聚合查询，并按查询计划补 `patting_logs(item_id, date DESC)` 等索引。
 - [ ] 未来高光关联接入后，删除 `patting_logs`/`antique_items` 时同步事务清理 `milestone_relations`。

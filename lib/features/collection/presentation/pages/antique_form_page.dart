@@ -41,7 +41,6 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   String? _subtype;
   DateTime _acquiredDate = DateTime.now();
   AntiqueCondition _condition = AntiqueCondition.good;
-  double? _currentValuation;
   List<String> _imagePaths = [];
   bool _isLoading = false;
   bool _isSavingImage = false;
@@ -61,7 +60,8 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   List<String> get _currentSubtypes => _currentCategoryModel?.subtypes ?? [];
 
   /// 当前分类的专属字段
-  List<String> get _currentFields => _currentCategoryModel?.metadataFields ?? [];
+  List<String> get _currentFields =>
+      _currentCategoryModel?.metadataFields ?? [];
 
   /// 获取实际展示的字段列表（分类模型未加载时用硬编码兜底）
   List<String> _getDisplayFields() {
@@ -124,12 +124,17 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         _subtypeCtrl.text = item.subtype ?? '';
         // 回填分类专属字段 — 直接从 item.categoryMetadata 构建控制器，不依赖分类模型
         _metaCtrls.clear();
-        if (item.categoryMetadata != null && item.categoryMetadata!.isNotEmpty) {
+        if (item.categoryMetadata != null &&
+            item.categoryMetadata!.isNotEmpty) {
           for (final e in item.categoryMetadata!.entries) {
             if (_category == '核桃' && e.value.contains(',')) {
               final parts = e.value.split(',');
-              _metaCtrls['左${e.key}'] = TextEditingController(text: parts[0].trim());
-              _metaCtrls['右${e.key}'] = TextEditingController(text: parts.length > 1 ? parts[1].trim() : '');
+              _metaCtrls['左${e.key}'] = TextEditingController(
+                text: parts[0].trim(),
+              );
+              _metaCtrls['右${e.key}'] = TextEditingController(
+                text: parts.length > 1 ? parts[1].trim() : '',
+              );
             } else {
               _metaCtrls[e.key] = TextEditingController(text: e.value);
             }
@@ -139,7 +144,6 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         }
         _acquiredDate = item.acquiredDate;
         _condition = item.condition;
-        _currentValuation = item.currentValuation;
         _imagePaths = List.from(item.imagePaths);
       });
     }
@@ -174,9 +178,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         setState(() => _imagePaths.add(savedPath));
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存图片失败: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('保存图片失败: $e')));
         }
       } finally {
         if (mounted) setState(() => _isSavingImage = false);
@@ -199,9 +203,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         setState(() => _imagePaths.add(savedPath));
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存图片失败: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('保存图片失败: $e')));
         }
       } finally {
         if (mounted) setState(() => _isSavingImage = false);
@@ -261,12 +265,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
             ? null
             : _sellerCtrl.text.trim(),
         condition: _condition,
-        currentValuation: _currentValuation,
         imagePaths: _imagePaths,
         categoryMetadata: metadata.isNotEmpty ? metadata : null,
-        notes: _notesCtrl.text.trim().isEmpty
-            ? null
-            : _notesCtrl.text.trim(),
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         createdAt: now,
         updatedAt: now,
       );
@@ -278,38 +279,44 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       } else {
         final created = await repo.create(item);
         // 新建时自动创建首条打卡记录（入手当天，含藏品照片）
-        await repo.addPattingLog(PattingLogEntity(
-          itemId: created.id!,
-          date: _acquiredDate,
-          durationMinutes: 0,
-          method: 'bare_hand',
-          note: null,
-          photoPaths: _imagePaths,
-        ));
+        await repo.addPattingLog(
+          PattingLogEntity(
+            itemId: created.id!,
+            date: _acquiredDate,
+            durationMinutes: 0,
+            method: 'bare_hand',
+            note: null,
+            photoPaths: _imagePaths,
+          ),
+        );
       }
 
       // 如果分类不在预设列表中，自动添加
       final catNotifier = ref.read(collectionCategoriesProvider.notifier);
       if (!catNotifier.state.any((c) => c.name == _category)) {
-        catNotifier.add(CollectionCategory(name: _category, sortOrder: catNotifier.state.length));
+        catNotifier.add(
+          CollectionCategory(
+            name: _category,
+            sortOrder: catNotifier.state.length,
+          ),
+        );
       }
 
       // 刷新列表
       ref.invalidate(antiqueListProvider);
       ref.invalidate(categoryCountProvider);
-      ref.invalidate(totalValuationProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isEditing ? '已更新' : '已添加')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_isEditing ? '已更新' : '已添加')));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -389,7 +396,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                               hintText: '自定义分类',
                               border: OutlineInputBorder(),
                               isDense: true,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                             ),
                             onChanged: (v) {
                               if (v.trim().isNotEmpty) {
@@ -409,7 +419,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
 
                     // 细分品类
                     if (_currentSubtypes.isNotEmpty) ...[
-                      Text('细分品类', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        '细分品类',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -418,7 +431,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                           ..._currentSubtypes.map((sub) {
                             final selected = _subtype == sub;
                             return ChoiceChip(
-                              label: Text(sub, style: const TextStyle(fontSize: 12)),
+                              label: Text(
+                                sub,
+                                style: const TextStyle(fontSize: 12),
+                              ),
                               selected: selected,
                               onSelected: (sel) {
                                 setState(() {
@@ -436,11 +452,15 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                           hintText: '自定义细分品类',
                           border: OutlineInputBorder(),
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         controller: _subtypeCtrl,
                         onChanged: (v) {
-                          if (v.trim().isNotEmpty) setState(() => _subtype = v.trim());
+                          if (v.trim().isNotEmpty)
+                            setState(() => _subtype = v.trim());
                         },
                       ),
                       const SizedBox(height: 16),
@@ -448,13 +468,18 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
 
                     // 分类专属字段
                     if (_getDisplayFields().isNotEmpty) ...[
-                      Text('详细参数', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        '详细参数',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       if (_category == '核桃') ...[
                         // 核桃专用：每个字段显示左右双输入（包括重量）
                         ..._getDisplayFields().map((field) {
-                          final leftCtrl = _metaCtrls['左$field'] ??= TextEditingController();
-                          final rightCtrl = _metaCtrls['右$field'] ??= TextEditingController();
+                          final leftCtrl = _metaCtrls['左$field'] ??=
+                              TextEditingController();
+                          final rightCtrl = _metaCtrls['右$field'] ??=
+                              TextEditingController();
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
@@ -464,12 +489,21 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                                     controller: leftCtrl,
                                     decoration: InputDecoration(
                                       hintText: '左$field',
-                                      border: const OutlineInputBorder(), isDense: true,
+                                      border: const OutlineInputBorder(),
+                                      isDense: true,
                                       prefixText: '左 ',
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
                                     ),
                                     keyboardType: TextInputType.number,
-                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[\d.]'),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -478,12 +512,21 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                                     controller: rightCtrl,
                                     decoration: InputDecoration(
                                       hintText: '右$field',
-                                      border: const OutlineInputBorder(), isDense: true,
+                                      border: const OutlineInputBorder(),
+                                      isDense: true,
                                       prefixText: '右 ',
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
                                     ),
                                     keyboardType: TextInputType.number,
-                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[\d.]'),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -493,16 +536,33 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                       ] else ...[
                         // 非核桃：正常单行
                         ..._getDisplayFields().map((field) {
-                          final isNumeric = field.contains('mm') || field.contains('重量') || field.contains('尺寸');
+                          final isNumeric =
+                              field.contains('mm') ||
+                              field.contains('重量') ||
+                              field.contains('尺寸');
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: TextField(
                               controller: _metaCtrls[field],
-                              decoration: InputDecoration(hintText: field, border: const OutlineInputBorder(), isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                              keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+                              decoration: InputDecoration(
+                                hintText: field,
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              ),
+                              keyboardType: isNumeric
+                                  ? TextInputType.number
+                                  : TextInputType.text,
                               inputFormatters: isNumeric
-                                  ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))] : null,
+                                  ? [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[\d.]'),
+                                      ),
+                                    ]
+                                  : null,
                             ),
                           );
                         }),
@@ -511,19 +571,23 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     ],
 
                     // 入手日期
-                    Text('入手日期',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '入手日期',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 8),
                     InkWell(
                       onTap: _pickDate,
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -567,17 +631,21 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                     SegmentedButton<AntiqueCondition>(
                       segments: const [
                         ButtonSegment(
-                            value: AntiqueCondition.perfect,
-                            label: Text('全品')),
+                          value: AntiqueCondition.perfect,
+                          label: Text('全品'),
+                        ),
                         ButtonSegment(
-                            value: AntiqueCondition.good,
-                            label: Text('良好')),
+                          value: AntiqueCondition.good,
+                          label: Text('良好'),
+                        ),
                         ButtonSegment(
-                            value: AntiqueCondition.fair,
-                            label: Text('一般')),
+                          value: AntiqueCondition.fair,
+                          label: Text('一般'),
+                        ),
                         ButtonSegment(
-                            value: AntiqueCondition.poor,
-                            label: Text('有损')),
+                          value: AntiqueCondition.poor,
+                          label: Text('有损'),
+                        ),
                       ],
                       selected: {_condition},
                       onSelectionChanged: (sel) =>
@@ -645,7 +713,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
                 children: [
                   Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey),
                   SizedBox(height: 4),
-                  Text('添加', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    '添加',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
       ),
@@ -658,9 +729,7 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         Container(
           width: 100,
           height: 100,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.file(

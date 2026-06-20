@@ -110,14 +110,13 @@ class BackupService {
         .toList();
     data['antique_items'] = (await _db.select(_db.antiqueItems).get()).map((r) {
       final m = _rowToMap(r);
+      m['currentValuation'] = null;
       if (m['imagePaths'] is List) {
         m['imagePaths'] = encodePaths(m['imagePaths'] as List<String>?);
       }
       return m;
     }).toList();
-    data['valuation_records'] = (await _db.select(_db.valuationRecords).get())
-        .map((r) => _rowToMap(r))
-        .toList();
+    data['valuation_records'] = const <Map<String, dynamic>>[];
     data['patting_logs'] = (await _db.select(_db.pattingLogs).get()).map((r) {
       final m = _rowToMap(r);
       if (m['photoPaths'] is List) {
@@ -401,11 +400,17 @@ class BackupService {
         for (final e in row.entries) {
           snakeRow[snakeKey(e.key)] = e.value;
         }
+        if (tableName == 'valuation_records') {
+          continue;
+        }
         final legacyAiApiKey = tableName == 'user_preferences'
             ? snakeRow['ai_api_key']?.toString()
             : null;
         if (tableName == 'user_preferences') {
           snakeRow['ai_api_key'] = null;
+        }
+        if (tableName == 'antique_items') {
+          _archiveCurrentValuationIntoNotes(snakeRow);
         }
 
         final cols = tableColumns[tableName]!;
@@ -445,6 +450,10 @@ class BackupService {
             legacyAiApiKey.trim().isNotEmpty) {
           await _apiKeyStore.write(legacyAiApiKey);
         }
+      }
+
+      if (tableName == 'valuation_records') {
+        await _archiveLegacyValuationRecords(rows);
       }
     }
 
@@ -498,6 +507,128 @@ class BackupService {
     final sanitized = Map<String, dynamic>.from(row);
     sanitized['aiApiKey'] = null;
     return sanitized;
+  }
+
+  void _archiveCurrentValuationIntoNotes(Map<String, dynamic> snakeRow) {
+    final valuation = snakeRow['current_valuation'];
+    if (valuation is num && valuation > 0) {
+      final existingNotes = snakeRow['notes']?.toString();
+      final archive =
+          '\n\n【历史估值归档】\n'
+          '- 当前估值: ${_formatMoney(valuation)} 元';
+      snakeRow['notes'] = _appendArchiveText(existingNotes, archive);
+    }
+    snakeRow['current_valuation'] = null;
+  }
+
+  Future<void> _archiveLegacyValuationRecords(List<dynamic> rows) async {
+    final grouped = <int, List<Map<dynamic, dynamic>>>{};
+    for (final row in rows) {
+      if (row is! Map) continue;
+      final itemId = _readInt(row, 'item_id', 'itemId');
+      if (itemId == null) continue;
+      grouped.putIfAbsent(itemId, () => []).add(row);
+    }
+
+    for (final entry in grouped.entries) {
+      final records = entry.value;
+      records.sort((a, b) {
+        final aDate = _readDateMillis(a, 'date');
+        final bDate = _readDateMillis(b, 'date');
+        return aDate.compareTo(bDate);
+      });
+
+      final buffer = StringBuffer('\n\n【历史估值归档】');
+      for (final record in records) {
+        final amount = _readNum(record, 'amount');
+        if (amount == null) continue;
+        final dateText = _formatBackupDate(_readValue(record, 'date'));
+        final remark = _readValue(record, 'remark')?.toString().trim();
+        buffer.write('\n- $dateText | 金额: ${_formatMoney(amount)} 元');
+        if (remark != null && remark.isNotEmpty) {
+          buffer.write(' | 备注: $remark');
+        }
+      }
+
+      final archiveText = buffer.toString();
+      if (archiveText == '\n\n【历史估值归档】') continue;
+      await _db.customStatement(
+        'UPDATE antique_items SET notes = COALESCE(notes, "") || ? WHERE id = ?',
+        [archiveText, entry.key],
+      );
+    }
+  }
+
+  String _appendArchiveText(String? existing, String archive) {
+    if (existing == null || existing.trim().isEmpty) {
+      return archive.trimLeft();
+    }
+    return '$existing$archive';
+  }
+
+  dynamic _readValue(Map<dynamic, dynamic> row, String key) {
+    return row[key] ?? row[_snakeToCamel(key)];
+  }
+
+  int? _readInt(Map<dynamic, dynamic> row, String snake, String camel) {
+    final value = row[snake] ?? row[camel];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  num? _readNum(Map<dynamic, dynamic> row, String key) {
+    final value = _readValue(row, key);
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '');
+  }
+
+  int _readDateMillis(Map<dynamic, dynamic> row, String key) {
+    final value = _readValue(row, key);
+    if (value is int) {
+      return value > 100000000000 ? value : value * 1000;
+    }
+    if (value is num) {
+      final intValue = value.toInt();
+      return intValue > 100000000000 ? intValue : intValue * 1000;
+    }
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    return parsed?.millisecondsSinceEpoch ?? 0;
+  }
+
+  String _formatBackupDate(dynamic value) {
+    DateTime? date;
+    if (value is int) {
+      date = DateTime.fromMillisecondsSinceEpoch(
+        value > 100000000000 ? value : value * 1000,
+      );
+    } else if (value is num) {
+      final intValue = value.toInt();
+      date = DateTime.fromMillisecondsSinceEpoch(
+        intValue > 100000000000 ? intValue : intValue * 1000,
+      );
+    } else {
+      date = DateTime.tryParse(value?.toString() ?? '');
+    }
+    if (date == null) return '日期未知';
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatMoney(num amount) {
+    if (amount % 1 == 0) return amount.toInt().toString();
+    return amount.toStringAsFixed(2);
+  }
+
+  String _snakeToCamel(String key) {
+    final parts = key.split('_');
+    if (parts.length <= 1) return key;
+    return parts.first +
+        parts
+            .skip(1)
+            .map((p) => p.isEmpty ? p : p[0].toUpperCase() + p.substring(1))
+            .join();
   }
 
   dynamic _defaultRestoreValue(String tableName, String columnName) {

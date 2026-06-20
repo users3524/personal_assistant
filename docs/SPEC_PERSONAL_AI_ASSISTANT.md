@@ -26,7 +26,7 @@
 | `todos` | 待办 | 使用中。 |
 | `antique_items` | 文玩 | 使用中。 |
 | `patting_logs` | 文玩 | 使用中。 |
-| `valuation_records` | 文玩估值 | 当前代码存在，后续不作为保留模块。 |
+| `valuation_records` | 文玩估值遗留兼容 | 应用层已下线；新备份不导出估值历史，旧备份导入时归档到藏品备注。 |
 | `daily_reviews` | AI 复盘 | 使用中。 |
 | `weekly_reports` | AI 复盘 | 使用中。 |
 | `resume_profile` | 简历 | 使用中。 |
@@ -74,16 +74,17 @@ work_experiences.responsibilities/tech_stack -> List<String>
 
 ## 5. 文玩估值模块口径
 
-当前代码中仍存在：
+产品口径：文玩记录继续保留，估值模块不再保留为产品功能。
 
-1. `valuation_records` 表。
-2. `ValuationRecordEntity`。
-3. `AntiqueRepository.getValuations()` / `addValuation()`。
-4. `totalValuationProvider`。
-5. `ValuationChart`。
-6. 藏品字段 `currentValuation`。
+当前已完成应用层下线：
 
-产品口径：文玩记录继续保留，但估值模块后续不需要保留。文档后续实现计划应以“移除估值展示与相关依赖、迁移或清理存量字段/表”为目标，而不是继续扩展估值功能。
+1. 删除 `ValuationChart` 和 `fl_chart` 依赖。
+2. 删除 `ValuationRecordEntity`、估值仓库接口/实现和 `totalValuationProvider`。
+3. 移除网格卡片估值展示，以及财富榜、潜力榜等估值榜单。
+4. `AntiqueEntity` 不再暴露 `currentValuation`。
+5. `BackupService` 新导出的 `valuation_records` 为空；旧备份导入时将 `valuation_records.date/amount/remark` 和旧 `current_valuation` 归档到 `antique_items.notes`。
+
+暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v6 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
 
 ## 6. 已吸收的未来设计原则
 

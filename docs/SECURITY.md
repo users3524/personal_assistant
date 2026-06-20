@@ -39,7 +39,7 @@
 2. `todo_lists`
 3. `todos`
 4. `antique_items`
-5. `valuation_records`
+5. `valuation_records`（兼容键保留，新导出为空）
 6. `patting_logs`
 7. `daily_reviews`
 8. `weekly_reports`
@@ -50,7 +50,7 @@
 13. `project_experiences`
 14. `collection_categories`
 
-当前数据库有 14 张表，备份导出已覆盖全部存量业务表。
+当前数据库有 14 张表，备份导出已覆盖全部存量业务表。估值功能已应用层下线，因此新备份保留 `valuation_records` 键但内容为空；`antique_items.currentValuation` 导出为 `null`。
 
 图片处理：导出时会尝试读取 `imagePaths` / `photoPaths` 对应文件，存在则编码为 `base64:<content>`；失败则保留原路径。
 
@@ -70,6 +70,7 @@
 6. 对 `base64:` 图片解码到系统临时目录 `personal_assistant_images`。
 7. 对旧备份缺失的新增列表字段使用空列表默认值，避免 schema v6 字段缺口导致导入中断。
 8. 若旧备份中包含 `user_preferences.aiApiKey` / `ai_api_key`，导入时迁移到安全存储并清空数据库字段；若备份不含密钥，覆盖导入会清空当前安全存储中的 AI Key。
+9. 若旧备份中包含 `valuation_records` 或 `antique_items.currentValuation`，导入时归档到对应藏品的 `notes`，不再回灌估值表。
 
 当前限制：
 
@@ -77,6 +78,7 @@
 | --- | --- |
 | 覆盖导入 | 导入前清空现有数据，不是合并。 |
 | 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID 与周报文本字段已纳入导入导出镜像测试。 |
+| 估值兼容 | 旧备份估值历史会归档到藏品备注；新备份不导出估值历史。 |
 | 图片恢复目录 | Base64 图片恢复到系统临时目录，不是应用文档目录。 |
 | 备份文件明文 | 备份 JSON 本身无密码保护和加密；但 AI API Key 已从导出内容中剔除。 |
 

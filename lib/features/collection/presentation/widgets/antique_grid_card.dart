@@ -21,7 +21,9 @@ class AntiqueGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverPath = latestPhoto ?? (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
+    final coverPath =
+        latestPhoto ??
+        (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
 
     return GestureDetector(
       onTap: onTap,
@@ -44,15 +46,25 @@ class AntiqueGridCard extends StatelessWidget {
                         ),
                         if (latestPhoto != null)
                           Positioned(
-                            top: 4, right: 4,
+                            top: 4,
+                            right: 4,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black54,
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text('${DateTime.now().difference(item.acquiredDate).inDays}天',
-                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                              child: Text(
+                                '${DateTime.now().difference(item.acquiredDate).inDays}天',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -80,7 +92,10 @@ class AntiqueGridCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           item.category,
-                          style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.primary),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -90,22 +105,15 @@ class AntiqueGridCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             item.subtype!,
-                            style: const TextStyle(fontSize: 10, color: Colors.orange),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      if (item.currentValuation != null)
-                        Text(
-                          '¥${item.currentValuation!.toStringAsFixed(0)}',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green.shade700),
-                        ),
                     ],
                   ),
                 ],

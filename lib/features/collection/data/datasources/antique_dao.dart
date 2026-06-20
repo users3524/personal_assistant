@@ -26,7 +26,6 @@ class AntiqueDao {
       acquiredPrice: row.acquiredPrice,
       sourceSeller: row.sourceSeller,
       condition: _conditionFromString(row.condition),
-      currentValuation: row.currentValuation,
       imagePaths: row.imagePaths,
       categoryMetadata: _parseMetadata(row.categoryMetadata),
       fingerprints: row.fingerprints,
@@ -46,10 +45,13 @@ class AntiqueDao {
       acquiredPrice: Value(entity.acquiredPrice),
       sourceSeller: Value(entity.sourceSeller),
       condition: Value(_conditionToString(entity.condition)),
-      currentValuation: Value(entity.currentValuation),
+      currentValuation: const Value<double?>(null),
       imagePaths: Value(entity.imagePaths),
-      categoryMetadata: Value(entity.categoryMetadata != null
-          ? jsonEncode(entity.categoryMetadata) : null),
+      categoryMetadata: Value(
+        entity.categoryMetadata != null
+            ? jsonEncode(entity.categoryMetadata)
+            : null,
+      ),
       fingerprints: Value(entity.fingerprints),
       notes: Value(entity.notes),
     );
@@ -93,16 +95,6 @@ class AntiqueDao {
     }
   }
 
-  ValuationRecordEntity _valuationToEntity(ValuationRecord row) {
-    return ValuationRecordEntity(
-      id: row.id,
-      itemId: row.itemId,
-      date: row.date,
-      amount: row.amount,
-      remark: row.remark,
-    );
-  }
-
   PattingLogEntity _pattingToEntity(PattingLog row) {
     return PattingLogEntity(
       id: row.id,
@@ -123,25 +115,22 @@ class AntiqueDao {
   }
 
   Future<AntiqueEntity?> getById(int id) async {
-    final row = await (_db.select(_db.antiqueItems)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.antiqueItems,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row != null ? _toEntity(row) : null;
   }
 
   Future<List<AntiqueEntity>> getAll() async {
-    final rows = await (_db.select(_db.antiqueItems)
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    final rows = await (_db.select(
+      _db.antiqueItems,
+    )..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])).get();
     return rows.map(_toEntity).toList();
   }
 
   Future<AntiqueEntity> update(AntiqueEntity entity) async {
-    await (_db.update(_db.antiqueItems)
-          ..where((t) => t.id.equals(entity.id!)))
-        .write(_toCompanion(entity).copyWith(
-          updatedAt: Value(DateTime.now()),
-        ));
+    await (_db.update(_db.antiqueItems)..where((t) => t.id.equals(entity.id!)))
+        .write(_toCompanion(entity).copyWith(updatedAt: Value(DateTime.now())));
     return entity;
   }
 
@@ -152,109 +141,90 @@ class AntiqueDao {
   // ===== 查询筛选 =====
 
   Future<List<AntiqueEntity>> getByCategory(String category) async {
-    final rows = await (_db.select(_db.antiqueItems)
-          ..where((t) => t.category.equals(category))
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.antiqueItems)
+              ..where((t) => t.category.equals(category))
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
     return rows.map(_toEntity).toList();
   }
 
   Future<List<AntiqueEntity>> getByCondition(AntiqueCondition condition) async {
     final condStr = _conditionToString(condition);
-    final rows = await (_db.select(_db.antiqueItems)
-          ..where((t) => t.condition.equals(condStr))
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.antiqueItems)
+              ..where((t) => t.condition.equals(condStr))
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
     return rows.map(_toEntity).toList();
   }
 
-  Future<List<AntiqueEntity>> getByYearRange(
-    int startYear,
-    int endYear,
-  ) async {
+  Future<List<AntiqueEntity>> getByYearRange(int startYear, int endYear) async {
     final start = DateTime(startYear, 1, 1);
     final end = DateTime(endYear, 12, 31);
-    final rows = await (_db.select(_db.antiqueItems)
-          ..where((t) =>
-              t.acquiredDate.isBetweenValues(start, end))
-          ..orderBy([(t) => OrderingTerm.desc(t.acquiredDate)]))
-        .get();
+    final rows =
+        await (_db.select(_db.antiqueItems)
+              ..where((t) => t.acquiredDate.isBetweenValues(start, end))
+              ..orderBy([(t) => OrderingTerm.desc(t.acquiredDate)]))
+            .get();
     return rows.map(_toEntity).toList();
   }
 
   Future<List<AntiqueEntity>> search(String keyword) async {
     final pattern = '%$keyword%';
-    final rows = await (_db.select(_db.antiqueItems)
-          ..where((t) =>
-              t.name.like(pattern) | t.description.like(pattern) |
-              t.category.like(pattern))
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.antiqueItems)
+              ..where(
+                (t) =>
+                    t.name.like(pattern) |
+                    t.description.like(pattern) |
+                    t.category.like(pattern),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
     return rows.map(_toEntity).toList();
-  }
-
-  // ===== 估值记录 =====
-
-  Future<List<ValuationRecordEntity>> getValuations(int itemId) async {
-    final rows = await (_db.select(_db.valuationRecords)
-          ..where((t) => t.itemId.equals(itemId))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
-        .get();
-    return rows.map(_valuationToEntity).toList();
-  }
-
-  Future<ValuationRecordEntity> addValuation(
-    ValuationRecordEntity record,
-  ) async {
-    final id = await _db.into(_db.valuationRecords).insert(
-          ValuationRecordsCompanion(
-            itemId: Value(record.itemId),
-            date: Value(record.date),
-            amount: Value(record.amount),
-            remark: Value(record.remark),
-          ),
-        );
-    return ValuationRecordEntity(
-      id: id,
-      itemId: record.itemId,
-      date: record.date,
-      amount: record.amount,
-      remark: record.remark,
-    );
   }
 
   // ===== 盘玩日志 =====
 
   Future<List<PattingLogEntity>> getPattingLogs(int itemId) async {
-    final rows = await (_db.select(_db.pattingLogs)
-          ..where((t) => t.itemId.equals(itemId))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
-        .get();
+    final rows =
+        await (_db.select(_db.pattingLogs)
+              ..where((t) => t.itemId.equals(itemId))
+              ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+            .get();
     return rows.map(_pattingToEntity).toList();
   }
 
   Future<List<PattingLogEntity>> getPattingLogsByDate(DateTime date) async {
     final dayStart = DateTime(date.year, date.month, date.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
-    final rows = await (_db.select(_db.pattingLogs)
-          ..where((t) => t.date.isBetweenValues(dayStart, dayEnd))
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.pattingLogs)
+              ..where((t) => t.date.isBetweenValues(dayStart, dayEnd))
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+            .get();
     return rows.map(_pattingToEntity).toList();
   }
 
-  Future<List<PattingLogEntity>> getPattingLogsByMonth(int year, int month) async {
+  Future<List<PattingLogEntity>> getPattingLogsByMonth(
+    int year,
+    int month,
+  ) async {
     final monthStart = DateTime(year, month, 1);
     final monthEnd = DateTime(year, month + 1, 1);
-    final rows = await (_db.select(_db.pattingLogs)
-          ..where((t) => t.date.isBetweenValues(monthStart, monthEnd))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
-        .get();
+    final rows =
+        await (_db.select(_db.pattingLogs)
+              ..where((t) => t.date.isBetweenValues(monthStart, monthEnd))
+              ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+            .get();
     return rows.map(_pattingToEntity).toList();
   }
 
   Future<PattingLogEntity> addPattingLog(PattingLogEntity log) async {
-    final id = await _db.into(_db.pattingLogs).insert(
+    final id = await _db
+        .into(_db.pattingLogs)
+        .insert(
           PattingLogsCompanion(
             itemId: Value(log.itemId),
             date: Value(log.date),
@@ -277,11 +247,14 @@ class AntiqueDao {
 
   /// 更新打卡记录（仅备注和照片路径）
   Future<PattingLogEntity> updatePattingLog(PattingLogEntity log) async {
-    await (_db.update(_db.pattingLogs)..where((t) => t.id.equals(log.id!)))
-        .write(PattingLogsCompanion(
-      note: Value(log.note),
-      photoPaths: Value(log.photoPaths),
-    ));
+    await (_db.update(
+      _db.pattingLogs,
+    )..where((t) => t.id.equals(log.id!))).write(
+      PattingLogsCompanion(
+        note: Value(log.note),
+        photoPaths: Value(log.photoPaths),
+      ),
+    );
     return log;
   }
 
@@ -315,13 +288,5 @@ class AntiqueDao {
       map[row.category] = (map[row.category] ?? 0) + 1;
     }
     return map;
-  }
-
-  Future<double> totalValuation() async {
-    final rows = await _db.select(_db.antiqueItems).get();
-    return rows.fold<double>(
-      0,
-      (sum, r) => sum + (r.currentValuation ?? 0),
-    );
   }
 }

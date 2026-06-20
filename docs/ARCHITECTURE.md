@@ -11,7 +11,7 @@
 | 业务域 | 当前形态 |
 | --- | --- |
 | 待办 | 任务、清单、子任务、软删除、归档、统计、周/月视图。 |
-| 文玩/盘串 | 藏品档案、分类字段、照片、盘玩打卡、打卡对比、月历、趣味榜单；估值代码当前存在但后续不作为保留模块。 |
+| 文玩/盘串 | 藏品档案、分类字段、照片、盘玩打卡、打卡对比、月历、趣味榜单；估值功能已应用层下线，schema v6 遗留表/列暂留兼容。 |
 | AI 复盘 | 对话式日报、日报详情、周报、离线模板生成器、OpenAI 兼容调用。 |
 | 动态简历 | 三模板预览、长表单编辑、可见性开关、拖拽排序、图片导出分享。 |
 
@@ -27,7 +27,6 @@
 | 数据库 | `drift` + `sqlite3_flutter_libs` | 本地 SQLite ORM。 |
 | 文件路径 | `path_provider` + `path` | 数据库、图片、配置文件路径。 |
 | 网络 | `dio` | OpenAI 兼容 API 调用、连接检测。 |
-| 图表 | `fl_chart` | 当前用于文玩估值图表。 |
 | 通知 | `flutter_local_notifications` + `timezone` | 每日复盘/每周周报提醒。 |
 | 图片 | `image_picker` + `gal` | 拍照/相册取图、保存到系统相册。 |
 | 分享 | `share_plus` | 简历图片、文玩图片/对比图分享。 |
@@ -120,7 +119,7 @@ feature/
 | `todo_lists` | 待办清单。 |
 | `todos` | 待办任务、子任务、状态、标签、软删除、重复策略。 |
 | `antique_items` | 文玩藏品档案。 |
-| `valuation_records` | 文玩估值记录，当前存在，后续计划移除。 |
+| `valuation_records` | 遗留估值兼容表；应用层已下线，新备份不再导出估值历史。 |
 | `patting_logs` | 文玩盘玩/打卡日志。 |
 | `daily_reviews` | 每日复盘。 |
 | `weekly_reports` | 每周周报。 |
@@ -153,7 +152,7 @@ Todo
 
 Collection
   -> AntiqueRepository -> AntiqueDao
-  -> antique_items / patting_logs / valuation_records
+  -> antique_items / patting_logs
   -> AppSettingsPersistence 保存翻牌配置和网格列数
 
 AI Assistant

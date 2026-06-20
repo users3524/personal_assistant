@@ -19,7 +19,7 @@
 
 当前文档把“已实现现状”和“后续智能化规划”分开维护。后续实现顺序统一按以下阶段推进：
 
-1. 先修现有数据债：备份导入导出、API Key 安全存储、文玩估值移除策略、图片路径统一。
+1. 先修现有数据债：备份导入导出、API Key 安全存储、文玩估值应用层下线、图片路径统一。
 2. 再修现有功能链路：待办树查询、复盘真实文玩分钟、输入/STT 限制、周报日期范围查询、简历编辑缺口。
 3. 然后落地 AI 成本闸门：`PromptBuilder`、`chat_turns`、15 轮熔断、离线便签。
 4. 再做深夜引擎：先前台 Catch-Up Guard 补偿闭环，再接 Android WorkManager。
@@ -48,8 +48,9 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 - 盘玩打卡：照片、时长、方式、备注、时间线展示。
 - 列表与月历：网格视图、月历视图、最新打卡照片、每日翻牌、趣味榜单。
 - 照片能力：全屏查看、分享、保存、打卡照片对比。
+- 估值下线：估值图表、估值 Provider、估值实体/仓库接口、财富/潜力榜和 `fl_chart` 依赖已移除。
 
-估值相关代码当前仍存在：`valuation_records` 表、`current_valuation` 字段、`ValuationChart`、`totalValuationProvider`、财富/潜力相关排序逻辑。产品口径是文玩记录继续保留，但估值模块后续不需要保留，后续应做迁移或移除，而不是继续扩展估值能力。
+兼容口径：`valuation_records` 表和 `antique_items.current_valuation` 字段仍保留在 schema v6 中，作为旧数据库/旧备份兼容壳；新导出的 `valuation_records` 为空，旧备份导入时会把估值历史按藏品归档到 `antique_items.notes`。
 
 ### 待办
 
@@ -120,7 +121,6 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 | 路由 | `go_router` | 3 个底部 Tab 和全屏路由。 |
 | 数据库 | `drift` + `sqlite3_flutter_libs` | 本地 SQLite。 |
 | 网络 | `dio` | OpenAI 兼容 API。 |
-| 图表 | `fl_chart` | 当前仅用于文玩估值图表，后续随估值模块处理。 |
 | 通知 | `flutter_local_notifications` + `timezone` | 本地提醒。 |
 | 图片 | `image_picker` + `gal` | 拍照/选图和保存到相册。 |
 | 分享 | `share_plus` | 简历图片、文玩图片分享。 |
@@ -140,7 +140,7 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 | `todo_lists` | 待办清单。 |
 | `todos` | 待办任务、父子关系、状态、标签、软删除、重复策略。 |
 | `antique_items` | 文玩藏品档案。 |
-| `valuation_records` | 文玩估值记录，当前存在，后续不作为保留模块。 |
+| `valuation_records` | 遗留估值兼容表；应用层已下线，新备份不再导出估值历史。 |
 | `patting_logs` | 文玩盘玩/打卡日志。 |
 | `daily_reviews` | 每日复盘。 |
 | `weekly_reports` | 每周周报。 |
@@ -215,9 +215,9 @@ Feature 内部基本按 `data/domain/presentation` 分层。
 
 ## 隐私与安全
 
-- 数据库、AI Key、备份 JSON 当前均为本地明文。
+- 数据库和备份 JSON 当前为本地明文；AI Key 已迁移到平台安全存储，备份不再导出密钥。
 - AI 请求只会发往用户配置的 Provider/baseUrl。
-- JSON 备份可能包含 API Key、个人资料、藏品价格、图片 Base64。
+- JSON 备份可能包含个人资料、藏品入手价格、图片 Base64；不再包含 AI API Key。
 - 备份导入当前是覆盖恢复，不是合并恢复。
 
 更多细节见 [docs/SECURITY.md](docs/SECURITY.md)。

@@ -2,7 +2,7 @@
 
 最后更新：2026-06-20
 
-本文记录当前代码中的文玩模块实现。注意：文玩记录功能保留，但估值模块后续不需要保留；当前代码存在估值表和图表，应按迁移计划移除，而不是继续扩展。
+本文记录当前代码中的文玩模块实现。注意：文玩记录功能保留；估值模块已完成应用层下线，schema v6 中的遗留表/列暂时保留为旧数据库和旧备份兼容壳。
 
 ## 1. 当前页面与入口
 
@@ -28,7 +28,7 @@
 | `acquired_price` | 入手价格，可空；用于排序和单次成本榜。 |
 | `source_seller` | 来源/卖家。 |
 | `condition` | `perfect` / `good` / `fair` / `poor`。 |
-| `current_valuation` | 当前估值，当前代码使用，后续估值模块移除时需处理。 |
+| `current_valuation` | 遗留估值兼容列；应用层不再读取或维护，新保存时写空。 |
 | `image_paths` | 藏品照片路径列表，`StringListConverter`；Drift 字段非空，默认 `[]`。 |
 | `category_metadata` | 分类专属字段 JSON 字符串。 |
 | `fingerprints` | 特征记录。 |
@@ -50,7 +50,7 @@
 
 ### `valuation_records`
 
-当前代码存在该表：
+当前 schema v6 仍存在该表：
 
 | 字段 | 当前用途 |
 | --- | --- |
@@ -61,25 +61,15 @@
 | `remark` | 备注。 |
 | `created_at` | 创建时间。 |
 
-后续口径：不保留估值模块。移除时需要处理 `valuation_records`、`current_valuation`、`ValuationChart`、`totalValuationProvider`、`fl_chart`、财富/潜力等依赖估值的榜单或展示。
-
-估值移除迁移原则：
-
-1. 迁移前先确认是否需要将历史估值归档为文本，追加到 `antique_items.description` 或 `notes`。
-2. 若做文本归档，应使用当前真实字段：`valuation_records.date`、`amount`、`remark`。
-3. 文本归档需要按 `item_id` 分组，按 `date` 升序生成可读记录，避免把多个藏品的历史估值混到一起。
-4. 下线应分阶段进行：先在应用层隐藏/移除估值 UI、Provider、图表和 `fl_chart` 依赖，同时让导入旧备份时的 `valuation_records` 可重定向归档；待旧备份兼容路径稳定后，再评估物理移除表和列。
-5. 物理移除 `valuation_records` 或 `current_valuation` 前，必须更新 `BackupService._restoreData()`：遇到旧备份中的 `valuation_records` 时不直接插入已移除表，而是先按藏品归档到描述或备注，避免旧 JSON 备份恢复崩溃。
-6. 同步更新备份导入导出和迁移测试，避免旧备份恢复失败。
+当前口径：不保留估值功能。已移除 `ValuationChart`、`ValuationRecordEntity`、`AntiqueRepository.getValuations()` / `addValuation()`、`totalValuationProvider`、`fl_chart`、财富榜和潜力榜。`BackupService` 新导出的 `valuation_records` 为空；导入旧备份时，`valuation_records.date` / `amount` / `remark` 会按 `item_id` 分组、日期升序追加归档到 `antique_items.notes`，旧 `current_valuation` 也会以“当前估值”文本归档后写空。物理删除表/列留到后续 schema 迁移阶段评估。
 
 ## 3. 当前实体与仓库
 
 | 类型 | 当前内容 |
 | --- | --- |
-| `AntiqueEntity` | 藏品主实体，包含图片路径、分类字段、价格、估值、备注。 |
+| `AntiqueEntity` | 藏品主实体，包含图片路径、分类字段、入手价格、备注。 |
 | `PattingLogEntity` | 盘玩日志，包含时长、方式、备注、照片路径。 |
-| `ValuationRecordEntity` | 当前估值记录实体，后续计划移除。 |
-| `AntiqueRepository` | CRUD、分类/品相/年份/搜索、估值、盘玩日志、统计、最新打卡照片。 |
+| `AntiqueRepository` | CRUD、分类/品相/年份/搜索、盘玩日志、统计、最新打卡照片。 |
 | `AntiqueDao` | Drift 查询与实体转换。 |
 
 ## 4. 当前列表页功能
@@ -103,13 +93,13 @@
 
 | 榜单 | 依据 |
 | --- | --- |
-| 财富榜 | `currentValuation` 排序，后续随估值模块移除。 |
 | 贵妃榜 | 当月打卡次数。 |
 | 核桃榜 | 核桃分类的边宽等尺寸字段。 |
 | 老炮榜 | 入手时间。 |
 | 串串榜 | 手串尺寸/串型字段。 |
 | 缘分榜 | 来源/卖家聚类。 |
 | 冷宫幽怨榜 | 距离上次打卡天数。 |
+| 把玩王 | 累计盘玩时长。 |
 | 夜猫子榜 | 23:00-3:00 打卡次数。 |
 | 劳模榜 | 入手价 / 累计打卡次数。 |
 | 雨露均沾榜 | 近两周盘玩活跃度。 |
@@ -144,7 +134,7 @@
 | 删除打卡 | 二次确认后删除。 |
 | 照片对比 | 至少两条有照片打卡后，可选择左右照片生成时光对比。 |
 | 对比图保存 | 使用 `RepaintBoundary` 生成图片并分享。 |
-| 删除藏品 | 二次确认；代码提示会删除图片和盘玩记录，数据库外键会级联日志和估值。 |
+| 删除藏品 | 二次确认；代码提示会删除图片和盘玩记录，数据库外键会级联盘玩日志和遗留估值记录。 |
 
 ## 8. 分类管理
 
@@ -174,7 +164,7 @@
 
 ## 10. 备份与 AI 复盘衔接
 
-当前 `BackupService` 已导出 `antique_items`、`valuation_records`、`patting_logs` 和 `collection_categories`，但恢复图片会写入系统临时目录，且导出图片时仍直接 `File(path)`，对相对路径不稳定。后续需要让备份服务复用图片解析 helper，保证相对路径和绝对路径都能被正确打包。
+当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。恢复图片会写入系统临时目录，且导出图片时仍直接 `File(path)`，对相对路径不稳定。后续需要让备份服务复用图片解析 helper，保证相对路径和绝对路径都能被正确打包。
 
 AI 复盘侧当前 `DailyReviewChatPage` 生成日报时 `pattingMinutes` 固定传 0。后续深夜素材包应从 `patting_logs` 读取当天 `duration_minutes` 总和、打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入；白天文玩打卡本身不应触发云端请求。
 

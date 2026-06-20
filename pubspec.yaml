@@ -30,9 +30,6 @@ dependencies:
   # 网络（AI API）
   dio: ^5.4.3+1
 
-  # 图表
-  fl_chart: ^0.68.0
-
   # 通知
   flutter_local_notifications: ^17.1.0
   timezone: ^0.9.2

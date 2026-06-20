@@ -17,10 +17,6 @@ abstract class AntiqueRepository {
   Future<List<AntiqueEntity>> getByYearRange(int startYear, int endYear);
   Future<List<AntiqueEntity>> search(String keyword);
 
-  // ===== 估值记录 =====
-  Future<List<ValuationRecordEntity>> getValuations(int itemId);
-  Future<ValuationRecordEntity> addValuation(ValuationRecordEntity record);
-
   // ===== 盘玩日志 =====
   Future<List<PattingLogEntity>> getPattingLogs(int itemId);
   Future<List<PattingLogEntity>> getPattingLogsByDate(DateTime date);
@@ -31,7 +27,6 @@ abstract class AntiqueRepository {
 
   // ===== 统计 =====
   Future<Map<String, int>> countByCategory();
-  Future<double> totalValuation();
 
   // ===== 批量查询 =====
   /// 返回 Map<itemId, 最新一张打卡照片路径>

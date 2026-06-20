@@ -48,6 +48,7 @@ void main() {
               as Map<String, dynamic>;
       expect(backupJson['todo_lists'], isA<List<dynamic>>());
       expect(backupJson['todo_lists'], hasLength(1));
+      expect(backupJson['valuation_records'], isEmpty);
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -150,6 +151,71 @@ void main() {
       final prefs = await sourceDb.select(sourceDb.userPreferences).getSingle();
       expect(prefs.aiApiKey, null);
       expect(await apiKeyStore.read(), 'legacy-secret-key');
+    });
+
+    test('archives legacy valuation records into antique notes', () async {
+      final now = DateTime(2026, 6, 20, 10, 30);
+      final backup = {
+        'version': 1,
+        'exportedAt': now.toIso8601String(),
+        'antique_items': [
+          {
+            'id': 1,
+            'name': '旧藏核桃',
+            'category': '核桃',
+            'description': null,
+            'acquiredDate': DateTime(2025, 1, 2).millisecondsSinceEpoch,
+            'acquiredPrice': 800.0,
+            'sourceSeller': '老店',
+            'condition': 'good',
+            'currentValuation': 1200.0,
+            'imagePaths': <String>[],
+            'notes': '原始备注',
+            'createdAt': now.millisecondsSinceEpoch,
+            'updatedAt': now.millisecondsSinceEpoch,
+          },
+        ],
+        'valuation_records': [
+          {
+            'id': 2,
+            'itemId': 1,
+            'date': DateTime(2026, 2, 3).millisecondsSinceEpoch,
+            'amount': 1000.0,
+            'remark': '首次复盘',
+            'createdAt': now.millisecondsSinceEpoch,
+          },
+          {
+            'id': 1,
+            'itemId': 1,
+            'date': DateTime(2026, 1, 2).millisecondsSinceEpoch,
+            'amount': 950.5,
+            'remark': null,
+            'createdAt': now.millisecondsSinceEpoch,
+          },
+        ],
+      };
+      final file = File(
+        '${tempDir.path}${Platform.pathSeparator}legacy_valuations.json',
+      );
+      await file.writeAsString(jsonEncode(backup));
+
+      await BackupService(
+        sourceDb,
+        apiKeyStore: apiKeyStore,
+      ).importBackup(file.path);
+
+      final item = await sourceDb.select(sourceDb.antiqueItems).getSingle();
+      expect(item.currentValuation, null);
+      expect(item.notes, contains('原始备注'));
+      expect(item.notes, contains('【历史估值归档】'));
+      expect(item.notes, contains('当前估值: 1200 元'));
+      expect(item.notes, contains('2026-01-02 | 金额: 950.50 元'));
+      expect(item.notes, contains('2026-02-03 | 金额: 1000 元 | 备注: 首次复盘'));
+
+      final valuationRows = await sourceDb
+          .select(sourceDb.valuationRecords)
+          .get();
+      expect(valuationRows, isEmpty);
     });
   });
 }

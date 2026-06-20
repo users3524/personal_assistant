@@ -16,7 +16,7 @@
 
 ## 2. 当前数据库表
 
-当前 `schemaVersion = 6`，表结构来自 Drift 手写表定义。
+当前 `schemaVersion = 7`，表结构来自 Drift 手写表定义。
 
 | 表 | 所属模块 | 当前状态 |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ work_experiences.responsibilities/tech_stack -> List<String>
 4. `AntiqueEntity` 不再暴露 `currentValuation`。
 5. `BackupService` 新导出的 `valuation_records` 为空；旧备份导入时将 `valuation_records.date/amount/remark` 和旧 `current_valuation` 归档到 `antique_items.notes`。
 
-暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v6 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
+暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v7 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
 
 ## 6. 已吸收的未来设计原则
 

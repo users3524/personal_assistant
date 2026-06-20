@@ -18,15 +18,15 @@
 - [x] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。
 - [x] 补齐 `BackupService` 导入列清单：`work_experiences.responsibilities`。
 - [x] 补齐 `BackupService` 导入列清单：`project_experiences.key_deliverables/badges`。
-- [x] 决定并执行文玩估值模块应用层下线方案，schema v6 表/列暂留作兼容壳。
+- [x] 决定并执行文玩估值模块应用层下线方案，当前 schema 表/列暂留作兼容壳。
 - [x] 移除估值后同步更新 `pubspec.yaml`，删除不再使用的 `fl_chart`。
-- [ ] 为 Drift schema 迁移补测试。
+- [x] 为 Drift schema 迁移补测试。
 - [x] 为 `BackupService` 增加导出-导入镜像测试，覆盖 `todo_lists`、任务树、软删除、简历 List 字段、`daily_reviews.completed_todo_ids`、`weekly_reports` 当前文本字段和日期毫秒/秒转换。
 
 ## P1：待办
 
 - [x] `TodoDao.getTree()` 改为父任务查询 + 子任务 IN 批量查询。
-- [ ] 为待办批量树查询评估并补充 `parent_id`、`list_id`、`deleted_at/status/due_date` 等索引。
+- [x] 为待办批量树查询评估并补充 `parent_id`、`list_id`、`deleted_at/status/due_date` 等索引。
 - [x] 父任务状态和软删除改为事务级联。
 - [x] 修复 `TodoEntity.copyWith` 无法显式置空 nullable 时间字段的问题。
 - [x] 评估 `Value<T?>`、哨兵对象或独立 update command，并选择 domain 层哨兵对象统一 nullable 清空模式。

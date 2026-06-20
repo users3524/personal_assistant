@@ -50,7 +50,7 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 - 照片能力：全屏查看、分享、保存、打卡照片对比。
 - 估值下线：估值图表、估值 Provider、估值实体/仓库接口、财富/潜力榜和 `fl_chart` 依赖已移除。
 
-兼容口径：`valuation_records` 表和 `antique_items.current_valuation` 字段仍保留在 schema v6 中，作为旧数据库/旧备份兼容壳；新导出的 `valuation_records` 为空，旧备份导入时会把估值历史按藏品归档到 `antique_items.notes`。
+兼容口径：`valuation_records` 表和 `antique_items.current_valuation` 字段仍保留在 schema v7 中，作为旧数据库/旧备份兼容壳；新导出的 `valuation_records` 为空，旧备份导入时会把估值历史按藏品归档到 `antique_items.notes`。
 
 ### 待办
 
@@ -134,7 +134,7 @@ Windows 用户可运行 `build_and_run.bat` 进行本地构建和安装。当前
 
 ## 数据库
 
-当前 `schemaVersion = 6`，注册 14 张表：
+当前 `schemaVersion = 7`，注册 14 张表：
 
 | 表 | 用途 |
 | --- | --- |

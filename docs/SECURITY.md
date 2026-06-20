@@ -68,7 +68,7 @@
 4. 将 drift `toJson()` 的 camelCase key 转为 snake_case。
 5. 对日期列把毫秒时间戳转换为 Drift SQLite 使用的秒时间戳。
 6. 对 `base64:` 图片解码到系统临时目录 `personal_assistant_images`。
-7. 对旧备份缺失的新增列表字段使用空列表默认值，避免 schema v6 字段缺口导致导入中断。
+7. 对旧备份缺失的新增列表字段使用空列表默认值，避免历史 schema 字段缺口导致导入中断。
 8. 若旧备份中包含 `user_preferences.aiApiKey` / `ai_api_key`，导入时迁移到安全存储并清空数据库字段；若备份不含密钥，覆盖导入会清空当前安全存储中的 AI Key。
 9. 若旧备份中包含 `valuation_records` 或 `antique_items.currentValuation`，导入时归档到对应藏品的 `notes`，不再回灌估值表。
 

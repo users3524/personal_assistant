@@ -50,7 +50,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,8 +73,17 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(todos, todos.parentId);
         await m.addColumn(todos, todos.recurrenceRule);
       }
+      if (from < 7) {
+        await _createTodoIndexes();
+      }
     },
   );
+
+  Future<void> _createTodoIndexes() async {
+    for (final statement in todoIndexStatements) {
+      await customStatement(statement);
+    }
+  }
 
   static Future<AppDatabase> create() async {
     final dir = await getApplicationDocumentsDirectory();

@@ -18,20 +18,38 @@ class TodoDao {
 
   Future<List<TodoListEntity>> getLists() async {
     final rows = await _db.select(_db.todoLists).get();
-    return rows.map((r) => TodoListEntity(
-      id: r.id, name: r.name, category: r.category, createdAt: r.createdAt,
-    )).toList();
+    return rows
+        .map(
+          (r) => TodoListEntity(
+            id: r.id,
+            name: r.name,
+            category: r.category,
+            createdAt: r.createdAt,
+          ),
+        )
+        .toList();
   }
 
   Future<TodoListEntity> saveList(TodoListEntity list) async {
     if (list.id != null) {
-      await (_db.update(_db.todoLists)..where((t) => t.id.equals(list.id!)))
-          .write(TodoListsCompanion(name: Value(list.name), category: Value(list.category)));
+      await (_db.update(
+        _db.todoLists,
+      )..where((t) => t.id.equals(list.id!))).write(
+        TodoListsCompanion(
+          name: Value(list.name),
+          category: Value(list.category),
+        ),
+      );
       return list;
     }
-    final id = await _db.into(_db.todoLists).insert(
-      TodoListsCompanion(name: Value(list.name), category: Value(list.category)),
-    );
+    final id = await _db
+        .into(_db.todoLists)
+        .insert(
+          TodoListsCompanion(
+            name: Value(list.name),
+            category: Value(list.category),
+          ),
+        );
     return list.copyWith(id: id);
   }
 
@@ -93,28 +111,40 @@ class TodoDao {
 
   String _normalizeCategory(String cat) {
     switch (cat) {
-      case 'life': return '生活';
-      case 'work': return '工作';
-      default: return cat;
+      case 'life':
+        return '生活';
+      case 'work':
+        return '工作';
+      default:
+        return cat;
     }
   }
 
   String _statusToString(TodoStatus status) {
     switch (status) {
-      case TodoStatus.pending: return 'pending';
-      case TodoStatus.inProgress: return 'in_progress';
-      case TodoStatus.done: return 'done';
-      case TodoStatus.cancelled: return 'cancelled';
+      case TodoStatus.pending:
+        return 'pending';
+      case TodoStatus.inProgress:
+        return 'in_progress';
+      case TodoStatus.done:
+        return 'done';
+      case TodoStatus.cancelled:
+        return 'cancelled';
     }
   }
 
   TodoStatus _statusFromString(String status) {
     switch (status) {
-      case 'pending': return TodoStatus.pending;
-      case 'in_progress': return TodoStatus.inProgress;
-      case 'done': return TodoStatus.done;
-      case 'cancelled': return TodoStatus.cancelled;
-      default: return TodoStatus.pending;
+      case 'pending':
+        return TodoStatus.pending;
+      case 'in_progress':
+        return TodoStatus.inProgress;
+      case 'done':
+        return TodoStatus.done;
+      case 'cancelled':
+        return TodoStatus.cancelled;
+      default:
+        return TodoStatus.pending;
     }
   }
 
@@ -123,26 +153,48 @@ class TodoDao {
   /// 获取父任务及其子任务树
   Future<TodoEntity?> _hydrateTree(Todo? row) async {
     if (row == null) return null;
-    final childRows = await (_db.select(_db.todos)
-          ..where((t) => t.parentId.equals(row.id) & t.deletedAt.isNull())
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .get();
+    final childRows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.parentId.equals(row.id) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
     final children = childRows.map((r) => _toEntity(r)).toList();
     return _toEntity(row, subtasks: children);
   }
 
+  Future<List<TodoEntity>> _hydrateParentRows(List<Todo> parentRows) async {
+    if (parentRows.isEmpty) return const [];
+
+    final parentIds = parentRows.map((row) => row.id).toList();
+    final childRows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.parentId.isIn(parentIds) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
+
+    final childrenByParent = <int, List<TodoEntity>>{};
+    for (final row in childRows) {
+      final parentId = row.parentId;
+      if (parentId == null) continue;
+      childrenByParent.putIfAbsent(parentId, () => []).add(_toEntity(row));
+    }
+
+    return parentRows
+        .map(
+          (row) =>
+              _toEntity(row, subtasks: childrenByParent[row.id] ?? const []),
+        )
+        .toList();
+  }
+
   /// 获取所有父任务（树形结构）
   Future<List<TodoEntity>> getTree() async {
-    final parentRows = await (_db.select(_db.todos)
-          ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    final results = <TodoEntity>[];
-    for (final row in parentRows) {
-      final tree = await _hydrateTree(row);
-      if (tree != null) results.add(tree);
-    }
-    return results;
+    final parentRows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
+              ..orderBy(_smartOrder()))
+            .get();
+    return _hydrateParentRows(parentRows);
   }
 
   /// 获取今日任务树
@@ -153,10 +205,11 @@ class TodoDao {
 
   /// 获取父任务（不含子任务，用于仪表盘统计）
   Future<List<TodoEntity>> getParents() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
@@ -168,9 +221,9 @@ class TodoDao {
   }
 
   Future<TodoEntity?> getById(int id) async {
-    final row = await (_db.select(_db.todos)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.todos,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return null;
     return _hydrateTree(row);
   }
@@ -178,8 +231,9 @@ class TodoDao {
   Future<List<TodoEntity>> getAll() => getTree();
 
   Future<TodoEntity> update(TodoEntity entity) async {
-    await (_db.update(_db.todos)..where((t) => t.id.equals(entity.id!)))
-        .write(_toCompanion(entity).copyWith(updatedAt: Value(DateTime.now())));
+    await (_db.update(_db.todos)..where((t) => t.id.equals(entity.id!))).write(
+      _toCompanion(entity).copyWith(updatedAt: Value(DateTime.now())),
+    );
     return entity;
   }
 
@@ -192,10 +246,11 @@ class TodoDao {
   }
 
   Future<List<TodoEntity>> getSubtasks(int parentId) async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.parentId.equals(parentId) & t.deletedAt.isNull())
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.parentId.equals(parentId) & t.deletedAt.isNull())
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
@@ -204,26 +259,36 @@ class TodoDao {
   Future<void> cascadeStatus(int id, TodoStatus newStatus) async {
     final now = DateTime.now();
     final statusStr = _statusToString(newStatus);
-    // 更新父任务
-    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(status: Value(statusStr), updatedAt: Value(now),
-          completedAt: newStatus == TodoStatus.done ? Value(now) : const Value.absent(),
-          cancelledAt: newStatus == TodoStatus.cancelled ? Value(now) : const Value.absent(),
-        ));
-    // 级联更新子任务
-    await (_db.update(_db.todos)..where((t) => t.parentId.equals(id) & t.deletedAt.isNull()))
-        .write(TodosCompanion(status: Value(statusStr), updatedAt: Value(now),
-          completedAt: newStatus == TodoStatus.done ? Value(now) : const Value.absent(),
-          cancelledAt: newStatus == TodoStatus.cancelled ? Value(now) : const Value.absent(),
-        ));
+    final companion = TodosCompanion(
+      status: Value(statusStr),
+      updatedAt: Value(now),
+      completedAt: newStatus == TodoStatus.done
+          ? Value(now)
+          : const Value.absent(),
+      cancelledAt: newStatus == TodoStatus.cancelled
+          ? Value(now)
+          : const Value.absent(),
+    );
+    await _db.transaction(() async {
+      await (_db.update(
+        _db.todos,
+      )..where((t) => t.id.equals(id))).write(companion);
+      await (_db.update(_db.todos)
+            ..where((t) => t.parentId.equals(id) & t.deletedAt.isNull()))
+          .write(companion);
+    });
   }
 
   Future<void> cascadeDelete(int id) async {
     final now = DateTime.now();
-    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())));
-    await (_db.update(_db.todos)..where((t) => t.parentId.equals(id)))
-        .write(TodosCompanion(deletedAt: Value(now), updatedAt: Value(now)));
+    await _db.transaction(() async {
+      await (_db.update(_db.todos)..where((t) => t.id.equals(id))).write(
+        TodosCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+      );
+      await (_db.update(_db.todos)..where((t) => t.parentId.equals(id))).write(
+        TodosCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+      );
+    });
   }
 
   // ===== 重复策略 =====
@@ -234,13 +299,21 @@ class TodoDao {
     if (todo == null || todo.recurrenceRule == null) return null;
 
     // 计算下次截止日期
-    final nextDue = _nextRecurrenceDate(todo.recurrenceRule!, todo.dueDate ?? DateTime.now());
+    final nextDue = _nextRecurrenceDate(
+      todo.recurrenceRule!,
+      todo.dueDate ?? DateTime.now(),
+    );
     if (nextDue == null) return null;
 
     // 归档当前
     final now = DateTime.now();
-    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(status: const Value('done'), completedAt: Value(now), updatedAt: Value(now)));
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id))).write(
+      TodosCompanion(
+        status: const Value('done'),
+        completedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
 
     // 创建下一周期的副本
     final next = todo.copyWith(
@@ -276,8 +349,30 @@ class TodoDao {
   Future<void> softDelete(int id) => cascadeDelete(id);
 
   Future<void> restore(int id) async {
-    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(deletedAt: Value(null), status: Value('pending'), updatedAt: Value(DateTime.now())));
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id))).write(
+      TodosCompanion(
+        deletedAt: const Value(null),
+        status: const Value('pending'),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> reopenCascade(int id) async {
+    final now = DateTime.now();
+    const companion = TodosCompanion(
+      status: Value('pending'),
+      completedAt: Value<DateTime?>(null),
+      cancelledAt: Value<DateTime?>(null),
+    );
+    await _db.transaction(() async {
+      await (_db.update(_db.todos)..where((t) => t.id.equals(id))).write(
+        companion.copyWith(updatedAt: Value(now)),
+      );
+      await (_db.update(_db.todos)
+            ..where((t) => t.parentId.equals(id) & t.deletedAt.isNull()))
+          .write(companion.copyWith(updatedAt: Value(now)));
+    });
   }
 
   Future<void> hardDelete(int id) async {
@@ -287,67 +382,102 @@ class TodoDao {
   // ===== 智能排序 =====
 
   List<OrderingTerm Function(Todos t)> _smartOrder() => [
-        (t) => OrderingTerm.desc(t.isStarred),
-        (t) => OrderingTerm.desc(t.priority),
-        (t) => OrderingTerm.asc(t.dueDate),
-        (t) => OrderingTerm.desc(t.updatedAt),
-      ];
+    (t) => OrderingTerm.desc(t.isStarred),
+    (t) => OrderingTerm.desc(t.priority),
+    (t) => OrderingTerm.asc(t.dueDate),
+    (t) => OrderingTerm.desc(t.updatedAt),
+  ];
 
   // ===== 查询 =====
 
   Future<List<TodoEntity>> getByCategory(String category) async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.category.equals(category) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    final results = <TodoEntity>[];
-    for (final row in rows) {
-      final tree = await _hydrateTree(row);
-      if (tree != null) results.add(tree);
-    }
-    return results;
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.category.equals(category) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
+    return _hydrateParentRows(rows);
   }
 
   Future<List<TodoEntity>> getByStatus(TodoStatus status) async {
     final statusStr = _statusToString(status);
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.status.equals(statusStr) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.status.equals(statusStr) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
-  Future<List<TodoEntity>> getByCategoryAndStatus(String category, TodoStatus status) async {
+  Future<List<TodoEntity>> getByCategoryAndStatus(
+    String category,
+    TodoStatus status,
+  ) async {
     final statusStr = _statusToString(status);
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.category.equals(category) & t.status.equals(statusStr) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.category.equals(category) &
+                    t.status.equals(statusStr) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> getByDateRange(DateTime start, DateTime end) async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.dueDate.isBetweenValues(start, end) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.dueDate.isBetweenValues(start, end) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> search(String keyword) async {
     final pattern = '%$keyword%';
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => (t.title.like(pattern) | t.description.like(pattern)) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    (t.title.like(pattern) | t.description.like(pattern)) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> getStarred() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.isStarred.equals(true) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.isStarred.equals(true) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy(_smartOrder()))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
@@ -367,18 +497,25 @@ class TodoDao {
   }
 
   Future<List<TodoEntity>> getArchived() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.status.isIn(['done', 'cancelled']) & t.deletedAt.isNull() & t.parentId.isNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where(
+                (t) =>
+                    t.status.isIn(['done', 'cancelled']) &
+                    t.deletedAt.isNull() &
+                    t.parentId.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> getTrashed() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.deletedAt.isNotNull() & t.parentId.isNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)
+              ..where((t) => t.deletedAt.isNotNull() & t.parentId.isNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
+            .get();
     return rows.map((r) => _toEntity(r)).toList();
   }
 
@@ -388,7 +525,7 @@ class TodoDao {
     final now = DateTime.now();
     await (_db.update(_db.todos)
           ..where((t) => t.status.equals('done') & t.deletedAt.isNull()))
-        .write(TodosCompanion(updatedAt: Value(DateTime.now()), deletedAt: Value(DateTime.now())));
+        .write(TodosCompanion(updatedAt: Value(now), deletedAt: Value(now)));
   }
 
   Future<void> emptyTrash() async {
@@ -401,39 +538,66 @@ class TodoDao {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.status.equals('done') & t.completedAt.isBetweenValues(todayStart, todayEnd) & t.deletedAt.isNull() & t.parentId.isNull()))
-        .get();
+    final rows =
+        await (_db.select(_db.todos)..where(
+              (t) =>
+                  t.status.equals('done') &
+                  t.completedAt.isBetweenValues(todayStart, todayEnd) &
+                  t.deletedAt.isNull() &
+                  t.parentId.isNull(),
+            ))
+            .get();
     return rows.length;
   }
 
   Future<int> countTodayTotal() async {
     final completedCount = await countTodayCompleted();
-    final activeRows = await (_db.select(_db.todos)
-          ..where((t) => t.status.isNotIn(['done', 'cancelled']) & t.deletedAt.isNull() & t.parentId.isNull()))
-        .get();
+    final activeRows =
+        await (_db.select(_db.todos)..where(
+              (t) =>
+                  t.status.isNotIn(['done', 'cancelled']) &
+                  t.deletedAt.isNull() &
+                  t.parentId.isNull(),
+            ))
+            .get();
     final activeEntities = activeRows.map((r) => _toEntity(r)).toList();
-    final activeTodayCount = activeEntities.where((e) => e.shouldShowInToday).length;
+    final activeTodayCount = activeEntities
+        .where((e) => e.shouldShowInToday)
+        .length;
     return completedCount + activeTodayCount;
   }
 
   Future<double> weeklyCompletionRate() async {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final weekStartDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final weekStartDate = DateTime(
+      weekStart.year,
+      weekStart.month,
+      weekStart.day,
+    );
     final weekEndDate = weekStartDate.add(const Duration(days: 7));
-    final all = await (_db.select(_db.todos)
-          ..where((t) => t.createdAt.isBetweenValues(weekStartDate, weekEndDate) & t.deletedAt.isNull() & t.parentId.isNull()))
-        .get();
+    final all =
+        await (_db.select(_db.todos)..where(
+              (t) =>
+                  t.createdAt.isBetweenValues(weekStartDate, weekEndDate) &
+                  t.deletedAt.isNull() &
+                  t.parentId.isNull(),
+            ))
+            .get();
     if (all.isEmpty) return 1.0;
     final done = all.where((t) => t.status == 'done').length;
     return done / all.length;
   }
 
   Future<double> delayRate() async {
-    final done = await (_db.select(_db.todos)
-          ..where((t) => t.status.equals('done') & t.deletedAt.isNull() & t.parentId.isNull()))
-        .get();
+    final done =
+        await (_db.select(_db.todos)..where(
+              (t) =>
+                  t.status.equals('done') &
+                  t.deletedAt.isNull() &
+                  t.parentId.isNull(),
+            ))
+            .get();
     if (done.isEmpty) return 0.0;
     final delayed = done.where((t) {
       if (t.completedAt == null || t.dueDate == null) return false;

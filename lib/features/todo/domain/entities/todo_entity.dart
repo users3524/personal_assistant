@@ -8,6 +8,8 @@ enum TodoStatus { pending, inProgress, done, cancelled }
 /// 默认分类列表（用户可自定义）
 const List<String> defaultCategories = ['生活', '工作', '学习', '健康'];
 
+const Object _copySentinel = Object();
+
 class TodoListEntity {
   final int? id;
   final String name;
@@ -21,13 +23,17 @@ class TodoListEntity {
     required this.createdAt,
   });
 
-  TodoListEntity copyWith({int? id, String? name, String? category, DateTime? createdAt}) =>
-      TodoListEntity(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        category: category ?? this.category,
-        createdAt: createdAt ?? this.createdAt,
-      );
+  TodoListEntity copyWith({
+    int? id,
+    String? name,
+    String? category,
+    DateTime? createdAt,
+  }) => TodoListEntity(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    category: category ?? this.category,
+    createdAt: createdAt ?? this.createdAt,
+  );
 }
 
 class TodoEntity {
@@ -82,57 +88,72 @@ class TodoEntity {
   });
 
   TodoEntity copyWith({
-    int? id,
+    Object? id = _copySentinel,
     String? title,
-    String? description,
+    Object? description = _copySentinel,
     String? category,
     int? priority,
-    DateTime? dueDate,
+    Object? dueDate = _copySentinel,
     TodoStatus? status,
     List<String>? tags,
     bool? isStarred,
-    DateTime? startedAt,
-    DateTime? completedAt,
-    DateTime? cancelledAt,
-    DateTime? deletedAt,
-    int? actualMinutes,
+    Object? startedAt = _copySentinel,
+    Object? completedAt = _copySentinel,
+    Object? cancelledAt = _copySentinel,
+    Object? deletedAt = _copySentinel,
+    Object? actualMinutes = _copySentinel,
     int? delayCount,
     DateTime? createdAt,
     DateTime? updatedAt,
-    int? listId,
-    int? parentId,
+    Object? listId = _copySentinel,
+    Object? parentId = _copySentinel,
     List<TodoEntity>? subtasks,
-    String? recurrenceRule,
-  }) =>
-      TodoEntity(
-        id: id ?? this.id,
-        title: title ?? this.title,
-        description: description ?? this.description,
-        category: category ?? this.category,
-        priority: priority ?? this.priority,
-        dueDate: dueDate ?? this.dueDate,
-        status: status ?? this.status,
-        tags: tags ?? this.tags,
-        isStarred: isStarred ?? this.isStarred,
-        startedAt: startedAt ?? this.startedAt,
-        completedAt: completedAt ?? this.completedAt,
-        cancelledAt: cancelledAt ?? this.cancelledAt,
-        deletedAt: deletedAt ?? this.deletedAt,
-        actualMinutes: actualMinutes ?? this.actualMinutes,
-        delayCount: delayCount ?? this.delayCount,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        listId: listId ?? this.listId,
-        parentId: parentId ?? this.parentId,
-        subtasks: subtasks ?? this.subtasks,
-        recurrenceRule: recurrenceRule ?? this.recurrenceRule,
-      );
+    Object? recurrenceRule = _copySentinel,
+  }) => TodoEntity(
+    id: id == _copySentinel ? this.id : id as int?,
+    title: title ?? this.title,
+    description: description == _copySentinel
+        ? this.description
+        : description as String?,
+    category: category ?? this.category,
+    priority: priority ?? this.priority,
+    dueDate: dueDate == _copySentinel ? this.dueDate : dueDate as DateTime?,
+    status: status ?? this.status,
+    tags: tags ?? this.tags,
+    isStarred: isStarred ?? this.isStarred,
+    startedAt: startedAt == _copySentinel
+        ? this.startedAt
+        : startedAt as DateTime?,
+    completedAt: completedAt == _copySentinel
+        ? this.completedAt
+        : completedAt as DateTime?,
+    cancelledAt: cancelledAt == _copySentinel
+        ? this.cancelledAt
+        : cancelledAt as DateTime?,
+    deletedAt: deletedAt == _copySentinel
+        ? this.deletedAt
+        : deletedAt as DateTime?,
+    actualMinutes: actualMinutes == _copySentinel
+        ? this.actualMinutes
+        : actualMinutes as int?,
+    delayCount: delayCount ?? this.delayCount,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    listId: listId == _copySentinel ? this.listId : listId as int?,
+    parentId: parentId == _copySentinel ? this.parentId : parentId as int?,
+    subtasks: subtasks ?? this.subtasks,
+    recurrenceRule: recurrenceRule == _copySentinel
+        ? this.recurrenceRule
+        : recurrenceRule as String?,
+  );
 
   // ===== 核心逻辑属性 =====
 
   /// 是否已过期（纯日期比对）
   bool get isOverdue {
-    if (status == TodoStatus.done || status == TodoStatus.cancelled) return false;
+    if (status == TodoStatus.done || status == TodoStatus.cancelled) {
+      return false;
+    }
     if (deletedAt != null) return false;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -142,7 +163,11 @@ class TodoEntity {
       return deadlineDay.isBefore(today);
     }
     if (startedAt != null) {
-      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      final startDay = DateTime(
+        startedAt!.year,
+        startedAt!.month,
+        startedAt!.day,
+      );
       return startDay.isBefore(today);
     }
     return false;
@@ -152,9 +177,15 @@ class TodoEntity {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     if (status == TodoStatus.done && completedAt != null) return completedAt!;
-    if (status == TodoStatus.cancelled && cancelledAt != null) return cancelledAt!;
+    if (status == TodoStatus.cancelled && cancelledAt != null) {
+      return cancelledAt!;
+    }
     if (startedAt != null) {
-      final startDay = DateTime(startedAt!.year, startedAt!.month, startedAt!.day);
+      final startDay = DateTime(
+        startedAt!.year,
+        startedAt!.month,
+        startedAt!.day,
+      );
       if (today.isAfter(startDay)) return today;
       return startDay;
     }
@@ -165,7 +196,11 @@ class TodoEntity {
     if (!isActive) return false;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final itemDisplayDay = DateTime(displayDate.year, displayDate.month, displayDate.day);
+    final itemDisplayDay = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+    );
     return itemDisplayDay == today;
   }
 
@@ -193,10 +228,14 @@ class TodoEntity {
 
   String get statusLabel {
     switch (status) {
-      case TodoStatus.pending: return '待办';
-      case TodoStatus.inProgress: return '进行中';
-      case TodoStatus.done: return '已完成';
-      case TodoStatus.cancelled: return '已取消';
+      case TodoStatus.pending:
+        return '待办';
+      case TodoStatus.inProgress:
+        return '进行中';
+      case TodoStatus.done:
+        return '已完成';
+      case TodoStatus.cancelled:
+        return '已取消';
     }
   }
 }

@@ -156,10 +156,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final db = await ref.read(appDatabaseProvider.future);
       _prefsDao = UserPreferencesDao(db);
       final prefs = await _prefsDao!.getOrCreate();
+      final apiKey = await _prefsDao!.getAiApiKey();
 
       if (!mounted) return;
       setState(() {
-        _savedApiKey = prefs.aiApiKey ?? '';
+        _savedApiKey = apiKey;
         _savedBaseUrl = prefs.aiBaseUrl ?? 'https://api.openai.com/v1';
         _savedModel = prefs.aiModel ?? 'gpt-4o-mini';
         _savedProvider = prefs.aiProvider;

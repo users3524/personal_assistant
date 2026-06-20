@@ -9,11 +9,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app_database.dart';
+import '../security/api_key_store.dart';
 
 class BackupService {
   final AppDatabase _db;
+  final ApiKeyStore _apiKeyStore;
 
-  BackupService(this._db);
+  BackupService(this._db, {ApiKeyStore? apiKeyStore})
+    : _apiKeyStore = apiKeyStore ?? SecureApiKeyStore();
 
   /// 导出全部数据为 JSON 文件，保存到应用文档目录（默认）
   Future<String> exportBackup() async {
@@ -97,7 +100,7 @@ class BackupService {
     }
 
     data['user_preferences'] = (await _db.select(_db.userPreferences).get())
-        .map((r) => _rowToMap(r))
+        .map((r) => _sanitizeUserPreferences(_rowToMap(r)))
         .toList();
     data['todo_lists'] = (await _db.select(_db.todoLists).get())
         .map((r) => _rowToMap(r))
@@ -169,6 +172,7 @@ class BackupService {
     await _db.delete(_db.todoLists).go();
     await _db.delete(_db.collectionCategories).go();
     await _db.delete(_db.userPreferences).go();
+    await _apiKeyStore.delete();
 
     final tableOrder = [
       'user_preferences',
@@ -397,6 +401,12 @@ class BackupService {
         for (final e in row.entries) {
           snakeRow[snakeKey(e.key)] = e.value;
         }
+        final legacyAiApiKey = tableName == 'user_preferences'
+            ? snakeRow['ai_api_key']?.toString()
+            : null;
+        if (tableName == 'user_preferences') {
+          snakeRow['ai_api_key'] = null;
+        }
 
         final cols = tableColumns[tableName]!;
         final vals = <dynamic>[];
@@ -429,6 +439,12 @@ class BackupService {
         final sql =
             'INSERT OR REPLACE INTO $tableName (${cols.join(', ')}) VALUES ($qs)';
         await _db.customStatement(sql, vals);
+
+        if (tableName == 'user_preferences' &&
+            legacyAiApiKey != null &&
+            legacyAiApiKey.trim().isNotEmpty) {
+          await _apiKeyStore.write(legacyAiApiKey);
+        }
       }
     }
 
@@ -476,6 +492,12 @@ class BackupService {
 
   Map<String, dynamic> _rowToMap(DataClass row) {
     return row.toJson();
+  }
+
+  Map<String, dynamic> _sanitizeUserPreferences(Map<String, dynamic> row) {
+    final sanitized = Map<String, dynamic>.from(row);
+    sanitized['aiApiKey'] = null;
+    return sanitized;
   }
 
   dynamic _defaultRestoreValue(String tableName, String columnName) {

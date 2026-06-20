@@ -28,21 +28,21 @@ class AIConfig {
     String? baseUrl,
     String? model,
     String? apiKey,
-  }) =>
-      AIConfig(
-        provider: provider ?? this.provider,
-        baseUrl: baseUrl ?? this.baseUrl,
-        model: model ?? this.model,
-        apiKey: apiKey ?? this.apiKey,
-      );
+  }) => AIConfig(
+    provider: provider ?? this.provider,
+    baseUrl: baseUrl ?? this.baseUrl,
+    model: model ?? this.model,
+    apiKey: apiKey ?? this.apiKey,
+  );
 
   /// 是否已配置可用的 AI 服务
-  bool get isConfigured =>
-      provider == '离线模式' || apiKey.isNotEmpty;
+  bool get isConfigured => provider == '离线模式' || apiKey.isNotEmpty;
 }
 
 /// AI 配置 Provider（可读写，启动时自动加载数据库配置）
-final aiConfigProvider = StateNotifierProvider<AIConfigNotifier, AIConfig>((ref) {
+final aiConfigProvider = StateNotifierProvider<AIConfigNotifier, AIConfig>((
+  ref,
+) {
   final notifier = AIConfigNotifier(ref);
   // 异步从数据库加载配置
   Future.microtask(() => notifier.loadFromDb());
@@ -61,11 +61,12 @@ class AIConfigNotifier extends StateNotifier<AIConfig> {
       final db = await _ref.read(appDatabaseProvider.future);
       final dao = UserPreferencesDao(db);
       final prefs = await dao.getOrCreate();
+      final apiKey = await dao.getAiApiKey();
       state = AIConfig(
         provider: prefs.aiProvider,
         baseUrl: prefs.aiBaseUrl ?? 'https://api.openai.com/v1',
         model: prefs.aiModel ?? 'gpt-4o-mini',
-        apiKey: prefs.aiApiKey ?? '',
+        apiKey: apiKey,
       );
       _loaded = true;
     } catch (_) {

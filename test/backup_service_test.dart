@@ -5,17 +5,20 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/backup_service.dart';
+import 'package:personal_assistant/core/security/api_key_store.dart';
 
 void main() {
   group('BackupService', () {
     late Directory tempDir;
     late AppDatabase sourceDb;
+    late InMemoryApiKeyStore apiKeyStore;
     var sourceClosed = false;
     AppDatabase? targetDb;
 
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp('pa_backup_test_');
       sourceDb = AppDatabase.createInMemory();
+      apiKeyStore = InMemoryApiKeyStore();
       sourceClosed = false;
     });
 
@@ -32,23 +35,32 @@ void main() {
     test('exports and restores schema v6 fields without data loss', () async {
       final now = DateTime(2026, 6, 20, 10, 30);
       final deletedAt = DateTime(2026, 6, 21, 9);
+      await apiKeyStore.write('existing-secret-key');
 
       await _seedSourceDatabase(sourceDb, now, deletedAt);
 
       final backupPath = await BackupService(
         sourceDb,
+        apiKeyStore: apiKeyStore,
       ).exportBackupTo(tempDir.path);
       final backupJson =
           jsonDecode(await File(backupPath).readAsString())
               as Map<String, dynamic>;
       expect(backupJson['todo_lists'], isA<List<dynamic>>());
       expect(backupJson['todo_lists'], hasLength(1));
+      expect(
+        (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
+        null,
+      );
 
       await sourceDb.close();
       sourceClosed = true;
       targetDb = AppDatabase.createInMemory();
       final restoredDb = targetDb!;
-      await BackupService(restoredDb).importBackup(backupPath);
+      await BackupService(
+        restoredDb,
+        apiKeyStore: apiKeyStore,
+      ).importBackup(backupPath);
 
       final prefs = await restoredDb
           .select(restoredDb.userPreferences)
@@ -100,6 +112,44 @@ void main() {
       expect(weekly.improvements, 'Improvements');
       expect(weekly.nextWeekPlan, 'Next plan');
       expect(weekly.createdAt, now);
+      expect(await apiKeyStore.read(), null);
+    });
+
+    test('imports legacy plaintext API key into secure store only', () async {
+      final now = DateTime(2026, 6, 20, 10, 30);
+      final backup = {
+        'version': 1,
+        'exportedAt': now.toIso8601String(),
+        'user_preferences': [
+          {
+            'id': 1,
+            'themeMode': 'system',
+            'language': 'zh',
+            'notificationEnabled': true,
+            'aiProvider': 'OpenAI',
+            'aiApiKey': 'legacy-secret-key',
+            'aiBaseUrl': 'https://api.openai.com/v1',
+            'aiModel': 'gpt-4o-mini',
+            'dailyReviewTime': '21:00',
+            'weeklyReportDay': 'sunday',
+            'resumeTemplateId': 0,
+            'todoCategories': '[]',
+            'createdAt': now.millisecondsSinceEpoch,
+            'updatedAt': now.millisecondsSinceEpoch,
+          },
+        ],
+      };
+      final file = File('${tempDir.path}${Platform.pathSeparator}legacy.json');
+      await file.writeAsString(jsonEncode(backup));
+
+      await BackupService(
+        sourceDb,
+        apiKeyStore: apiKeyStore,
+      ).importBackup(file.path);
+
+      final prefs = await sourceDb.select(sourceDb.userPreferences).getSingle();
+      expect(prefs.aiApiKey, null);
+      expect(await apiKeyStore.read(), 'legacy-secret-key');
     });
   });
 }

@@ -12,7 +12,7 @@
 
 ## P0：代码债
 
-- [ ] 将 AI API Key 从 `user_preferences.ai_api_key` 明文迁移到平台安全存储，并设计兼容迁移。
+- [x] 将 AI API Key 从 `user_preferences.ai_api_key` 明文迁移到平台安全存储，并设计兼容迁移。
 - [x] 将 `todo_lists` 纳入 `BackupService` 导出和导入。
 - [x] 补齐 `BackupService` 导入列清单：`user_preferences.todo_categories`。
 - [x] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。

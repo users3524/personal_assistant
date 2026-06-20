@@ -9,7 +9,7 @@
 | 数据 | 存储位置 | 当前风险 |
 | --- | --- | --- |
 | SQLite 数据库 | `ApplicationDocumentsDirectory/personal_assistant.db` | 本地明文数据库。 |
-| AI API Key | `user_preferences.ai_api_key` | 明文持久化。 |
+| AI API Key | `flutter_secure_storage` 平台安全存储；`user_preferences.ai_api_key` 仅作为旧版本迁移入口保留。 | 数据库备份不再导出密钥；Web/桌面端安全强度取决于插件平台实现。 |
 | 文玩图片/打卡图片 | 当前多处保存到应用文档目录 `antique_images/`，数据库保存路径。 | 路径和文件未加密。 |
 | 轻量设置 | `ApplicationDocumentsDirectory/app_settings.json` | JSON 明文。 |
 | 备份文件 | 用户选择路径或应用文档目录。 | JSON 明文，可能包含敏感信息。 |
@@ -27,7 +27,7 @@
 | 硅基流动 | `https://api.siliconflow.cn/v1`。 |
 | 自定义 | 用户手动输入 baseUrl/model/key。 |
 
-当前在线 AI 请求通过 `dio` 调用 OpenAI 兼容接口，请求内容包括日报/周报摘要、完成任务标题和用户输入文本。
+当前在线 AI 请求通过 `dio` 调用 OpenAI 兼容接口，请求内容包括日报/周报摘要、完成任务标题和用户输入文本。API Key 从安全存储读取，不再从 Drift 偏好表明文字段读取。
 
 ## 3. 备份导出
 
@@ -54,6 +54,8 @@
 
 图片处理：导出时会尝试读取 `imagePaths` / `photoPaths` 对应文件，存在则编码为 `base64:<content>`；失败则保留原路径。
 
+密钥处理：`user_preferences.aiApiKey` 在导出 JSON 中强制写为 `null`，避免明文备份泄漏。
+
 ## 4. 备份导入
 
 来源：`BackupService._restoreData()`
@@ -67,6 +69,7 @@
 5. 对日期列把毫秒时间戳转换为 Drift SQLite 使用的秒时间戳。
 6. 对 `base64:` 图片解码到系统临时目录 `personal_assistant_images`。
 7. 对旧备份缺失的新增列表字段使用空列表默认值，避免 schema v6 字段缺口导致导入中断。
+8. 若旧备份中包含 `user_preferences.aiApiKey` / `ai_api_key`，导入时迁移到安全存储并清空数据库字段；若备份不含密钥，覆盖导入会清空当前安全存储中的 AI Key。
 
 当前限制：
 
@@ -75,7 +78,7 @@
 | 覆盖导入 | 导入前清空现有数据，不是合并。 |
 | 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID 与周报文本字段已纳入导入导出镜像测试。 |
 | 图片恢复目录 | Base64 图片恢复到系统临时目录，不是应用文档目录。 |
-| 明文 | 无密码保护和加密。 |
+| 备份文件明文 | 备份 JSON 本身无密码保护和加密；但 AI API Key 已从导出内容中剔除。 |
 
 ## 5. 通知权限
 
@@ -91,18 +94,16 @@
 
 ## 6. 当前未实现的安全能力
 
-1. API Key 加密存储。
-2. 备份文件密码保护。
-3. 专有备份包。
-4. 图片目录整体备份。
-5. AI 请求内容审计。
-6. 数据迁移前自动备份。
+1. 备份文件密码保护。
+2. 专有备份包。
+3. 图片目录整体备份。
+4. AI 请求内容审计。
+5. 数据迁移前自动备份。
 
 ## 7. 后续安全规划
 
 | 规划 | 说明 |
 | --- | --- |
-| API Key 安全存储 | 当前 `user_preferences.ai_api_key` 是明文；后续应迁移到平台安全存储。Android 优先走 Keystore；Windows/Web 需要单独确认可用降级方案。 |
-| 配置与密钥分离 | `LLMStrategyConfig` 只保存供应商、模型名、baseUrl、预算等非敏感字段；密钥只通过安全存储读取。 |
-| 兼容迁移 | 首次升级时检测旧明文 Key，写入安全存储后清空数据库字段，并保留失败回滚提示。 |
-| 备份策略 | 明文 JSON 备份不应导出 API Key；若未来需要导出，应提供用户确认和加密备份格式。 |
+| 安全存储平台验证 | 已接入 `flutter_secure_storage`；后续仍需在 Android、Windows、Web 真机/真环境逐项验证插件行为和降级提示。 |
+| 配置与密钥分离 | 后续 `LLMStrategyConfig` 只保存供应商、模型名、baseUrl、预算等非敏感字段；密钥继续只通过安全存储读取。 |
+| 加密备份格式 | 明文 JSON 备份不导出 API Key；若未来需要导出密钥，应提供用户确认和加密备份格式。 |

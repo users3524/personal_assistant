@@ -69,8 +69,8 @@
 | --- | --- |
 | `AntiqueEntity` | 藏品主实体，包含图片路径、分类字段、入手价格、备注。 |
 | `PattingLogEntity` | 盘玩日志，包含时长、方式、备注、照片路径。 |
-| `AntiqueRepository` | CRUD、分类/品相/年份/搜索、盘玩日志、统计、最新打卡照片。 |
-| `AntiqueDao` | Drift 查询与实体转换。 |
+| `AntiqueRepository` | CRUD、分类/品相/年份/搜索、盘玩日志、统计、最新打卡照片、按日聚合盘玩分钟。 |
+| `AntiqueDao` | Drift 查询与实体转换；按日/月读取盘玩日志时使用半开日期区间，避免跨日边界重复计入。 |
 
 ## 4. 当前列表页功能
 
@@ -166,7 +166,7 @@
 
 当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。导出图片时已复用 `resolveImageFile()`，可稳定打包相对路径和绝对路径。恢复图片目前仍写入系统临时目录，后续需要改为应用文档目录并返回相对路径 token。
 
-AI 复盘侧当前 `DailyReviewChatPage` 生成日报时 `pattingMinutes` 固定传 0。后续深夜素材包应从 `patting_logs` 读取当天 `duration_minutes` 总和、打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入；白天文玩打卡本身不应触发云端请求。
+AI 复盘侧当前 `DailyReviewChatPage` 生成和保存日报时，会通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取复盘日期当天 `patting_logs.duration_minutes` 总和，写入 `daily_reviews.patting_minutes` 并传给 AI 日报生成。当前只接入数字事实；后续深夜素材包还应读取当天打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入。白天文玩打卡本身不应触发云端请求。
 
 ## 11. 后续多态关联清理
 

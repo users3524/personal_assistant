@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 周/月视图、任务树、子任务、软删除、归档、统计；树查询已批量化，重新打开可清空完成/取消时间。 |
 | 文玩 | 藏品、照片、盘玩打卡、月历、对比、趣味榜单；默认分类含长串；估值功能已应用层下线，遗留表/列暂留兼容。 |
-| AI 复盘 | 对话式日报、周报、离线/在线 AI。 |
+| AI 复盘 | 对话式日报、周报、离线/在线 AI；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断。 |
 | 简历 | 三模板预览、编辑、拖拽排序、可见性、图片导出。 |
 | 设置 | AI 配置、通知、分类管理、JSON 备份；API Key 已走平台安全存储。 |
 
@@ -51,7 +51,7 @@
 | 备份导入/导出补齐 | `todo_lists` 未覆盖；`user_preferences` 缺 `todo_categories`；`todos` 缺 `list_id/parent_id/recurrence_rule/deleted_at`；简历表缺新增 List 字段。 |
 | 文玩图片路径统一 | UI 展示、分享、保存到相册和备份导出已复用 `resolveImageFile()` / `ResolvedImage`；后续继续处理备份恢复写入应用文档目录。 |
 | 估值兼容收尾 | 应用层已下线估值；后续仅需在旧备份兼容稳定后评估 schema 物理移除。 |
-| 复盘页限制补齐 | 若继续执行原设计，需要新增 turn 计数、文本长度限制、语音时长限制。 |
+| 复盘页限制补齐 | 已补文本 500 字和语音 60 秒；后续仍需新增 turn 计数、PromptBuilder 预算和离线便签模式。 |
 | 测试补齐 | 当前测试是占位，需要 DAO、Provider、迁移、备份恢复测试。 |
 | API Key 安全边界 | 已接入平台安全存储并从 JSON 备份中剔除；后续需要做真机平台验证和加密备份格式评估。 |
 
@@ -108,7 +108,7 @@
 | 策略配置 | 首版 `LLMStrategyConfig` JSON 复用 `user_preferences`，不引入 Hive/SharedPreferences，也暂不新增 `system_configs`。 |
 | PromptBuilder | 新增业务服务层，负责 prompt 组装、预算估算、裁剪、turn 拦截和离线模式切换。 |
 | 每日 15 轮限制 | 新增 `chat_turns` 或等价持久化表，记录日期、角色、是否离线、是否消耗云端请求。 |
-| 输入限制 | 文本 500 字，STT 60 秒。 |
+| 成本闸门剩余项 | 文本 500 字和 STT 60 秒已落地；后续补每日 turn 计数、PromptBuilder 预算和离线便签模式。 |
 | 离线便签模式 | 达到 turn 上限后继续本地落盘，但停止云端请求。 |
 | 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行、素材打包。 |
 | 调度接口 | 设计纯 Dart `AILogScheduler` 接口，平台实现放到 infrastructure 层；Android WorkManager 约束不使用 `RequiresDeviceIdle`。 |

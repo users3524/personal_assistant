@@ -201,10 +201,29 @@ class AntiqueDao {
     final dayEnd = dayStart.add(const Duration(days: 1));
     final rows =
         await (_db.select(_db.pattingLogs)
-              ..where((t) => t.date.isBetweenValues(dayStart, dayEnd))
+              ..where(
+                (t) =>
+                    t.date.isBiggerOrEqualValue(dayStart) &
+                    t.date.isSmallerThanValue(dayEnd),
+              )
               ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
             .get();
     return rows.map(_pattingToEntity).toList();
+  }
+
+  Future<int> sumPattingMinutesByDate(DateTime date) async {
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final totalMinutes = _db.pattingLogs.durationMinutes.sum();
+    final row =
+        await (_db.selectOnly(_db.pattingLogs)
+              ..addColumns([totalMinutes])
+              ..where(
+                _db.pattingLogs.date.isBiggerOrEqualValue(dayStart) &
+                    _db.pattingLogs.date.isSmallerThanValue(dayEnd),
+              ))
+            .getSingle();
+    return row.read(totalMinutes) ?? 0;
   }
 
   Future<List<PattingLogEntity>> getPattingLogsByMonth(
@@ -215,7 +234,11 @@ class AntiqueDao {
     final monthEnd = DateTime(year, month + 1, 1);
     final rows =
         await (_db.select(_db.pattingLogs)
-              ..where((t) => t.date.isBetweenValues(monthStart, monthEnd))
+              ..where(
+                (t) =>
+                    t.date.isBiggerOrEqualValue(monthStart) &
+                    t.date.isSmallerThanValue(monthEnd),
+              )
               ..orderBy([(t) => OrderingTerm.desc(t.date)]))
             .get();
     return rows.map(_pattingToEntity).toList();

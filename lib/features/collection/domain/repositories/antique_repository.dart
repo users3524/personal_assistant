@@ -27,6 +27,7 @@ abstract class AntiqueRepository {
 
   // ===== 统计 =====
   Future<Map<String, int>> countByCategory();
+  Future<int> sumPattingMinutesByDate(DateTime date);
 
   // ===== 批量查询 =====
   /// 返回 Map<itemId, 最新一张打卡照片路径>

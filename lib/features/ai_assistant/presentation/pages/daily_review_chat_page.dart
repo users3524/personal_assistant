@@ -4,13 +4,17 @@
 /// AI 以对话方式引导复盘，最终生成结构化日报并保存。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/ai/ai_provider.dart';
 import '../../data/repositories/review_repository_impl.dart';
 import '../../domain/entities/review_entity.dart';
+import '../../../collection/presentation/providers/antique_providers.dart';
 import '../../../todo/presentation/providers/todo_providers.dart';
 
 // ===== 对话消息模型 =====
@@ -20,11 +24,8 @@ class ChatMessage {
   final bool isUser;
   final DateTime time;
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    DateTime? time,
-  }) : time = time ?? DateTime.now();
+  ChatMessage({required this.text, required this.isUser, DateTime? time})
+    : time = time ?? DateTime.now();
 }
 
 // ===== 页面 =====
@@ -40,6 +41,8 @@ class DailyReviewChatPage extends ConsumerStatefulWidget {
 }
 
 class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
+  static const _maxTextInputLength = 500;
+
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _messages = <ChatMessage>[];
@@ -63,6 +66,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
   final _speech = stt.SpeechToText();
   bool _isListening = false;
   String _lastWords = '';
+  Timer? _speechCutoffTimer;
 
   // 编辑模式
   DailyReviewEntity? _existingReview;
@@ -91,10 +95,12 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         _aiSuggestion = review.aiSuggestion ?? '';
         // 显示已有内容
         _messages.clear();
-        _messages.add(ChatMessage(
-          text: '📋 以下是 ${date.month}/${date.day} 的已有复盘记录',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text: '📋 以下是 ${date.month}/${date.day} 的已有复盘记录',
+            isUser: false,
+          ),
+        );
         _messages.add(ChatMessage(text: '总结：$_summary', isUser: false));
         if (_highlights.isNotEmpty) {
           _messages.add(ChatMessage(text: '收获：$_highlights', isUser: false));
@@ -102,14 +108,10 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         if (_improvements.isNotEmpty) {
           _messages.add(ChatMessage(text: '不足：$_improvements', isUser: false));
         }
-        _messages.add(ChatMessage(
-          text: '✨ AI 评语：$_aiComment',
-          isUser: false,
-        ));
-        _messages.add(ChatMessage(
-          text: '💡 AI 建议：$_aiSuggestion',
-          isUser: false,
-        ));
+        _messages.add(ChatMessage(text: '✨ AI 评语：$_aiComment', isUser: false));
+        _messages.add(
+          ChatMessage(text: '💡 AI 建议：$_aiSuggestion', isUser: false),
+        );
         if (_aiComment.isNotEmpty) _reviewSaved = true;
       });
     }
@@ -117,18 +119,21 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
   void _addWelcomeMessage() {
     if (widget.dateStr != null && _existingReview != null) return;
-    _messages.add(ChatMessage(
-      text: '👋 今天过得怎么样？跟我说说今天的经历和感受吧！\n\n'
-          '你可以输入文字或点击麦克风语音输入。',
-      isUser: false,
-    ));
+    _messages.add(
+      ChatMessage(
+        text:
+            '👋 今天过得怎么样？跟我说说今天的经历和感受吧！\n\n'
+            '你可以输入文字或点击麦克风语音输入。',
+        isUser: false,
+      ),
+    );
   }
 
   /// 核心对话处理 — 自然语言驱动，AI 全程参与
   Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    final userText = _normalizeInputText(text);
 
-    final userText = text.trim();
+    if (userText.isEmpty) return;
     setState(() {
       _messages.add(ChatMessage(text: userText, isUser: true));
       _isProcessing = true;
@@ -137,7 +142,10 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
     // 检测保存确认
     if (_awaitingConfirmation && _aiComment.isNotEmpty) {
-      if (userText.contains('确认') || userText.contains('保存') || userText.contains('好') || userText.contains('是')) {
+      if (userText.contains('确认') ||
+          userText.contains('保存') ||
+          userText.contains('好') ||
+          userText.contains('是')) {
         await _saveReview();
         setState(() => _isProcessing = false);
         return;
@@ -172,11 +180,14 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     _summary = text;
     setState(() {
       _flowStep = 1;
-      _messages.add(ChatMessage(
-        text: '收到！今天有什么特别开心的收获或成就吗？🥰\n'
-            '（也可以直接告诉我"没有"）',
-        isUser: false,
-      ));
+      _messages.add(
+        ChatMessage(
+          text:
+              '收到！今天有什么特别开心的收获或成就吗？🥰\n'
+              '（也可以直接告诉我"没有"）',
+          isUser: false,
+        ),
+      );
       _isProcessing = false;
     });
   }
@@ -189,11 +200,14 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     }
     setState(() {
       _flowStep = 2;
-      _messages.add(ChatMessage(
-        text: '好的！那有什么不足或想改进的地方吗？🤔\n'
-            '（诚实面对自己才能成长，也可以说"没有"）',
-        isUser: false,
-      ));
+      _messages.add(
+        ChatMessage(
+          text:
+              '好的！那有什么不足或想改进的地方吗？🤔\n'
+              '（诚实面对自己才能成长，也可以说"没有"）',
+          isUser: false,
+        ),
+      );
       _isProcessing = false;
     });
   }
@@ -206,13 +220,16 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     }
     setState(() {
       _flowStep = 3;
-      _messages.add(ChatMessage(
-        text: '感谢你的坦诚！给你的今天打个分吧：\n\n'
-            '😊 情绪指数（1-5）：目前 $_moodLevel\n'
-            '⚡ 能量指数（1-5）：目前 $_energyLevel\n\n'
-            '回复「确认」使用当前评分，或输入「情绪4 能量3」来修改',
-        isUser: false,
-      ));
+      _messages.add(
+        ChatMessage(
+          text:
+              '感谢你的坦诚！给你的今天打个分吧：\n\n'
+              '😊 情绪指数（1-5）：目前 $_moodLevel\n'
+              '⚡ 能量指数（1-5）：目前 $_energyLevel\n\n'
+              '回复「确认」使用当前评分，或输入「情绪4 能量3」来修改',
+          isUser: false,
+        ),
+      );
       _isProcessing = false;
     });
   }
@@ -221,36 +238,48 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     // 解析评分
     final moodMatch = RegExp(r'情绪[：:\s]*(\d)').firstMatch(text);
     final energyMatch = RegExp(r'能量[：:\s]*(\d)').firstMatch(text);
-    
-    if (moodMatch != null) _moodLevel = int.parse(moodMatch.group(1)!).clamp(1, 5);
-    if (energyMatch != null) _energyLevel = int.parse(energyMatch.group(1)!).clamp(1, 5);
 
-    if (text.contains('确认') || text.contains('好') || text.contains('可以') || text.contains('是')) {
+    if (moodMatch != null) {
+      _moodLevel = int.parse(moodMatch.group(1)!).clamp(1, 5);
+    }
+    if (energyMatch != null) {
+      _energyLevel = int.parse(energyMatch.group(1)!).clamp(1, 5);
+    }
+
+    if (text.contains('确认') ||
+        text.contains('好') ||
+        text.contains('可以') ||
+        text.contains('是')) {
       // 进入 AI 生成阶段
       setState(() {
         _flowStep = 4;
-        _messages.add(ChatMessage(
-          text: '好的，情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡\n\n'
-              '正在为你生成 AI 复盘分析...',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text:
+                '好的，情绪：$_moodLevel ⭐  能量：$_energyLevel ⚡\n\n'
+                '正在为你生成 AI 复盘分析...',
+            isUser: false,
+          ),
+        );
       });
       await _generateReview();
     } else if (moodMatch != null || energyMatch != null) {
       setState(() {
-        _messages.add(ChatMessage(
-          text: '已更新：情绪 $_moodLevel ⭐  能量 $_energyLevel ⚡\n'
-              '回复「确认」开始 AI 分析，或继续修改。',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text:
+                '已更新：情绪 $_moodLevel ⭐  能量 $_energyLevel ⚡\n'
+                '回复「确认」开始 AI 分析，或继续修改。',
+            isUser: false,
+          ),
+        );
         _isProcessing = false;
       });
     } else {
       setState(() {
-        _messages.add(ChatMessage(
-          text: '请用「情绪数字 能量数字」的格式，或直接回复「确认」。',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(text: '请用「情绪数字 能量数字」的格式，或直接回复「确认」。', isUser: false),
+        );
         _isProcessing = false;
       });
     }
@@ -292,15 +321,18 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     final ai = ref.read(aiServiceProvider);
     if (ai == null) {
       setState(() {
-        _messages.add(ChatMessage(
-          text: '⚠️ 请先在「设置」页面配置 AI API Key，然后才能使用 AI 智能分析功能。\n\n'
-              '配置方法：\n'
-              '1. 前往设置 → AI 配置\n'
-              '2. 选择 AI 平台（推荐 DeepSeek，便宜好用）\n'
-              '3. 填入 API Key 和模型\n\n'
-              '（当前可以手动填写内容后保存）',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text:
+                '⚠️ 请先在「设置」页面配置 AI API Key，然后才能使用 AI 智能分析功能。\n\n'
+                '配置方法：\n'
+                '1. 前往设置 → AI 配置\n'
+                '2. 选择 AI 平台（推荐 DeepSeek，便宜好用）\n'
+                '3. 填入 API Key 和模型\n\n'
+                '（当前可以手动填写内容后保存）',
+            isUser: false,
+          ),
+        );
         _isProcessing = false;
         _awaitingConfirmation = true;
       });
@@ -315,6 +347,8 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
           .where((t) => t.isDone)
           .map((t) => t.title)
           .toList();
+      final reviewDate = _targetReviewDate();
+      final pattingMinutes = await _loadPattingMinutes(reviewDate);
 
       // 调用 AI
       final result = await ai.generateDailyReview(
@@ -324,40 +358,46 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         energyLevel: _energyLevel,
         moodLevel: _moodLevel,
         completedTitles: completedTitles,
-        pattingMinutes: 0,
+        pattingMinutes: pattingMinutes,
       );
 
       setState(() {
         _aiComment = result.comment;
         _aiSuggestion = result.suggestion;
         _awaitingConfirmation = true;
-        
-        final improvementNote = _improvements.isNotEmpty 
+
+        final improvementNote = _improvements.isNotEmpty
             ? '\n\n📌 **可改进点（已置顶）**：\n$_improvements'
             : '';
-        
-        _messages.add(ChatMessage(
-          text: '✨ **AI 复盘分析**\n\n'
-              '📝 评语：${result.comment}\n\n'
-              '💡 建议：${result.suggestion}\n\n'
-              '🏷️ 情绪标签：${result.sentimentTag}'
-              '$improvementNote\n\n'
-              '———\n'
-              '回复「确认」或「保存」来保存本次复盘 ✅\n'
-              '也可以继续和我聊聊你的想法 💬',
-          isUser: false,
-        ));
+
+        _messages.add(
+          ChatMessage(
+            text:
+                '✨ **AI 复盘分析**\n\n'
+                '📝 评语：${result.comment}\n\n'
+                '💡 建议：${result.suggestion}\n\n'
+                '🏷️ 情绪标签：${result.sentimentTag}'
+                '$improvementNote\n\n'
+                '———\n'
+                '回复「确认」或「保存」来保存本次复盘 ✅\n'
+                '也可以继续和我聊聊你的想法 💬',
+            isUser: false,
+          ),
+        );
         _isProcessing = false;
       });
     } catch (e) {
       setState(() {
-        _messages.add(ChatMessage(
-          text: '❌ AI 生成失败：$e\n\n'
-              '可能是网络问题或 API Key 无效。\n'
-              '请检查设置中的 AI 配置。\n'
-              '你也可以手动填写后保存。',
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            text:
+                '❌ AI 生成失败：$e\n\n'
+                '可能是网络问题或 API Key 无效。\n'
+                '请检查设置中的 AI 配置。\n'
+                '你也可以手动填写后保存。',
+            isUser: false,
+          ),
+        );
         _isProcessing = false;
         _awaitingConfirmation = true;
       });
@@ -372,38 +412,43 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
     try {
       final repo = await ref.read(reviewRepositoryProvider.future);
+      final reviewDate = _targetReviewDate();
+      final pattingMinutes = await _loadPattingMinutes(reviewDate);
 
       if (_existingReview != null) {
         // 更新
-        await repo.updateDaily(_existingReview!.copyWith(
-          summary: _summary,
-          highlights: _highlights.isNotEmpty ? _highlights : null,
-          improvements: _improvements.isNotEmpty ? _improvements : null,
-          energyLevel: _energyLevel,
-          moodLevel: _moodLevel,
-          aiComment: _aiComment.isNotEmpty ? _aiComment : null,
-          aiSuggestion: _aiSuggestion.isNotEmpty ? _aiSuggestion : null,
-        ));
+        await repo.updateDaily(
+          _existingReview!.copyWith(
+            summary: _summary,
+            highlights: _highlights.isNotEmpty ? _highlights : null,
+            improvements: _improvements.isNotEmpty ? _improvements : null,
+            energyLevel: _energyLevel,
+            moodLevel: _moodLevel,
+            pattingMinutes: pattingMinutes,
+            aiComment: _aiComment.isNotEmpty ? _aiComment : null,
+            aiSuggestion: _aiSuggestion.isNotEmpty ? _aiSuggestion : null,
+          ),
+        );
       } else {
         // 新建
         final now = DateTime.now();
-        final date = widget.dateStr != null
-            ? DateTime.parse(widget.dateStr!)
-            : DateTime(now.year, now.month, now.day);
-        await repo.createDaily(DailyReviewEntity(
-          date: date,
-          summary: _summary,
-          highlights: _highlights.isNotEmpty ? _highlights : null,
-          improvements: _improvements.isNotEmpty ? _improvements : null,
-          energyLevel: _energyLevel,
-          moodLevel: _moodLevel,
-          aiComment: _aiComment.isNotEmpty ? _aiComment : null,
-          aiSuggestion: _aiSuggestion.isNotEmpty ? _aiSuggestion : null,
-          isAiGenerated: _aiComment.isNotEmpty,
-          isManuallyEdited: _aiComment.isEmpty,
-          createdAt: now,
-          updatedAt: now,
-        ));
+        await repo.createDaily(
+          DailyReviewEntity(
+            date: reviewDate,
+            summary: _summary,
+            highlights: _highlights.isNotEmpty ? _highlights : null,
+            improvements: _improvements.isNotEmpty ? _improvements : null,
+            energyLevel: _energyLevel,
+            moodLevel: _moodLevel,
+            pattingMinutes: pattingMinutes,
+            aiComment: _aiComment.isNotEmpty ? _aiComment : null,
+            aiSuggestion: _aiSuggestion.isNotEmpty ? _aiSuggestion : null,
+            isAiGenerated: _aiComment.isNotEmpty,
+            isManuallyEdited: _aiComment.isEmpty,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
       }
 
       setState(() {
@@ -411,10 +456,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         _flowStep = 5;
         _awaitingConfirmation = false;
       });
-      _messages.add(ChatMessage(
-        text: '✅ 复盘已保存！',
-        isUser: false,
-      ));
+      _messages.add(ChatMessage(text: '✅ 复盘已保存！', isUser: false));
 
       // 刷新 provider
       ref.invalidate(reviewRepositoryProvider);
@@ -440,11 +482,19 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         setState(() => _lastWords = result.recognizedWords);
         _msgCtrl.text = _lastWords;
       },
-      localeId: 'zh_CN',
+      listenOptions: stt.SpeechListenOptions(localeId: 'zh_CN'),
     );
+    _speechCutoffTimer?.cancel();
+    _speechCutoffTimer = Timer(const Duration(seconds: 60), () {
+      if (!mounted || !_isListening) return;
+      _stopListening();
+      _showSnack('语音已达到 60 秒上限，已自动发送当前识别内容');
+    });
   }
 
   void _stopListening() {
+    _speechCutoffTimer?.cancel();
+    _speechCutoffTimer = null;
     _speech.stop();
     setState(() => _isListening = false);
     if (_lastWords.isNotEmpty) {
@@ -460,6 +510,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
   void dispose() {
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
+    _speechCutoffTimer?.cancel();
     _speech.stop();
     super.dispose();
   }
@@ -478,9 +529,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
   void _showSnack(String msg) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -489,7 +538,10 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
 
     // 保存确认
     if (_awaitingConfirmation && _aiComment.isNotEmpty) {
-      if (lower.contains('确认') || lower.contains('保存') || lower.contains('好') || lower.contains('是')) {
+      if (lower.contains('确认') ||
+          lower.contains('保存') ||
+          lower.contains('好') ||
+          lower.contains('是')) {
         _saveReview();
         return;
       }
@@ -504,6 +556,29 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     }
 
     _sendMessage(text);
+  }
+
+  String _normalizeInputText(String text) {
+    final trimmed = text.trim();
+    if (trimmed.runes.length <= _maxTextInputLength) {
+      return trimmed;
+    }
+    _showSnack('单次输入最多 500 字，已自动截断');
+    return String.fromCharCodes(trimmed.runes.take(_maxTextInputLength));
+  }
+
+  DateTime _targetReviewDate() {
+    if (widget.dateStr != null) {
+      final parsed = DateTime.parse(widget.dateStr!);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    }
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  Future<int> _loadPattingMinutes(DateTime date) async {
+    final repo = await ref.read(antiqueRepositoryProvider.future);
+    return repo.sumPattingMinutesByDate(date);
   }
 
   @override
@@ -541,41 +616,43 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
       ),
       body: SafeArea(
         child: Column(
-        children: [
-          // 消息列表
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return _buildMessageBubble(msg);
-              },
-            ),
-          ),
-
-          // 处理中指示器
-          if (_isProcessing)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+          children: [
+            // 消息列表
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollCtrl,
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  return _buildMessageBubble(msg);
+                },
               ),
             ),
 
-          // 输入栏
-          _buildInputBar(),
-        ],
-      ),
+            // 处理中指示器
+            if (_isProcessing)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+
+            // 输入栏
+            _buildInputBar(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMessageBubble(ChatMessage msg) {
-    final align = msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final align = msg.isUser
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     final color = msg.isUser
         ? Theme.of(context).colorScheme.primary
         : Theme.of(context).colorScheme.surfaceContainerHighest;
@@ -622,9 +699,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
         children: [
@@ -641,20 +716,38 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
             child: TextField(
               controller: _msgCtrl,
               decoration: InputDecoration(
-                hintText: _isListening
-                    ? '${_lastWords}...'
-                    : '说说今天的经历...',
+                hintText: _isListening ? '$_lastWords...' : '说说今天的经历...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
               textInputAction: TextInputAction.send,
+              maxLength: _maxTextInputLength,
+              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(_maxTextInputLength),
+              ],
+              buildCounter:
+                  (
+                    context, {
+                    required currentLength,
+                    maxLength,
+                    required isFocused,
+                  }) => isFocused
+                  ? Text(
+                      '$currentLength/$maxLength',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    )
+                  : null,
               onSubmitted: (text) {
                 if (text.trim().isNotEmpty && !_isProcessing) {
                   _handleTextMessage(text);

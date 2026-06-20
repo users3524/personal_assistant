@@ -72,6 +72,10 @@ class AntiqueRepositoryImpl implements AntiqueRepository {
 
   @override
   Future<Map<String, int>> countByCategory() => _dao.countByCategory();
+
+  @override
+  Future<int> sumPattingMinutesByDate(DateTime date) =>
+      _dao.sumPattingMinutesByDate(date);
 }
 
 // ===== Riverpod Providers =====

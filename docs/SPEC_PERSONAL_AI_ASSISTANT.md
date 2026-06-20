@@ -12,7 +12,7 @@
 | 待办 | `/todos` | 待办树、子任务、状态流转、软删除、归档、周/月视图、今日复盘入口。 |
 | 简历 | `/resume` | 三模板预览、编辑资料/经历/技能/项目、拖拽排序、可见性开关、图片导出分享。 |
 | 设置 | `/settings` | AI 配置、通知、分类管理、文玩设置、JSON 备份导入导出、许可页。 |
-| AI 复盘 | `/review/daily/*`, `/review/weekly/:id` | 对话式日报、日报详情、周报生成/查看、离线或在线 AI 生成。 |
+| AI 复盘 | `/review/daily/*`, `/review/weekly/:id` | 对话式日报、日报详情、周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界。 |
 
 ## 2. 当前数据库表
 
@@ -59,14 +59,15 @@ work_experiences.responsibilities/tech_stack -> List<String>
 | 多供应商配置 | `settings_page.dart` |
 | 日报 Prompt | `AIPrompts.dailyReviewSystemPrompt` |
 | 周报 Prompt | `AIPrompts.weeklyReportSystemPrompt` |
+| 日报文玩分钟输入 | `DailyReviewChatPage` 通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取当日盘玩分钟。 |
+| 单次文本 500 字限制 | `DailyReviewChatPage` 输入框和发送入口共同限制。 |
+| STT 60 秒截断 | `DailyReviewChatPage` 本地计时器自动停止识别并发送已识别文本。 |
 
 未实现：
 
 | 能力 | 当前状态 |
 | --- | --- |
 | 每日 15 轮熔断 | 无持久化 turn 计数和熔断 UI。 |
-| 单次文本 500 字限制 | 当前输入框未强制该限制。 |
-| STT 60 秒截断 | 当前 `speech_to_text.listen()` 未设置 60 秒硬截断策略。 |
 | 深夜 2:00-5:00 后台引擎 | 当前无后台调度实现。 |
 | 结构化 JSON 输出/重试 | 当前 OpenAI 输出按纯文本解析。 |
 | RAG / 向量存储 / 人生罗盘 | 当前无表、无检索实现。 |

@@ -1,8 +1,6 @@
 /// 文玩包列表页 — 网格/月历双视图 + 每日翻牌推荐。
 library;
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
 import '../widgets/antique_grid_card.dart';
+import '../widgets/resolved_image.dart';
 import '../../../settings/presentation/providers/category_management_providers.dart';
 import '../../../todo/presentation/providers/todo_providers.dart';
 
@@ -311,13 +310,13 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 top: Radius.circular(12),
               ),
               child: cover != null
-                  ? Image.file(
-                      File(cover),
+                  ? ResolvedImage(
+                      path: cover,
                       width: 100,
                       height: 72,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _buildPickIcon(item.category),
+                      placeholder: _buildPickIcon(item.category),
+                      error: _buildPickIcon(item.category),
                     )
                   : _buildPickIcon(item.category),
             ),
@@ -550,16 +549,20 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(4),
-                                      child: Image.file(
-                                        File(logs.first.photoPaths.first),
+                                      child: ResolvedImage(
+                                        path: logs.first.photoPaths.first,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
-                                        errorBuilder: (_, __, ___) =>
-                                            const Icon(
-                                              Icons.image,
-                                              size: 16,
-                                              color: Colors.grey,
-                                            ),
+                                        placeholder: const Icon(
+                                          Icons.image,
+                                          size: 16,
+                                          color: Colors.grey,
+                                        ),
+                                        error: const Icon(
+                                          Icons.image,
+                                          size: 16,
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                     ),
                                     // 物品名称叠加
@@ -1583,18 +1586,34 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
-                  radius: rank == 1 ? 26 : 22,
-                  backgroundColor: Colors.grey.shade100,
-                  backgroundImage: displayImage != null
-                      ? FileImage(File(displayImage))
-                      : null,
-                  child: displayImage == null
-                      ? Text(
-                          medals[rank - 1],
-                          style: const TextStyle(fontSize: 18),
-                        )
-                      : null,
+                child: ClipOval(
+                  child: SizedBox(
+                    width: rank == 1 ? 52 : 44,
+                    height: rank == 1 ? 52 : 44,
+                    child: displayImage != null
+                        ? ResolvedImage(
+                            path: displayImage,
+                            fit: BoxFit.cover,
+                            placeholder: Center(
+                              child: Text(
+                                medals[rank - 1],
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ),
+                            error: Center(
+                              child: Text(
+                                medals[rank - 1],
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              medals[rank - 1],
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                          ),
+                  ),
                 ),
               ),
               if (displayImage != null)
@@ -1708,12 +1727,17 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 leading: log.photoPaths.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.file(
-                          File(log.photoPaths.first),
+                        child: ResolvedImage(
+                          path: log.photoPaths.first,
                           width: 40,
                           height: 40,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
+                          placeholder: const Icon(
+                            Icons.image,
+                            size: 24,
+                            color: Colors.grey,
+                          ),
+                          error: const Icon(
                             Icons.image,
                             size: 24,
                             color: Colors.grey,

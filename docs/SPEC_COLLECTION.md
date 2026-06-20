@@ -151,16 +151,16 @@
 
 ## 9. 图片路径
 
-当前新图片保存函数将文件写入应用文档目录的 `antique_images/` 或 `patting_images/` 子目录，并返回 `antique_images/xxx.jpg` / `patting_images/xxx.jpg` 形式的相对路径；旧数据和部分导入数据仍可能是绝对路径。`core/utils/image_utils.dart` 可以解析绝对路径和相对路径。`BackupService` 导出藏品图片和盘玩照片时已复用 `resolveImageFile()`，相对路径能被正确读出并内联为 `base64:`。部分 UI 仍直接使用 `File(path)`，这会让相对路径在某些展示、分享或保存入口中破图。
+当前新图片保存函数将文件写入应用文档目录的 `antique_images/` 或 `patting_images/` 子目录，并返回 `antique_images/xxx.jpg` / `patting_images/xxx.jpg` 形式的相对路径；旧数据和部分导入数据仍可能是绝对路径。`core/utils/image_utils.dart` 通过 `resolveImageFile()` 解析绝对路径和相对路径，并使用平台路径拼接。文玩 UI 图片展示已收敛到 `ResolvedImage` 组件；分享、保存到相册和 `BackupService` 导出也会先复用 `resolveImageFile()`，相对路径能被正确读出并内联为 `base64:`。
 
 后续图片路径统一原则：
 
 1. 数据库存储统一收敛为相对路径 token。
-2. UI、分享、保存继续统一复用现有 `resolveImageFile()` 或等价单一服务解析路径，避免再造多个路径解析入口。
+2. UI、分享、保存、备份导出统一复用现有 `resolveImageFile()` 或 `ResolvedImage`，避免再造多个路径解析入口。
 3. 备份恢复解码 `base64:` 图片时写入应用文档目录，而不是系统临时目录。
 4. 迁移旧绝对路径前先校验文件是否存在，能复制到 `antique_images/` 的再转相对路径，不能复制的保留原值并提示用户。
 
-注意：当前 `resolveImageFile()` 是异步函数，返回 `Future<File>`。页面层不能按同步 helper 直接塞给 `Image.file()`；改造时需要在 Provider 中预解析、用 `FutureBuilder` 包裹，或提供统一的异步图片组件。
+注意：当前 `resolveImageFile()` 是异步函数，返回 `Future<File>`。页面层展示图片时应优先使用 `ResolvedImage`；业务操作如分享、保存、备份导出则在执行前 `await resolveImageFile(path)`。
 
 ## 10. 备份与 AI 复盘衔接
 

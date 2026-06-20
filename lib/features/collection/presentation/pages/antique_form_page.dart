@@ -12,6 +12,7 @@ import 'dart:io';
 import '../../../../core/models/collection_category.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
+import '../widgets/resolved_image.dart';
 import '../../../settings/presentation/providers/category_management_providers.dart'
     show collectionCategoriesProvider;
 
@@ -732,10 +733,16 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              File(_imagePaths[index]),
+            child: ResolvedImage(
+              path: _imagePaths[index],
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              placeholder: Container(
+                color: Colors.grey.shade100,
+                child: const Center(
+                  child: Icon(Icons.photo_outlined, color: Colors.grey),
+                ),
+              ),
+              error: Container(
                 color: Colors.grey.shade200,
                 child: const Center(
                   child: Icon(Icons.broken_image, color: Colors.grey),

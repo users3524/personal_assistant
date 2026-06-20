@@ -14,14 +14,20 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/utils/image_utils.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
+import '../widgets/resolved_image.dart';
 
 class AntiqueDetailPage extends ConsumerStatefulWidget {
   final int itemId;
   final int? highlightLogId;
 
-  const AntiqueDetailPage({super.key, required this.itemId, this.highlightLogId});
+  const AntiqueDetailPage({
+    super.key,
+    required this.itemId,
+    this.highlightLogId,
+  });
 
   @override
   ConsumerState<AntiqueDetailPage> createState() => _AntiqueDetailPageState();
@@ -197,17 +203,39 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             GestureDetector(
               onTap: () => _showFullScreenImage(context, images[0]),
               onLongPress: () => _showImageActions(context, images[0]),
-              child: Image.file(File(images[0]), fit: BoxFit.cover, width: double.infinity,
-                errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
+              child: ResolvedImage(
+                path: images[0],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(child: Icon(Icons.image)),
+                ),
+                error: Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(child: Icon(Icons.broken_image)),
+                ),
               ),
             ),
             // 显示照片来源标签
-            Positioned(top: 8, left: 8,
+            Positioned(
+              top: 8,
+              left: 8,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                child: Text(_cachedLogs != null && _cachedLogs!.any((l) => l.photoPaths.contains(images[0]))
-                    ? '最新打卡' : '藏品照片', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _cachedLogs != null &&
+                          _cachedLogs!.any(
+                            (l) => l.photoPaths.contains(images[0]),
+                          )
+                      ? '最新打卡'
+                      : '藏品照片',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
               ),
             ),
           ],
@@ -230,17 +258,46 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 children: [
                   GestureDetector(
                     onTap: () => _showFullScreenImage(context, images[index]),
-                    onLongPress: () => _showImageActions(context, images[index]),
-                    child: Image.file(File(images[index]), fit: BoxFit.cover, width: double.infinity,
-                      errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image))),
+                    onLongPress: () =>
+                        _showImageActions(context, images[index]),
+                    child: ResolvedImage(
+                      path: images[index],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(child: Icon(Icons.image)),
+                      ),
+                      error: Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(child: Icon(Icons.broken_image)),
+                      ),
                     ),
                   ),
-                  Positioned(top: 8, left: 8,
+                  Positioned(
+                    top: 8,
+                    left: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                      child: Text(_cachedLogs != null && _cachedLogs!.any((l) => l.photoPaths.contains(images[index]))
-                          ? '最新打卡' : '藏品照片', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _cachedLogs != null &&
+                                _cachedLogs!.any(
+                                  (l) => l.photoPaths.contains(images[index]),
+                                )
+                            ? '最新打卡'
+                            : '藏品照片',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -253,22 +310,27 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           valueListenable: _currentPage,
           builder: (_, page, __) => Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(images.length, (i) => Container(
-              width: i == page ? 8 : 6,
-              height: i == page ? 8 : 6,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i == page ? Colors.teal : Colors.grey.shade300,
+            children: List.generate(
+              images.length,
+              (i) => Container(
+                width: i == page ? 8 : 6,
+                height: i == page ? 8 : 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i == page ? Colors.teal : Colors.grey.shade300,
+                ),
               ),
-            )),
+            ),
           ),
         ),
         const SizedBox(height: 4),
         ValueListenableBuilder<int>(
           valueListenable: _currentPage,
-          builder: (_, page, __) => Text('${page + 1} / ${images.length}',
-            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          builder: (_, page, __) => Text(
+            '${page + 1} / ${images.length}',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
         ),
       ],
     );
@@ -290,22 +352,28 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(item.name,
-                        style: Theme.of(context).textTheme.headlineSmall),
+                    child: Text(
+                      item.name,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                   ),
                   Chip(
-                    label: Text(item.category, style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      item.category,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     backgroundColor: Colors.teal.withValues(alpha: 0.1),
                   ),
                 ],
               ),
               if (item.subtype != null) ...[
                 const SizedBox(height: 4),
-                Text(item.subtype!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.grey)),
+                Text(
+                  item.subtype!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                ),
               ],
               const SizedBox(height: 8),
               // 情感价值卡片
@@ -313,10 +381,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.amber.shade50,
-                      Colors.orange.shade50,
-                    ],
+                    colors: [Colors.amber.shade50, Colors.orange.shade50],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -336,10 +401,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                               color: Colors.brown,
                             ),
                           ),
-                          if (item.description != null && item.description!.isNotEmpty)
+                          if (item.description != null &&
+                              item.description!.isNotEmpty)
                             Text(
                               item.description!,
-                              style: const TextStyle(fontSize: 12, color: Colors.brown),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.brown,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -359,26 +428,31 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               ),
               if (item.acquiredPrice != null)
                 _infoRow('入手价格', '¥${item.acquiredPrice!.toStringAsFixed(0)}'),
-              if (item.sourceSeller != null)
-                _infoRow('来源', item.sourceSeller!),
+              if (item.sourceSeller != null) _infoRow('来源', item.sourceSeller!),
               if (item.notes != null && item.notes!.isNotEmpty) ...[
                 const Divider(height: 12),
                 Text('备注', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
-                Text(item.notes!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade700,
-                        )),
+                Text(
+                  item.notes!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+                ),
               ],
               // 分类专属参数
-              if (item.categoryMetadata != null && item.categoryMetadata!.isNotEmpty) ...[
+              if (item.categoryMetadata != null &&
+                  item.categoryMetadata!.isNotEmpty) ...[
                 const Divider(height: 16),
                 Text('详细参数', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
                 // 核桃品类三列显示（行名 | 左参数 | 右参数）
                 if (item.category == '核桃') ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.brown.shade50,
                       borderRadius: BorderRadius.circular(8),
@@ -388,9 +462,40 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         // 表头
                         Row(
                           children: [
-                            const SizedBox(width: 72, child: Text('参数', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                            Expanded(child: Center(child: Text('左', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.teal)))),
-                            Expanded(child: Center(child: Text('右', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)))),
+                            const SizedBox(
+                              width: 72,
+                              child: Text(
+                                '参数',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  '左',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: Colors.teal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  '右',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(height: 8),
@@ -402,16 +507,36 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                               children: [
                                 SizedBox(
                                   width: 72,
-                                  child: Text(e.key, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(parts.isNotEmpty ? parts[0].trim() : '', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.teal.shade700)),
+                                  child: Text(
+                                    e.key,
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                                 Expanded(
                                   child: Center(
-                                    child: Text(parts.length > 1 ? parts[1].trim() : '', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.orange.shade700)),
+                                    child: Text(
+                                      parts.isNotEmpty ? parts[0].trim() : '',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13,
+                                        color: Colors.teal.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      parts.length > 1 ? parts[1].trim() : '',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -430,10 +555,22 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         children: [
                           SizedBox(
                             width: 72,
-                            child: Text(e.key, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                            child: Text(
+                              e.key,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                           Expanded(
-                            child: Text(e.value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                            child: Text(
+                              e.value,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -455,16 +592,20 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         children: [
           SizedBox(
             width: 72,
-            child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: valueColor,
-                  fontSize: 14,
-                )),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: valueColor,
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),
@@ -484,10 +625,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.local_fire_department, size: 18, color: Colors.orange),
+                  const Icon(
+                    Icons.local_fire_department,
+                    size: 18,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(width: 6),
-                  Text('本月打卡热力图',
-                      style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    '本月打卡热力图',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -541,10 +688,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       children: [
         // 星期标签
         Row(
-          children: ['一','二','三','四','五','六','日'].map((d) {
+          children: ['一', '二', '三', '四', '五', '六', '日'].map((d) {
             return Expanded(
               child: Center(
-                child: Text(d, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                child: Text(
+                  d,
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                ),
               ),
             );
           }).toList(),
@@ -568,7 +718,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   decoration: BoxDecoration(
                     color: _heatColor(count),
                     borderRadius: BorderRadius.circular(4),
-                    border: isToday ? Border.all(color: Colors.orange.shade800, width: 1.5) : null,
+                    border: isToday
+                        ? Border.all(color: Colors.orange.shade800, width: 1.5)
+                        : null,
                   ),
                   alignment: Alignment.center,
                   child: Text(
@@ -606,7 +758,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
         const SizedBox(width: 3),
         Text(label, style: TextStyle(fontSize: 9, color: Colors.grey.shade600)),
       ],
@@ -628,8 +787,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 children: [
                   const Icon(Icons.timeline, size: 20, color: Colors.teal),
                   const SizedBox(width: 8),
-                  Text('盘玩时光',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text('盘玩时光', style: Theme.of(context).textTheme.titleMedium),
                 ],
               ),
               const SizedBox(height: 12),
@@ -653,11 +811,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 children: [
                   Icon(Icons.pan_tool_outlined, size: 40, color: Colors.grey),
                   SizedBox(height: 8),
-                  Text('还没有盘玩记录',
-                      style: TextStyle(color: Colors.grey)),
+                  Text('还没有盘玩记录', style: TextStyle(color: Colors.grey)),
                   SizedBox(height: 4),
-                  Text('点击下方按钮打卡',
-                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    '点击下方按钮打卡',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -672,16 +831,22 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           children: sorted.asMap().entries.map((entry) {
             final log = entry.value;
             final isFirst = entry.key == sorted.length - 1; // 最后一条是最早的
-            final daysSinceAcquisition = log.date.difference(item.acquiredDate).inDays;
-            final dayLabel = daysSinceAcquisition == 0 ? '入手当天' : '第${daysSinceAcquisition}天';
+            final daysSinceAcquisition = log.date
+                .difference(item.acquiredDate)
+                .inDays;
+            final dayLabel = daysSinceAcquisition == 0
+                ? '入手当天'
+                : '第${daysSinceAcquisition}天';
             // 日期时间：26/03/05 16:38
             final y = (log.date.year % 100).toString().padLeft(2, '0');
             final m = log.date.month.toString().padLeft(2, '0');
             final d = log.date.day.toString().padLeft(2, '0');
-            final time = '${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
+            final time =
+                '${log.date.hour.toString().padLeft(2, '0')}:${log.date.minute.toString().padLeft(2, '0')}';
             final dateTimeStr = '$y/$m/$d $time';
             final hasPhoto = log.photoPaths.isNotEmpty;
-            final isHighlighted = _highlightLogId != null && log.id == _highlightLogId;
+            final isHighlighted =
+                _highlightLogId != null && log.id == _highlightLogId;
 
             return IntrinsicHeight(
               key: log.id != null ? ValueKey('log_${log.id}') : null,
@@ -720,10 +885,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         ),
                       ),
                       Expanded(
-                        child: Container(
-                          width: 2,
-                          color: Colors.teal.shade100,
-                        ),
+                        child: Container(width: 2, color: Colors.teal.shade100),
                       ),
                     ],
                   ),
@@ -755,8 +917,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                 GestureDetector(
                                   onTap: () => _editPattingLog(item, log),
                                   child: const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 4),
-                                    child: Icon(Icons.edit, size: 14, color: Colors.grey),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Icon(
+                                      Icons.edit,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
                                 // 删除按钮
@@ -764,7 +932,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                   onTap: () => _deletePattingLog(log),
                                   child: const Padding(
                                     padding: EdgeInsets.only(left: 2),
-                                    child: Icon(Icons.close, size: 16, color: Colors.grey),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -784,21 +956,34 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                 runSpacing: 6,
                                 children: log.photoPaths.map((path) {
                                   return GestureDetector(
-                                    onTap: () => _showFullScreenImage(context, path),
-                                    onLongPress: () => _showImageActions(context, path),
+                                    onTap: () =>
+                                        _showFullScreenImage(context, path),
+                                    onLongPress: () =>
+                                        _showImageActions(context, path),
                                     child: Container(
                                       width: 150,
                                       height: 150,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(color: Colors.grey.shade300),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(7),
-                                        child: Image.file(
-                                          File(path),
+                                        child: ResolvedImage(
+                                          path: path,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey, size: 28),
+                                          placeholder: const Icon(
+                                            Icons.image,
+                                            color: Colors.grey,
+                                            size: 28,
+                                          ),
+                                          error: const Icon(
+                                            Icons.broken_image,
+                                            color: Colors.grey,
+                                            size: 28,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -814,7 +999,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 ],
               ),
             );
-        }).toList(),
+          }).toList(),
         );
       },
     );
@@ -849,7 +1034,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               child: Center(
                 child: InteractiveViewer(
                   maxScale: 4,
-                  child: Image.file(File(path), fit: BoxFit.contain),
+                  child: ResolvedImage(path: path, fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -892,13 +1077,14 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   /// 分享图片
   Future<void> _shareImage(BuildContext context, String path) async {
     try {
-      final file = XFile(path);
+      final resolved = await resolveImageFile(path);
+      final file = XFile(resolved.path);
       await Share.shareXFiles([file], text: '分享图片');
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('分享失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
       }
     }
   }
@@ -906,19 +1092,21 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   /// 保存图片到系统相册
   Future<void> _saveImageToGallery(BuildContext context, String path) async {
     try {
-      final file = File(path);
+      final file = await resolveImageFile(path);
       if (!await file.exists()) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('图片文件不存在')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('图片文件不存在')));
         }
         return;
       }
       final bytes = await file.readAsBytes();
       // gal 需要先写入临时文件
       final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/temp_save_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final tempFile = File(
+        '${tempDir.path}/temp_save_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       await tempFile.writeAsBytes(bytes);
       await Gal.putImage(tempFile.path);
       // 清理临时文件
@@ -933,9 +1121,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -951,8 +1139,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('记录此刻',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                '记录此刻',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt, color: Colors.teal),
@@ -1005,9 +1195,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       _showCheckinDialog(item, savedPath);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('图片处理失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('图片处理失败: $e')));
         // 图片失败也允许纯文字打卡
         _showCheckinDialog(item, null);
       }
@@ -1016,7 +1206,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
 
   void _showCheckinDialog(AntiqueEntity item, String? photoPath) {
     final noteCtrl = TextEditingController();
-    final fileExists = photoPath != null && File(photoPath).existsSync();
+    final hasPhoto = photoPath != null;
     // 选中的打卡时间 — 在对话框外创建，避免每次 setState 重建重置为 now
     final selectedDate = ValueNotifier<DateTime>(DateTime.now());
 
@@ -1033,32 +1223,26 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 图片预览
-                  if (fileExists)
+                  if (hasPhoto)
                     SizedBox(
                       height: 140,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photoPath),
+                        child: ResolvedImage(
+                          path: photoPath,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, e, __) => Container(
+                          error: Container(
                             color: Colors.grey.shade200,
                             alignment: Alignment.center,
-                            child: const Text('图片加载失败',
-                                style: TextStyle(fontSize: 10, color: Colors.grey)),
+                            child: const Text(
+                              '图片加载失败',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                  else if (photoPath != null && !fileExists)
-                    Container(
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text('图片文件不存在', style: TextStyle(fontSize: 12, color: Colors.orange)),
                       ),
                     )
                   else
@@ -1072,9 +1256,19 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.favorite_border, color: Colors.pink, size: 20),
+                            Icon(
+                              Icons.favorite_border,
+                              color: Colors.pink,
+                              size: 20,
+                            ),
                             SizedBox(width: 6),
-                            Text('无照片，纯文字记录', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(
+                              '无照片，纯文字记录',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1101,8 +1295,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       if (time == null || !ctx.mounted) return;
                       setDialogState(() {
                         selectedDate.value = DateTime(
-                          picked.year, picked.month, picked.day,
-                          time.hour, time.minute,
+                          picked.year,
+                          picked.month,
+                          picked.day,
+                          time.hour,
+                          time.minute,
                         );
                       });
                     },
@@ -1115,19 +1312,34 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         final h = date.hour.toString().padLeft(2, '0');
                         final mi = date.minute.toString().padLeft(2, '0');
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.access_time, size: 18, color: Colors.teal),
+                              const Icon(
+                                Icons.access_time,
+                                size: 18,
+                                color: Colors.teal,
+                              ),
                               const SizedBox(width: 8),
-                              Text('$y/$mo/$d $h:$mi',
-                                  style: const TextStyle(fontSize: 14)),
+                              Text(
+                                '$y/$mo/$d $h:$mi',
+                                style: const TextStyle(fontSize: 14),
+                              ),
                               const Spacer(),
-                              const Text('修改', style: TextStyle(fontSize: 12, color: Colors.teal)),
+                              const Text(
+                                '修改',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.teal,
+                                ),
+                              ),
                             ],
                           ),
                         );
@@ -1145,7 +1357,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       isDense: true,
                     ),
                     maxLines: 3,
-                    autofocus: photoPath == null || !fileExists,
+                    autofocus: !hasPhoto,
                   ),
                 ],
               ),
@@ -1159,27 +1371,34 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 onPressed: () async {
                   final note = noteCtrl.text.trim();
                   try {
-                    final repo = await ref.read(antiqueRepositoryProvider.future);
-                    await repo.addPattingLog(PattingLogEntity(
-                      itemId: widget.itemId,
-                      date: selectedDate.value,
-                      durationMinutes: 0,
-                      method: 'bare_hand',
-                      note: note.isEmpty ? null : note,
-                      photoPaths: (fileExists) ? [photoPath] : [],
-                    ));
+                    final repo = await ref.read(
+                      antiqueRepositoryProvider.future,
+                    );
+                    await repo.addPattingLog(
+                      PattingLogEntity(
+                        itemId: widget.itemId,
+                        date: selectedDate.value,
+                        durationMinutes: 0,
+                        method: 'bare_hand',
+                        note: note.isEmpty ? null : note,
+                        photoPaths: hasPhoto ? [photoPath] : [],
+                      ),
+                    );
                     if (ctx.mounted) Navigator.pop(ctx);
                     _refreshPage();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('打卡成功'), duration: Duration(seconds: 1)),
+                        const SnackBar(
+                          content: Text('打卡成功'),
+                          duration: Duration(seconds: 1),
+                        ),
                       );
                     }
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('打卡失败: $e')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('打卡失败: $e')));
                     }
                   }
                 },
@@ -1215,15 +1434,16 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 图片预览
-                  if (photoPath != null && File(photoPath!).existsSync())
+                  if (photoPath != null)
                     SizedBox(
                       height: 140,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photoPath!),
+                        child: ResolvedImage(
+                          path: photoPath!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _photoPlaceholder(),
+                          placeholder: _photoPlaceholder(),
+                          error: _photoPlaceholder(),
                         ),
                       ),
                     )
@@ -1238,7 +1458,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         icon: const Icon(Icons.camera_alt, size: 18),
                         label: const Text('拍照', style: TextStyle(fontSize: 12)),
                         onPressed: () async {
-                          final photo = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 1024);
+                          final photo = await ImagePicker().pickImage(
+                            source: ImageSource.camera,
+                            maxWidth: 1024,
+                          );
                           if (photo != null && ctx.mounted) {
                             final p = await _saveImageToAppDir(photo);
                             setDialogState(() => photoPath = p);
@@ -1249,7 +1472,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         icon: const Icon(Icons.photo_library, size: 18),
                         label: const Text('相册', style: TextStyle(fontSize: 12)),
                         onPressed: () async {
-                          final photo = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024);
+                          final photo = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1024,
+                          );
                           if (photo != null && ctx.mounted) {
                             final p = await _saveImageToAppDir(photo);
                             setDialogState(() => photoPath = p);
@@ -1258,9 +1484,17 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                       ),
                       if (photoPath != null)
                         TextButton.icon(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                          label: const Text('删除', style: TextStyle(fontSize: 12, color: Colors.red)),
-                          onPressed: () => setDialogState(() => photoPath = null),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: Colors.red,
+                          ),
+                          label: const Text(
+                            '删除',
+                            style: TextStyle(fontSize: 12, color: Colors.red),
+                          ),
+                          onPressed: () =>
+                              setDialogState(() => photoPath = null),
                         ),
                     ],
                   ),
@@ -1278,7 +1512,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
               FilledButton(
                 onPressed: () {
                   saved = true;
@@ -1295,10 +1532,12 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     if (!saved || !mounted) return;
     try {
       final repo = await ref.read(antiqueRepositoryProvider.future);
-      await repo.updatePattingLog(log.copyWith(
-        note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
-        photoPaths: photoPath != null ? [photoPath!] : [],
-      ));
+      await repo.updatePattingLog(
+        log.copyWith(
+          note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+          photoPaths: photoPath != null ? [photoPath!] : [],
+        ),
+      );
       _refreshPage();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1307,7 +1546,9 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -1340,7 +1581,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         title: const Text('删除记录'),
         content: const Text('确定要删除这条打卡记录吗？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -1361,20 +1605,25 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
       }
     }
   }
 
-  Future<void> _showComparePicker(BuildContext context, AntiqueEntity item) async {
+  Future<void> _showComparePicker(
+    BuildContext context,
+    AntiqueEntity item,
+  ) async {
     final logs = await _logsFuture;
     // 筛出有照片的记录
     final withPhotos = logs.where((l) => l.photoPaths.isNotEmpty).toList();
     if (withPhotos.length < 2) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('需要至少两条带照片的打卡记录才能对比')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('需要至少两条带照片的打卡记录才能对比')));
       }
       return;
     }
@@ -1404,11 +1653,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   }
 
   /// 全屏对比结果
-  void _handleAction(
-    BuildContext context,
-    AntiqueEntity item,
-    String action,
-  ) {
+  void _handleAction(BuildContext context, AntiqueEntity item, String action) {
     switch (action) {
       case 'edit':
         context.push('/collection/${item.id}/edit');
@@ -1427,8 +1672,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text(
-            '确定要删除「${item.name}」吗？\n所有图片、盘玩记录也将被删除。'),
+        content: Text('确定要删除「${item.name}」吗？\n所有图片、盘玩记录也将被删除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1475,9 +1719,27 @@ class _CompareDialogState extends State<_CompareDialog> {
   bool _savingImage = false;
 
   static const _styles = [
-    {'name': '暗夜', 'bg': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)], 'text': Colors.white70, 'subtext': Colors.white38, 'badgeBg': Colors.white24},
-    {'name': '暖木', 'bg': [Color(0xFF2D1F15), Color(0xFF4A3728)], 'text': Color(0xFFE8D5C4), 'subtext': Color(0xFFB8A08E), 'badgeBg': Color(0x55FFFFFF)},
-    {'name': '清新', 'bg': [Color(0xFF1B4332), Color(0xFF2D6A4F)], 'text': Color(0xFFD8F3DC), 'subtext': Color(0xFF95D5B2), 'badgeBg': Color(0x44FFFFFF)},
+    {
+      'name': '暗夜',
+      'bg': [Color(0xFF0D0D0D), Color(0xFF1A1A2E)],
+      'text': Colors.white70,
+      'subtext': Colors.white38,
+      'badgeBg': Colors.white24,
+    },
+    {
+      'name': '暖木',
+      'bg': [Color(0xFF2D1F15), Color(0xFF4A3728)],
+      'text': Color(0xFFE8D5C4),
+      'subtext': Color(0xFFB8A08E),
+      'badgeBg': Color(0x55FFFFFF),
+    },
+    {
+      'name': '清新',
+      'bg': [Color(0xFF1B4332), Color(0xFF2D6A4F)],
+      'text': Color(0xFFD8F3DC),
+      'subtext': Color(0xFF95D5B2),
+      'badgeBg': Color(0x44FFFFFF),
+    },
   ];
 
   PattingLogEntity? get _leftLog => _findLog(_leftKey);
@@ -1513,7 +1775,11 @@ class _CompareDialogState extends State<_CompareDialog> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: colors,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1523,20 +1789,46 @@ class _CompareDialogState extends State<_CompareDialog> {
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
               child: Row(
                 children: [
-                  Text('时光对比', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    '时光对比',
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const Spacer(),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(children: _styles.asMap().entries.map((e) => Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: ChoiceChip(
-                        label: Text(e.value['name'] as String, style: TextStyle(fontSize: 10, color: _colorStyle == e.key ? null : subtextColor.withValues(alpha: 0.7))),
-                        selected: _colorStyle == e.key,
-                        onSelected: (_) => setState(() => _colorStyle = e.key),
-                        visualDensity: VisualDensity.compact,
-                        selectedColor: Colors.teal.withValues(alpha: 0.3),
-                      ),
-                    )).toList()),
+                    child: Row(
+                      children: _styles
+                          .asMap()
+                          .entries
+                          .map(
+                            (e) => Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: ChoiceChip(
+                                label: Text(
+                                  e.value['name'] as String,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: _colorStyle == e.key
+                                        ? null
+                                        : subtextColor.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                                selected: _colorStyle == e.key,
+                                onSelected: (_) =>
+                                    setState(() => _colorStyle = e.key),
+                                visualDensity: VisualDensity.compact,
+                                selectedColor: Colors.teal.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ],
               ),
@@ -1550,17 +1842,39 @@ class _CompareDialogState extends State<_CompareDialog> {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: colors,
+                      ),
                     ),
                     child: SizedBox(
-                    height: 300,
-                    child: Row(
-                      children: [
-                        Expanded(child: _tile(leftLog, widget.item, textColor, subtextColor, badgeBg, true)),
-                        Container(width: 1, color: badgeBg),
-                        Expanded(child: _tile(rightLog, widget.item, textColor, subtextColor, badgeBg, false)),
-                      ],
-                    ),
+                      height: 300,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _tile(
+                              leftLog,
+                              widget.item,
+                              textColor,
+                              subtextColor,
+                              badgeBg,
+                              true,
+                            ),
+                          ),
+                          Container(width: 1, color: badgeBg),
+                          Expanded(
+                            child: _tile(
+                              rightLog,
+                              widget.item,
+                              textColor,
+                              subtextColor,
+                              badgeBg,
+                              false,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1585,10 +1899,18 @@ class _CompareDialogState extends State<_CompareDialog> {
                       Expanded(
                         child: OutlinedButton.icon(
                           icon: _savingImage
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Icon(Icons.save_alt, size: 18),
                           label: Text(_savingImage ? '保存中...' : '保存对比图'),
-                          style: OutlinedButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.8)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textColor.withValues(alpha: 0.8),
+                          ),
                           onPressed: _savingImage ? null : _saveCompareImage,
                         ),
                       ),
@@ -1615,7 +1937,13 @@ class _CompareDialogState extends State<_CompareDialog> {
     final entries = widget.logs.map((l) {
       final k = '${l.date.toIso8601String()}|${l.photoPaths.first}';
       final days = l.date.difference(widget.item.acquiredDate).inDays;
-      return _CompareEntry(key: k, path: l.photoPaths.first, dayLabel: days == 0 ? '入手当天' : '第${days}天', dateStr: '', note: l.note);
+      return _CompareEntry(
+        key: k,
+        path: l.photoPaths.first,
+        dayLabel: days == 0 ? '入手当天' : '第${days}天',
+        dateStr: '',
+        note: l.note,
+      );
     }).toList();
     final currentKey = isLeft ? _leftKey : _rightKey;
     final current = entries.where((e) => e.key == currentKey).firstOrNull;
@@ -1634,12 +1962,23 @@ class _CompareDialogState extends State<_CompareDialog> {
             if (current != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: Image.file(File(current.path), width: 24, height: 24, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 16)),
+                child: ResolvedImage(
+                  path: current.path,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.cover,
+                  placeholder: const Icon(Icons.image, size: 16),
+                  error: const Icon(Icons.image, size: 16),
+                ),
               ),
             const SizedBox(width: 4),
-            Expanded(child: Text(current?.dayLabel ?? (isLeft ? '选择左侧' : '选择右侧'),
-                style: const TextStyle(fontSize: 10, color: Colors.white70), maxLines: 1)),
+            Expanded(
+              child: Text(
+                current?.dayLabel ?? (isLeft ? '选择左侧' : '选择右侧'),
+                style: const TextStyle(fontSize: 10, color: Colors.white70),
+                maxLines: 1,
+              ),
+            ),
             const Icon(Icons.unfold_more, size: 14, color: Colors.white38),
           ],
         ),
@@ -1657,15 +1996,34 @@ class _CompareDialogState extends State<_CompareDialog> {
           final days = l.date.difference(widget.item.acquiredDate).inDays;
           final selected = (isLeft ? _leftKey : _rightKey) == k;
           return ListTile(
-            leading: ClipRRect(borderRadius: BorderRadius.circular(6),
-              child: Image.file(File(l.photoPaths.first), width: 40, height: 40, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 24))),
-            title: Text(days == 0 ? '入手当天' : '第$days天', style: TextStyle(fontWeight: selected ? FontWeight.bold : null)),
-            subtitle: Text('${l.date.month}/${l.date.day} ${l.note ?? ''}', style: const TextStyle(fontSize: 11)),
-            trailing: selected ? const Icon(Icons.check, color: Colors.teal) : null,
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: ResolvedImage(
+                path: l.photoPaths.first,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                placeholder: const Icon(Icons.image, size: 24),
+                error: const Icon(Icons.image, size: 24),
+              ),
+            ),
+            title: Text(
+              days == 0 ? '入手当天' : '第$days天',
+              style: TextStyle(fontWeight: selected ? FontWeight.bold : null),
+            ),
+            subtitle: Text(
+              '${l.date.month}/${l.date.day} ${l.note ?? ''}',
+              style: const TextStyle(fontSize: 11),
+            ),
+            trailing: selected
+                ? const Icon(Icons.check, color: Colors.teal)
+                : null,
             onTap: () {
               setState(() {
-                if (isLeft) _leftKey = k; else _rightKey = k;
+                if (isLeft)
+                  _leftKey = k;
+                else
+                  _rightKey = k;
               });
               Navigator.pop(ctx);
             },
@@ -1675,7 +2033,14 @@ class _CompareDialogState extends State<_CompareDialog> {
     );
   }
 
-  Widget _tile(PattingLogEntity log, AntiqueEntity item, Color textColor, Color subtextColor, Color badgeBg, bool isLeft) {
+  Widget _tile(
+    PattingLogEntity log,
+    AntiqueEntity item,
+    Color textColor,
+    Color subtextColor,
+    Color badgeBg,
+    bool isLeft,
+  ) {
     final days = log.date.difference(item.acquiredDate).inDays;
     final color = isLeft ? Colors.tealAccent : Colors.orangeAccent;
     final y = (log.date.year % 100).toString().padLeft(2, '0');
@@ -1686,34 +2051,81 @@ class _CompareDialogState extends State<_CompareDialog> {
       fit: StackFit.expand,
       children: [
         Positioned.fill(
-          child: InteractiveViewer(maxScale: 4,
-            child: Image.file(File(log.photoPaths.first), fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white24, size: 40))),
-          ),
-        ),
-        Positioned(top: 4, left: 0, right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)),
-              child: Text(isLeft ? '之前' : '之后', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+          child: InteractiveViewer(
+            maxScale: 4,
+            child: ResolvedImage(
+              path: log.photoPaths.first,
+              fit: BoxFit.contain,
+              error: const Center(
+                child: Icon(
+                  Icons.broken_image,
+                  color: Colors.white24,
+                  size: 40,
+                ),
+              ),
             ),
           ),
         ),
-        Positioned(bottom: 4, left: 4, right: 4,
+        Positioned(
+          top: 4,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                isLeft ? '之前' : '之后',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 4,
+          left: 4,
+          right: 4,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(6)),
-            child: Text('$y/$mo/$d  第${days}天', textAlign: TextAlign.center,
-              style: TextStyle(color: subtextColor, fontSize: 12, fontWeight: FontWeight.w500)),
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$y/$mo/$d  第${days}天',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: subtextColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ),
         if (log.note != null && log.note!.isNotEmpty)
-          Positioned(bottom: 16, left: 4, right: 4,
+          Positioned(
+            bottom: 16,
+            left: 4,
+            right: 4,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-              child: Text(log.note!, style: const TextStyle(color: Colors.white54, fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                log.note!,
+                style: const TextStyle(color: Colors.white54, fontSize: 9),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
       ],
@@ -1724,21 +2136,27 @@ class _CompareDialogState extends State<_CompareDialog> {
     if (_savingImage) return;
     setState(() => _savingImage = true);
     try {
-      final boundary = _compareKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _compareKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) throw Exception('无法获取对比区域');
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) throw Exception('图像编码失败');
 
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/compare_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File(
+        '${dir.path}/compare_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       final xFile = XFile(file.path);
       await Share.shareXFiles([xFile], text: '时光对比图');
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _savingImage = false);
@@ -1750,7 +2168,10 @@ class _CompareEntry {
   final String key, path, dayLabel, dateStr;
   final String? note;
   const _CompareEntry({
-    required this.key, required this.path,
-    required this.dayLabel, required this.dateStr, this.note,
+    required this.key,
+    required this.path,
+    required this.dayLabel,
+    required this.dateStr,
+    this.note,
   });
 }

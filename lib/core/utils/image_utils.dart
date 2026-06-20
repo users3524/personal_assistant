@@ -6,6 +6,7 @@ library;
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 /// 将存储路径解析为 File 对象
@@ -17,7 +18,7 @@ Future<File> resolveImageFile(String storedPath) async {
   }
   // 相对路径：拼接文档目录
   final dir = await getApplicationDocumentsDirectory();
-  return File('${dir.path}/$storedPath');
+  return File(p.join(dir.path, storedPath));
 }
 
 /// 检查图片文件是否存在（兼容相对路径）

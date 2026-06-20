@@ -1,11 +1,10 @@
 /// 藏品网格卡片组件。
 library;
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/antique_entity.dart';
+import 'resolved_image.dart';
 
 class AntiqueGridCard extends StatelessWidget {
   final AntiqueEntity item;
@@ -38,11 +37,12 @@ class AntiqueGridCard extends StatelessWidget {
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(
-                          File(coverPath),
+                        ResolvedImage(
+                          path: coverPath,
                           fit: BoxFit.cover,
                           width: double.infinity,
-                          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                          placeholder: _buildPlaceholder(),
+                          error: _buildPlaceholder(),
                         ),
                         if (latestPhoto != null)
                           Positioned(

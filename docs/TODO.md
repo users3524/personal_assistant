@@ -13,15 +13,15 @@
 ## P0：代码债
 
 - [ ] 将 AI API Key 从 `user_preferences.ai_api_key` 明文迁移到平台安全存储，并设计兼容迁移。
-- [ ] 将 `todo_lists` 纳入 `BackupService` 导出和导入。
-- [ ] 补齐 `BackupService` 导入列清单：`user_preferences.todo_categories`。
-- [ ] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。
-- [ ] 补齐 `BackupService` 导入列清单：`work_experiences.responsibilities`。
-- [ ] 补齐 `BackupService` 导入列清单：`project_experiences.key_deliverables/badges`。
+- [x] 将 `todo_lists` 纳入 `BackupService` 导出和导入。
+- [x] 补齐 `BackupService` 导入列清单：`user_preferences.todo_categories`。
+- [x] 补齐 `BackupService` 导入列清单：`todos.deleted_at/list_id/parent_id/recurrence_rule`。
+- [x] 补齐 `BackupService` 导入列清单：`work_experiences.responsibilities`。
+- [x] 补齐 `BackupService` 导入列清单：`project_experiences.key_deliverables/badges`。
 - [ ] 决定并执行文玩估值模块移除方案。
 - [ ] 移除估值后同步更新 `pubspec.yaml` 中 `fl_chart` 是否仍需要。
 - [ ] 为 Drift 迁移和备份恢复补测试。
-- [ ] 为 `BackupService` 增加导出-导入镜像测试，覆盖 `todo_lists`、任务树、软删除、简历 List 字段、`daily_reviews.completed_todo_ids`、`weekly_reports` 当前文本字段和日期毫秒/秒转换。
+- [x] 为 `BackupService` 增加导出-导入镜像测试，覆盖 `todo_lists`、任务树、软删除、简历 List 字段、`daily_reviews.completed_todo_ids`、`weekly_reports` 当前文本字段和日期毫秒/秒转换。
 
 ## P1：待办
 
@@ -32,7 +32,7 @@
 - [ ] 评估 `Value<T?>`、哨兵对象或独立 update command，选择一种统一 nullable 清空模式。
 - [ ] 完整接入 `todo_lists` 清单 UI。
 - [ ] 为今日统计、本周完成率、拖延率补单元测试。
-- [ ] 为备份恢复补待办树场景测试：清单、父任务、子任务、软删除、重复策略。
+- [x] 为备份恢复补待办树场景测试：清单、父任务、子任务、软删除、重复策略。
 
 ## P1：文玩
 

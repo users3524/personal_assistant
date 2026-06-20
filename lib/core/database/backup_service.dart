@@ -99,24 +99,29 @@ class BackupService {
     data['user_preferences'] = (await _db.select(_db.userPreferences).get())
         .map((r) => _rowToMap(r))
         .toList();
+    data['todo_lists'] = (await _db.select(_db.todoLists).get())
+        .map((r) => _rowToMap(r))
+        .toList();
     data['todos'] = (await _db.select(_db.todos).get())
         .map((r) => _rowToMap(r))
         .toList();
-    data['antique_items'] = (await _db.select(_db.antiqueItems).get())
-        .map((r) {
-          final m = _rowToMap(r);
-          if (m['imagePaths'] is List) m['imagePaths'] = encodePaths(m['imagePaths'] as List<String>?);
-          return m;
-        }).toList();
+    data['antique_items'] = (await _db.select(_db.antiqueItems).get()).map((r) {
+      final m = _rowToMap(r);
+      if (m['imagePaths'] is List) {
+        m['imagePaths'] = encodePaths(m['imagePaths'] as List<String>?);
+      }
+      return m;
+    }).toList();
     data['valuation_records'] = (await _db.select(_db.valuationRecords).get())
         .map((r) => _rowToMap(r))
         .toList();
-    data['patting_logs'] = (await _db.select(_db.pattingLogs).get())
-        .map((r) {
-          final m = _rowToMap(r);
-          if (m['photoPaths'] is List) m['photoPaths'] = encodePaths(m['photoPaths'] as List<String>?);
-          return m;
-        }).toList();
+    data['patting_logs'] = (await _db.select(_db.pattingLogs).get()).map((r) {
+      final m = _rowToMap(r);
+      if (m['photoPaths'] is List) {
+        m['photoPaths'] = encodePaths(m['photoPaths'] as List<String>?);
+      }
+      return m;
+    }).toList();
     data['daily_reviews'] = (await _db.select(_db.dailyReviews).get())
         .map((r) => _rowToMap(r))
         .toList();
@@ -161,40 +166,216 @@ class BackupService {
     await _db.delete(_db.valuationRecords).go();
     await _db.delete(_db.antiqueItems).go();
     await _db.delete(_db.todos).go();
+    await _db.delete(_db.todoLists).go();
     await _db.delete(_db.collectionCategories).go();
     await _db.delete(_db.userPreferences).go();
 
     final tableOrder = [
-      'user_preferences', 'collection_categories', 'todos', 'antique_items', 'valuation_records',
-      'patting_logs', 'daily_reviews', 'weekly_reports',
-      'resume_profile', 'work_experiences', 'educations',
-      'skill_items', 'project_experiences',
+      'user_preferences',
+      'collection_categories',
+      'todo_lists',
+      'todos',
+      'antique_items',
+      'valuation_records',
+      'patting_logs',
+      'daily_reviews',
+      'weekly_reports',
+      'resume_profile',
+      'work_experiences',
+      'educations',
+      'skill_items',
+      'project_experiences',
     ];
 
     // 每张表的 snake_case 列名，与实际 SQL schema 一致
     const tableColumns = {
-      'user_preferences': ['id','theme_mode','language','notification_enabled','ai_provider','ai_api_key','ai_base_url','ai_model','daily_review_time','weekly_report_day','resume_template_id','created_at','updated_at'],
-      'collection_categories': ['id','name','subtypes','metadata_fields','sort_order','created_at','updated_at'],
-      'todos': ['id','title','description','category','priority','due_date','status','tags','is_starred','started_at','completed_at','cancelled_at','actual_minutes','delay_count','created_at','updated_at'],
-      'antique_items': ['id','name','category','subtype','description','acquired_date','acquired_price','source_seller','condition','current_valuation','image_paths','category_metadata','fingerprints','notes','created_at','updated_at'],
-      'valuation_records': ['id','item_id','date','amount','remark','created_at'],
-      'patting_logs': ['id','item_id','date','duration_minutes','method','note','photo_paths','created_at'],
-      'daily_reviews': ['id','date','summary','highlights','improvements','energy_level','mood_level','completed_todo_ids','patting_minutes','ai_comment','ai_suggestion','is_ai_generated','is_manually_edited','created_at','updated_at'],
-      'weekly_reports': ['id','week_number','year','overview','highlights','improvements','next_week_plan','is_ai_generated','is_manually_edited','created_at','updated_at'],
-      'resume_profile': ['id','full_name','avatar_path','email','phone','personal_summary','website','location','job_title','updated_at'],
-      'work_experiences': ['id','company','position','start_date','end_date','description','tech_stack','is_visible','sort_order','created_at','updated_at'],
-      'educations': ['id','school','major','degree','start_date','end_date','description','is_visible','sort_order'],
-      'skill_items': ['id','name','category','proficiency','is_visible','sort_order'],
-      'project_experiences': ['id','name','role','description','tech_stack','link','start_date','end_date','is_visible','sort_order'],
+      'user_preferences': [
+        'id',
+        'theme_mode',
+        'language',
+        'notification_enabled',
+        'ai_provider',
+        'ai_api_key',
+        'ai_base_url',
+        'ai_model',
+        'daily_review_time',
+        'weekly_report_day',
+        'resume_template_id',
+        'todo_categories',
+        'created_at',
+        'updated_at',
+      ],
+      'collection_categories': [
+        'id',
+        'name',
+        'subtypes',
+        'metadata_fields',
+        'sort_order',
+        'created_at',
+        'updated_at',
+      ],
+      'todo_lists': ['id', 'name', 'category', 'created_at'],
+      'todos': [
+        'id',
+        'title',
+        'list_id',
+        'parent_id',
+        'recurrence_rule',
+        'description',
+        'category',
+        'priority',
+        'due_date',
+        'status',
+        'tags',
+        'is_starred',
+        'started_at',
+        'completed_at',
+        'cancelled_at',
+        'deleted_at',
+        'actual_minutes',
+        'delay_count',
+        'created_at',
+        'updated_at',
+      ],
+      'antique_items': [
+        'id',
+        'name',
+        'category',
+        'subtype',
+        'description',
+        'acquired_date',
+        'acquired_price',
+        'source_seller',
+        'condition',
+        'current_valuation',
+        'image_paths',
+        'category_metadata',
+        'fingerprints',
+        'notes',
+        'created_at',
+        'updated_at',
+      ],
+      'valuation_records': [
+        'id',
+        'item_id',
+        'date',
+        'amount',
+        'remark',
+        'created_at',
+      ],
+      'patting_logs': [
+        'id',
+        'item_id',
+        'date',
+        'duration_minutes',
+        'method',
+        'note',
+        'photo_paths',
+        'created_at',
+      ],
+      'daily_reviews': [
+        'id',
+        'date',
+        'summary',
+        'highlights',
+        'improvements',
+        'energy_level',
+        'mood_level',
+        'completed_todo_ids',
+        'patting_minutes',
+        'ai_comment',
+        'ai_suggestion',
+        'is_ai_generated',
+        'is_manually_edited',
+        'created_at',
+        'updated_at',
+      ],
+      'weekly_reports': [
+        'id',
+        'week_number',
+        'year',
+        'overview',
+        'highlights',
+        'improvements',
+        'next_week_plan',
+        'is_ai_generated',
+        'is_manually_edited',
+        'created_at',
+        'updated_at',
+      ],
+      'resume_profile': [
+        'id',
+        'full_name',
+        'avatar_path',
+        'email',
+        'phone',
+        'personal_summary',
+        'website',
+        'location',
+        'job_title',
+        'updated_at',
+      ],
+      'work_experiences': [
+        'id',
+        'company',
+        'position',
+        'start_date',
+        'end_date',
+        'description',
+        'responsibilities',
+        'tech_stack',
+        'is_visible',
+        'sort_order',
+        'created_at',
+        'updated_at',
+      ],
+      'educations': [
+        'id',
+        'school',
+        'major',
+        'degree',
+        'start_date',
+        'end_date',
+        'description',
+        'is_visible',
+        'sort_order',
+      ],
+      'skill_items': [
+        'id',
+        'name',
+        'category',
+        'proficiency',
+        'is_visible',
+        'sort_order',
+      ],
+      'project_experiences': [
+        'id',
+        'name',
+        'role',
+        'description',
+        'tech_stack',
+        'key_deliverables',
+        'badges',
+        'link',
+        'start_date',
+        'end_date',
+        'is_visible',
+        'sort_order',
+      ],
     };
 
     // camelCase → snake_case（drift.toJson 输出的是 camelCase）
-    String _snake(String c) {
+    String snakeKey(String c) {
       // 确保首字母 D/N 不会被 _ 包围：acquiredDate→acquired_date
+      if (c.contains('_')) {
+        return c.toLowerCase();
+      }
       final sb = StringBuffer();
       for (int i = 0; i < c.length; i++) {
         final ch = c[i];
-        if (ch == ch.toUpperCase() && i > 0) {
+        final code = ch.codeUnitAt(0);
+        final isUpperAscii = code >= 65 && code <= 90;
+        if (isUpperAscii && i > 0) {
           sb.write('_');
           sb.write(ch.toLowerCase());
         } else {
@@ -208,13 +389,13 @@ class BackupService {
       final rows = data[tableName];
       if (rows is! List || rows.isEmpty) continue;
 
-      for (final row in rows) {
+      for (final row in _orderedRowsForRestore(tableName, rows)) {
         if (row is! Map<String, dynamic>) continue;
 
         // 把 JSON 行转成 snake_case
         final snakeRow = <String, dynamic>{};
         for (final e in row.entries) {
-          snakeRow[_snake(e.key)] = e.value;
+          snakeRow[snakeKey(e.key)] = e.value;
         }
 
         final cols = tableColumns[tableName]!;
@@ -222,25 +403,31 @@ class BackupService {
 
         for (final col in cols) {
           var v = snakeRow[col];
+          v ??= _defaultRestoreValue(tableName, col);
 
           // 图片列表：base64 → 解码写盘
           if ((col == 'image_paths' || col == 'photo_paths') && v is List) {
-            v = v.map<dynamic>((p) {
-              if (p is String && p.startsWith('base64:')) {
-                return _decodeAndSaveImage(p.substring(7));
-              }
-              if (p is String && (p.startsWith('/data/') || p.startsWith('/storage/'))) {
-                return null; // 别的设备的绝对路径，没用
-              }
-              return p;
-            }).whereType<String>().toList();
+            v = v
+                .map<dynamic>((p) {
+                  if (p is String && p.startsWith('base64:')) {
+                    return _decodeAndSaveImage(p.substring(7));
+                  }
+                  if (p is String &&
+                      (p.startsWith('/data/') || p.startsWith('/storage/'))) {
+                    return null; // 别的设备的绝对路径，没用
+                  }
+                  return p;
+                })
+                .whereType<String>()
+                .toList();
           }
 
           vals.add(_toRaw(v, col));
         }
 
         final qs = vals.map((_) => '?').join(', ');
-        final sql = 'INSERT OR REPLACE INTO $tableName (${cols.join(', ')}) VALUES ($qs)';
+        final sql =
+            'INSERT OR REPLACE INTO $tableName (${cols.join(', ')}) VALUES ($qs)';
         await _db.customStatement(sql, vals);
       }
     }
@@ -291,11 +478,104 @@ class BackupService {
     return row.toJson();
   }
 
+  dynamic _defaultRestoreValue(String tableName, String columnName) {
+    const emptyListColumns = {
+      'todo_categories',
+      'tags',
+      'image_paths',
+      'photo_paths',
+      'completed_todo_ids',
+      'responsibilities',
+      'tech_stack',
+      'key_deliverables',
+      'badges',
+    };
+    if (emptyListColumns.contains(columnName)) {
+      return const <String>[];
+    }
+
+    if (tableName == 'todos' && columnName == 'delay_count') {
+      return 0;
+    }
+    if (tableName == 'todos' && columnName == 'priority') {
+      return 3;
+    }
+    if (tableName == 'todos' && columnName == 'category') {
+      return 'life';
+    }
+    if (tableName == 'todos' && columnName == 'status') {
+      return 'pending';
+    }
+    if (tableName == 'todos' && columnName == 'is_starred') {
+      return false;
+    }
+    if (tableName == 'daily_reviews' && columnName == 'patting_minutes') {
+      return 0;
+    }
+    if (tableName == 'daily_reviews' && columnName == 'is_ai_generated') {
+      return false;
+    }
+    if (tableName == 'daily_reviews' && columnName == 'is_manually_edited') {
+      return false;
+    }
+    if (tableName == 'weekly_reports' && columnName == 'is_ai_generated') {
+      return false;
+    }
+    if (tableName == 'weekly_reports' && columnName == 'is_manually_edited') {
+      return false;
+    }
+    if (columnName == 'is_visible') {
+      return true;
+    }
+    if (columnName == 'sort_order') {
+      return 0;
+    }
+
+    return null;
+  }
+
+  Iterable<dynamic> _orderedRowsForRestore(
+    String tableName,
+    List<dynamic> rows,
+  ) {
+    if (tableName != 'todos') {
+      return rows;
+    }
+
+    final ordered = List<dynamic>.from(rows);
+    final parentsById = <Object?, Object?>{};
+    for (final row in rows) {
+      if (row is Map<String, dynamic>) {
+        parentsById[row['id']] = row['parentId'] ?? row['parent_id'];
+      }
+    }
+
+    int depthOf(Object? id) {
+      var depth = 0;
+      var parentId = parentsById[id];
+      final seen = <Object?>{};
+      while (parentId != null && seen.add(parentId)) {
+        depth++;
+        parentId = parentsById[parentId];
+      }
+      return depth;
+    }
+
+    ordered.sort((a, b) {
+      final aDepth = a is Map<String, dynamic> ? depthOf(a['id']) : 0;
+      final bDepth = b is Map<String, dynamic> ? depthOf(b['id']) : 0;
+      return aDepth.compareTo(bDepth);
+    });
+    return ordered;
+  }
+
   /// 将 Base64 解码并写入文件，返回文件路径
   String _decodeAndSaveImage(String base64str) {
     try {
       final bytes = base64Decode(base64str);
-      final dir = Directory('${Directory.systemTemp.path}/personal_assistant_images');
+      final dir = Directory(
+        '${Directory.systemTemp.path}/personal_assistant_images',
+      );
       if (!dir.existsSync()) dir.createSync(recursive: true);
       final fileName = 'restored_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = File('${dir.path}/$fileName');

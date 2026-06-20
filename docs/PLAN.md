@@ -15,17 +15,16 @@
 | AI 复盘 | 已有对话式日报和周报，未实现深夜后台。 |
 | 简历 | 已有三模板和图片导出，未实现 PDF/STAR。 |
 | 设置 | 已有 AI 配置、通知、分类管理、JSON 备份。 |
-| 备份 | 数据库有 14 张表；备份导出覆盖 13 个业务集合且漏掉 `todo_lists`，导入列清单也落后于 schema 6。 |
+| 备份 | 数据库有 14 张表；`BackupService` 已覆盖全部存量业务表，并补齐 schema 6 的 `todo_lists`、任务树、软删除、简历 List 字段、日报完成任务 ID 与周报文本字段镜像测试。 |
 
 ## 2. 下一步建议顺序
 
-1. 先修备份导入列清单，避免现有数据恢复丢字段。
-2. 再处理 API Key 安全存储迁移，避免后续策略配置继续携带明文密钥。
-3. 处理文玩估值模块移除，明确历史估值归档或丢弃策略。
-4. 然后补待办树查询和 copyWith nullable 修复。
-5. 接着补 AI 复盘输入边界、真实文玩盘玩分钟、周报日期范围查询和可见降级。
-6. AI 智能化前先做 schema RFC：`chat_turns`、`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
-7. 再进入 15 轮限制、前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
+1. 处理 API Key 安全存储迁移，避免后续策略配置继续携带明文密钥。
+2. 处理文玩估值模块移除，明确历史估值归档或丢弃策略。
+3. 然后补待办树查询和 copyWith nullable 修复。
+4. 接着补 AI 复盘输入边界、真实文玩盘玩分钟、周报日期范围查询和可见降级。
+5. AI 智能化前先做 schema RFC：`chat_turns`、`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
+6. 再进入 15 轮限制、前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
 
 ## 3. 已吸收的智能化规划优点
 

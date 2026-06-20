@@ -36,20 +36,21 @@
 当前 JSON 备份包含：
 
 1. `user_preferences`
-2. `todos`
-3. `antique_items`
-4. `valuation_records`
-5. `patting_logs`
-6. `daily_reviews`
-7. `weekly_reports`
-8. `resume_profile`
-9. `work_experiences`
-10. `educations`
-11. `skill_items`
-12. `project_experiences`
-13. `collection_categories`
+2. `todo_lists`
+3. `todos`
+4. `antique_items`
+5. `valuation_records`
+6. `patting_logs`
+7. `daily_reviews`
+8. `weekly_reports`
+9. `resume_profile`
+10. `work_experiences`
+11. `educations`
+12. `skill_items`
+13. `project_experiences`
+14. `collection_categories`
 
-注意：当前数据库有 14 张表，但备份导出没有包含 `todo_lists`。
+当前数据库有 14 张表，备份导出已覆盖全部存量业务表。
 
 图片处理：导出时会尝试读取 `imagePaths` / `photoPaths` 对应文件，存在则编码为 `base64:<content>`；失败则保留原路径。
 
@@ -65,14 +66,14 @@
 4. 将 drift `toJson()` 的 camelCase key 转为 snake_case。
 5. 对日期列把毫秒时间戳转换为 Drift SQLite 使用的秒时间戳。
 6. 对 `base64:` 图片解码到系统临时目录 `personal_assistant_images`。
+7. 对旧备份缺失的新增列表字段使用空列表默认值，避免 schema v6 字段缺口导致导入中断。
 
 当前限制：
 
 | 限制 | 说明 |
 | --- | --- |
 | 覆盖导入 | 导入前清空现有数据，不是合并。 |
-| 表未覆盖 | `todo_lists` 当前没有导出，也没有导入。 |
-| 表列清单落后 | `user_preferences` 导入列未包含 `todo_categories`；`todos` 未包含 `list_id`、`parent_id`、`recurrence_rule`、`deleted_at`；`work_experiences` 未包含 `responsibilities`；`project_experiences` 未包含 `key_deliverables`、`badges`。 |
+| 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID 与周报文本字段已纳入导入导出镜像测试。 |
 | 图片恢复目录 | Base64 图片恢复到系统临时目录，不是应用文档目录。 |
 | 明文 | 无密码保护和加密。 |
 

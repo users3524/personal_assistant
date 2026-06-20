@@ -1,19 +1,46 @@
 /// 待办 DAO — drift 数据库操作。
 library;
 
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/todo_entity.dart';
 import '../datasources/todos_table.dart';
 
-/// 待办数据访问对象
 class TodoDao {
   final AppDatabase _db;
 
   TodoDao(this._db);
 
-  /// 将领域实体转为 drift 插入数据
+  // ===== 清单 CRUD =====
+
+  Future<List<TodoListEntity>> getLists() async {
+    final rows = await _db.select(_db.todoLists).get();
+    return rows.map((r) => TodoListEntity(
+      id: r.id, name: r.name, category: r.category, createdAt: r.createdAt,
+    )).toList();
+  }
+
+  Future<TodoListEntity> saveList(TodoListEntity list) async {
+    if (list.id != null) {
+      await (_db.update(_db.todoLists)..where((t) => t.id.equals(list.id!)))
+          .write(TodoListsCompanion(name: Value(list.name), category: Value(list.category)));
+      return list;
+    }
+    final id = await _db.into(_db.todoLists).insert(
+      TodoListsCompanion(name: Value(list.name), category: Value(list.category)),
+    );
+    return list.copyWith(id: id);
+  }
+
+  Future<void> deleteList(int id) async {
+    await (_db.delete(_db.todoLists)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ===== 实体转换 =====
+
   TodosCompanion _toCompanion(TodoEntity entity) {
     return TodosCompanion(
       title: Value(entity.title),
@@ -32,22 +59,22 @@ class TodoDao {
       createdAt: Value(entity.createdAt),
       updatedAt: Value(entity.updatedAt),
       deletedAt: Value(entity.deletedAt),
+      listId: Value(entity.listId),
+      parentId: Value(entity.parentId),
+      recurrenceRule: Value(entity.recurrenceRule),
     );
   }
 
-  /// 将数据库行转为领域实体
-  TodoEntity _toEntity(Todo row) {
-    final cat = _normalizeCategory(row.category);
-    final tags = row.tags;
+  TodoEntity _toEntity(Todo row, {List<TodoEntity> subtasks = const []}) {
     return TodoEntity(
       id: row.id,
       title: row.title,
       description: row.description,
-      category: cat,
+      category: _normalizeCategory(row.category),
       priority: row.priority,
       dueDate: row.dueDate,
       status: _statusFromString(row.status),
-      tags: tags,
+      tags: row.tags,
       isStarred: row.isStarred,
       startedAt: row.startedAt,
       completedAt: row.completedAt,
@@ -57,46 +84,80 @@ class TodoDao {
       delayCount: row.delayCount,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      listId: row.listId,
+      parentId: row.parentId,
+      recurrenceRule: row.recurrenceRule,
+      subtasks: subtasks,
     );
   }
 
   String _normalizeCategory(String cat) {
     switch (cat) {
-      case 'life':
-        return '生活';
-      case 'work':
-        return '工作';
-      default:
-        return cat;
+      case 'life': return '生活';
+      case 'work': return '工作';
+      default: return cat;
     }
   }
 
   String _statusToString(TodoStatus status) {
     switch (status) {
-      case TodoStatus.pending:
-        return 'pending';
-      case TodoStatus.inProgress:
-        return 'in_progress';
-      case TodoStatus.done:
-        return 'done';
-      case TodoStatus.cancelled:
-        return 'cancelled';
+      case TodoStatus.pending: return 'pending';
+      case TodoStatus.inProgress: return 'in_progress';
+      case TodoStatus.done: return 'done';
+      case TodoStatus.cancelled: return 'cancelled';
     }
   }
 
   TodoStatus _statusFromString(String status) {
     switch (status) {
-      case 'pending':
-        return TodoStatus.pending;
-      case 'in_progress':
-        return TodoStatus.inProgress;
-      case 'done':
-        return TodoStatus.done;
-      case 'cancelled':
-        return TodoStatus.cancelled;
-      default:
-        return TodoStatus.pending;
+      case 'pending': return TodoStatus.pending;
+      case 'in_progress': return TodoStatus.inProgress;
+      case 'done': return TodoStatus.done;
+      case 'cancelled': return TodoStatus.cancelled;
+      default: return TodoStatus.pending;
     }
+  }
+
+  // ===== 树形查询 =====
+
+  /// 获取父任务及其子任务树
+  Future<TodoEntity?> _hydrateTree(Todo? row) async {
+    if (row == null) return null;
+    final childRows = await (_db.select(_db.todos)
+          ..where((t) => t.parentId.equals(row.id) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+    final children = childRows.map((r) => _toEntity(r)).toList();
+    return _toEntity(row, subtasks: children);
+  }
+
+  /// 获取所有父任务（树形结构）
+  Future<List<TodoEntity>> getTree() async {
+    final parentRows = await (_db.select(_db.todos)
+          ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
+          ..orderBy(_smartOrder()))
+        .get();
+    final results = <TodoEntity>[];
+    for (final row in parentRows) {
+      final tree = await _hydrateTree(row);
+      if (tree != null) results.add(tree);
+    }
+    return results;
+  }
+
+  /// 获取今日任务树
+  Future<List<TodoEntity>> getTodayTree() async {
+    final all = await getTree();
+    return all.where((e) => e.shouldShowInToday).toList();
+  }
+
+  /// 获取父任务（不含子任务，用于仪表盘统计）
+  Future<List<TodoEntity>> getParents() async {
+    final rows = await (_db.select(_db.todos)
+          ..where((t) => t.parentId.isNull() & t.deletedAt.isNull())
+          ..orderBy(_smartOrder()))
+        .get();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
   // ===== 基础 CRUD =====
@@ -110,57 +171,121 @@ class TodoDao {
     final row = await (_db.select(_db.todos)
           ..where((t) => t.id.equals(id)))
         .getSingleOrNull();
-    return row != null ? _toEntity(row) : null;
+    if (row == null) return null;
+    return _hydrateTree(row);
   }
 
-  Future<List<TodoEntity>> getAll() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) => t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    return rows.map(_toEntity).toList();
-  }
+  Future<List<TodoEntity>> getAll() => getTree();
 
   Future<TodoEntity> update(TodoEntity entity) async {
-    await (_db.update(_db.todos)
-          ..where((t) => t.id.equals(entity.id!)))
-        .write(_toCompanion(entity).copyWith(
-          updatedAt: Value(DateTime.now()),
-        ));
+    await (_db.update(_db.todos)..where((t) => t.id.equals(entity.id!)))
+        .write(_toCompanion(entity).copyWith(updatedAt: Value(DateTime.now())));
     return entity;
+  }
+
+  // ===== 子任务 CRUD =====
+
+  Future<TodoEntity> addSubtask(int parentId, TodoEntity subtask) async {
+    final entity = subtask.copyWith(parentId: parentId);
+    final id = await _db.into(_db.todos).insert(_toCompanion(entity));
+    return entity.copyWith(id: id);
+  }
+
+  Future<List<TodoEntity>> getSubtasks(int parentId) async {
+    final rows = await (_db.select(_db.todos)
+          ..where((t) => t.parentId.equals(parentId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+    return rows.map((r) => _toEntity(r)).toList();
+  }
+
+  // ===== 级联状态更新 =====
+
+  Future<void> cascadeStatus(int id, TodoStatus newStatus) async {
+    final now = DateTime.now();
+    final statusStr = _statusToString(newStatus);
+    // 更新父任务
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
+        .write(TodosCompanion(status: Value(statusStr), updatedAt: Value(now),
+          completedAt: newStatus == TodoStatus.done ? Value(now) : const Value.absent(),
+          cancelledAt: newStatus == TodoStatus.cancelled ? Value(now) : const Value.absent(),
+        ));
+    // 级联更新子任务
+    await (_db.update(_db.todos)..where((t) => t.parentId.equals(id) & t.deletedAt.isNull()))
+        .write(TodosCompanion(status: Value(statusStr), updatedAt: Value(now),
+          completedAt: newStatus == TodoStatus.done ? Value(now) : const Value.absent(),
+          cancelledAt: newStatus == TodoStatus.cancelled ? Value(now) : const Value.absent(),
+        ));
+  }
+
+  Future<void> cascadeDelete(int id) async {
+    final now = DateTime.now();
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
+        .write(TodosCompanion(deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())));
+    await (_db.update(_db.todos)..where((t) => t.parentId.equals(id)))
+        .write(TodosCompanion(deletedAt: Value(now), updatedAt: Value(now)));
+  }
+
+  // ===== 重复策略 =====
+
+  /// 完成一个重复任务：归档当前，生成下一个
+  Future<TodoEntity?> completeRecurring(int id) async {
+    final todo = await getById(id);
+    if (todo == null || todo.recurrenceRule == null) return null;
+
+    // 计算下次截止日期
+    final nextDue = _nextRecurrenceDate(todo.recurrenceRule!, todo.dueDate ?? DateTime.now());
+    if (nextDue == null) return null;
+
+    // 归档当前
+    final now = DateTime.now();
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
+        .write(TodosCompanion(status: const Value('done'), completedAt: Value(now), updatedAt: Value(now)));
+
+    // 创建下一周期的副本
+    final next = todo.copyWith(
+      id: null,
+      status: TodoStatus.pending,
+      dueDate: nextDue,
+      startedAt: nextDue,
+      completedAt: null,
+      cancelledAt: null,
+      actualMinutes: null,
+      delayCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    );
+    return insert(next);
+  }
+
+  DateTime? _nextRecurrenceDate(String rule, DateTime from) {
+    switch (rule) {
+      case 'daily':
+        return from.add(const Duration(days: 1));
+      case 'weekly':
+        return from.add(const Duration(days: 7));
+      case 'monthly':
+        return DateTime(from.year, from.month + 1, from.day);
+      default:
+        return null;
+    }
   }
 
   // ===== 软删除与恢复 =====
 
-  /// 软删除：设置 deletedAt 时间戳
-  Future<void> softDelete(int id) async {
-    await (_db.update(_db.todos)
-          ..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(
-          deletedAt: Value(DateTime.now()),
-          updatedAt: Value(DateTime.now()),
-        ));
-  }
+  Future<void> softDelete(int id) => cascadeDelete(id);
 
-  /// 恢复软删除
   Future<void> restore(int id) async {
-    await (_db.update(_db.todos)
-          ..where((t) => t.id.equals(id)))
-        .write(TodosCompanion(
-          deletedAt: Value(null),
-          status: Value('pending'),
-          updatedAt: Value(DateTime.now()),
-        ));
+    await (_db.update(_db.todos)..where((t) => t.id.equals(id)))
+        .write(TodosCompanion(deletedAt: Value(null), status: Value('pending'), updatedAt: Value(DateTime.now())));
   }
 
-  /// 永久删除
   Future<void> hardDelete(int id) async {
     await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
   }
 
   // ===== 智能排序 =====
 
-  /// 星标优先 → 优先级降序 → 截止日期升序 → 更新时间降序
   List<OrderingTerm Function(Todos t)> _smartOrder() => [
         (t) => OrderingTerm.desc(t.isStarred),
         (t) => OrderingTerm.desc(t.priority),
@@ -168,197 +293,148 @@ class TodoDao {
         (t) => OrderingTerm.desc(t.updatedAt),
       ];
 
-  // ===== 条件查询 =====
+  // ===== 查询 =====
 
   Future<List<TodoEntity>> getByCategory(String category) async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) => t.category.equals(category) & t.deletedAt.isNull())
+          ..where((t) => t.category.equals(category) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    final results = <TodoEntity>[];
+    for (final row in rows) {
+      final tree = await _hydrateTree(row);
+      if (tree != null) results.add(tree);
+    }
+    return results;
   }
 
   Future<List<TodoEntity>> getByStatus(TodoStatus status) async {
     final statusStr = _statusToString(status);
     final rows = await (_db.select(_db.todos)
-          ..where((t) => t.status.equals(statusStr) & t.deletedAt.isNull())
+          ..where((t) => t.status.equals(statusStr) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
-  Future<List<TodoEntity>> getByCategoryAndStatus(
-    String category,
-    TodoStatus status,
-  ) async {
+  Future<List<TodoEntity>> getByCategoryAndStatus(String category, TodoStatus status) async {
     final statusStr = _statusToString(status);
     final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.category.equals(category) &
-              t.status.equals(statusStr) &
-              t.deletedAt.isNull())
+          ..where((t) => t.category.equals(category) & t.status.equals(statusStr) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
-  Future<List<TodoEntity>> getByDateRange(
-    DateTime start,
-    DateTime end,
-  ) async {
+  Future<List<TodoEntity>> getByDateRange(DateTime start, DateTime end) async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.dueDate.isBetweenValues(start, end) & t.deletedAt.isNull())
+          ..where((t) => t.dueDate.isBetweenValues(start, end) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> search(String keyword) async {
     final pattern = '%$keyword%';
     final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              (t.title.like(pattern) | t.description.like(pattern)) &
-              t.deletedAt.isNull())
+          ..where((t) => (t.title.like(pattern) | t.description.like(pattern)) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
   Future<List<TodoEntity>> getStarred() async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) => t.isStarred.equals(true) & t.deletedAt.isNull())
+          ..where((t) => t.isStarred.equals(true) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy(_smartOrder()))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
-  /// 今日待办：截止日期为今天且未完成
-  /// 今日待办：所有应显示在今天的未完成任务（使用 shouldShowInToday 过滤）
   Future<List<TodoEntity>> getToday() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    return rows.map(_toEntity).where((e) => e.shouldShowInToday).toList();
+    final all = await getTree();
+    return all.where((e) => e.shouldShowInToday).toList();
   }
 
-  /// 活跃待办：未完成、未逾期、未删除
   Future<List<TodoEntity>> getActive() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    return rows.map(_toEntity).where((e) => !e.isOverdue).toList();
+    final all = await getTree();
+    return all.where((e) => !e.isOverdue && e.isActive).toList();
   }
 
-  /// 逾期待办：有截止日期且已过截止日（由实体 isOverdue 判定）
   Future<List<TodoEntity>> getOverdue() async {
-    final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull())
-          ..orderBy(_smartOrder()))
-        .get();
-    return rows.map(_toEntity).where((e) => e.isOverdue).toList();
+    final all = await getTree();
+    return all.where((e) => e.isOverdue).toList();
   }
 
-  /// 归档：已完成或已取消（不含已删除）
   Future<List<TodoEntity>> getArchived() async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.isIn(['done', 'cancelled']) & t.deletedAt.isNull())
+          ..where((t) => t.status.isIn(['done', 'cancelled']) & t.deletedAt.isNull() & t.parentId.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
-  /// 回收站：已软删除
   Future<List<TodoEntity>> getTrashed() async {
     final rows = await (_db.select(_db.todos)
-          ..where((t) => t.deletedAt.isNotNull())
+          ..where((t) => t.deletedAt.isNotNull() & t.parentId.isNull())
           ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map((r) => _toEntity(r)).toList();
   }
 
-  // ===== 批量操作 =====
+  // ===== 批量 =====
 
-  /// 已完成任务移至回收站
   Future<void> softClearCompleted() async {
+    final now = DateTime.now();
     await (_db.update(_db.todos)
           ..where((t) => t.status.equals('done') & t.deletedAt.isNull()))
-        .write(TodosCompanion(
-          updatedAt: Value(DateTime.now()),
-          deletedAt: Value(DateTime.now()),
-        ));
+        .write(TodosCompanion(updatedAt: Value(DateTime.now()), deletedAt: Value(DateTime.now())));
   }
 
-  /// 清空回收站
   Future<void> emptyTrash() async {
     await (_db.delete(_db.todos)..where((t) => t.deletedAt.isNotNull())).go();
   }
 
-  // ===== 统计 =====
+  // ===== 统计（仅父任务） =====
 
   Future<int> countTodayCompleted() async {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
     final rows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.equals('done') &
-              t.completedAt.isBetweenValues(todayStart, todayEnd) &
-              t.deletedAt.isNull()))
+          ..where((t) => t.status.equals('done') & t.completedAt.isBetweenValues(todayStart, todayEnd) & t.deletedAt.isNull() & t.parentId.isNull()))
         .get();
     return rows.length;
   }
 
   Future<int> countTodayTotal() async {
-    // 已完成数（口径与 countTodayCompleted 一致）
     final completedCount = await countTodayCompleted();
-
-    // 所有未完成的活跃任务
     final activeRows = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.status.isNotIn(['done', 'cancelled']) &
-              t.deletedAt.isNull()))
+          ..where((t) => t.status.isNotIn(['done', 'cancelled']) & t.deletedAt.isNull() & t.parentId.isNull()))
         .get();
-
-    final activeEntities = activeRows.map(_toEntity).toList();
+    final activeEntities = activeRows.map((r) => _toEntity(r)).toList();
     final activeTodayCount = activeEntities.where((e) => e.shouldShowInToday).length;
-
     return completedCount + activeTodayCount;
   }
 
   Future<double> weeklyCompletionRate() async {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final weekStartDate =
-        DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final weekStartDate = DateTime(weekStart.year, weekStart.month, weekStart.day);
     final weekEndDate = weekStartDate.add(const Duration(days: 7));
-
     final all = await (_db.select(_db.todos)
-          ..where((t) =>
-              t.createdAt.isBetweenValues(weekStartDate, weekEndDate) &
-              t.deletedAt.isNull()))
+          ..where((t) => t.createdAt.isBetweenValues(weekStartDate, weekEndDate) & t.deletedAt.isNull() & t.parentId.isNull()))
         .get();
     if (all.isEmpty) return 1.0;
-
     final done = all.where((t) => t.status == 'done').length;
     return done / all.length;
   }
 
   Future<double> delayRate() async {
     final done = await (_db.select(_db.todos)
-          ..where((t) => t.status.equals('done') & t.deletedAt.isNull()))
+          ..where((t) => t.status.equals('done') & t.deletedAt.isNull() & t.parentId.isNull()))
         .get();
     if (done.isEmpty) return 0.0;
-
     final delayed = done.where((t) {
       if (t.completedAt == null || t.dueDate == null) return false;
       return t.completedAt!.isAfter(t.dueDate!);

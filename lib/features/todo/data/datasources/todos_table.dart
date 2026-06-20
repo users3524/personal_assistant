@@ -3,6 +3,7 @@ library;
 
 import 'package:drift/drift.dart';
 import '../../../../core/database/converters/string_list_converter.dart';
+import 'todo_lists_table.dart';
 
 class Todos extends Table {
   @override
@@ -10,15 +11,29 @@ class Todos extends Table {
 
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text()();
+
+  // 清单关联
+  IntColumn get listId => integer()
+      .references(TodoLists, #id, onDelete: KeyAction.setNull)
+      .nullable()();
+
+  // 自关联父任务
+  IntColumn get parentId => integer()
+      .nullable()
+      .references(Todos, #id, onDelete: KeyAction.cascade)();
+
+  // 重复策略: null = 不重复, 'daily' / 'weekly' / 'monthly'
+  TextColumn get recurrenceRule => text().nullable()();
+
   TextColumn get description => text().nullable()();
-  TextColumn get category => text().withDefault(const Constant('life'))();  // life | work
-  IntColumn get priority => integer().withDefault(const Constant(3))();    // 1-5
+  TextColumn get category => text().withDefault(const Constant('life'))();
+  IntColumn get priority => integer().withDefault(const Constant(3))();
   DateTimeColumn get dueDate => dateTime().nullable()();
-  TextColumn get status => text().withDefault(const Constant('pending'))(); // pending | in_progress | done | cancelled
+  TextColumn get status => text().withDefault(const Constant('pending'))();
   TextColumn get tags => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
   BoolColumn get isStarred => boolean().withDefault(const Constant(false))();
 
-  // Lifecycle tracking
+  // Lifecycle
   DateTimeColumn get startedAt => dateTime().nullable()();
   DateTimeColumn get completedAt => dateTime().nullable()();
   DateTimeColumn get cancelledAt => dateTime().nullable()();

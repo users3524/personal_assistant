@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/todo/data/datasources/todos_table.dart';
+import '../../features/todo/data/datasources/todo_lists_table.dart';
 import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
 import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
 import '../../features/collection/data/datasources/antique_items_table.dart';
@@ -31,6 +32,7 @@ part 'app_database.g.dart';
   tables: [
     UserPreferences,
     CollectionCategories,
+    TodoLists,
     Todos,
     AntiqueItems,
     ValuationRecords,
@@ -48,31 +50,28 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
-        await m.addColumn(
-          antiqueItems,
-          antiqueItems.categoryMetadata,
-        );
+        await m.addColumn(antiqueItems, antiqueItems.categoryMetadata);
       }
       if (from < 3) {
         await m.createTable(collectionCategories);
       }
       if (from < 4) {
-        await m.addColumn(
-          userPreferences,
-          userPreferences.todoCategories,
-        );
+        await m.addColumn(userPreferences, userPreferences.todoCategories);
       }
       if (from < 5) {
-        await m.addColumn(
-          todos,
-          todos.deletedAt,
-        );
+        await m.addColumn(todos, todos.deletedAt);
+      }
+      if (from < 6) {
+        await m.createTable(todoLists);
+        await m.addColumn(todos, todos.listId);
+        await m.addColumn(todos, todos.parentId);
+        await m.addColumn(todos, todos.recurrenceRule);
       }
     },
   );

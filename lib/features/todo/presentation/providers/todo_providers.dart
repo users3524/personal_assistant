@@ -33,7 +33,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
   @override
   Future<List<TodoEntity>> build() async {
     final repo = await ref.watch(todoRepositoryProvider.future);
-    return repo.getAll();
+    return repo.getTree();
   }
 
   Future<void> refresh() async {

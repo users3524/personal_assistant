@@ -437,8 +437,19 @@ class TodoListView extends StatelessWidget {
       );
     }
 
-    final pending = todos.where((t) => t.isActive).toList()..sort((a, b) => b.priority.compareTo(a.priority));
-    final done = todos.where((t) => !t.isActive).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    // 展平树形结构：父任务 + 缩进的子任务
+    final pending = <TodoEntity>[];
+    final done = <TodoEntity>[];
+    for (final t in todos.where((t) => t.isParent && t.isActive)) {
+      pending.add(t);
+      pending.addAll(t.subtasks.where((s) => s.isActive));
+    }
+    for (final t in todos.where((t) => t.isParent && !t.isActive)) {
+      done.add(t);
+      done.addAll(t.subtasks.where((s) => !s.isActive));
+    }
+    pending.sort((a, b) => b.priority.compareTo(a.priority));
+    done.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     final combined = [...pending, ...done];
 
     return RefreshIndicator(
@@ -515,8 +526,10 @@ class _TodoListTile extends StatelessWidget {
       },
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        leading: GestureDetector(
+        contentPadding: EdgeInsets.only(left: todo.isSubtask ? 48 : 16, right: 16, top: 2, bottom: 2),
+        leading: todo.isSubtask
+            ? const Icon(Icons.subdirectory_arrow_right, size: 18, color: Colors.grey)
+            : GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
             onToggle();
@@ -555,6 +568,19 @@ class _TodoListTile extends StatelessWidget {
               child: Text(todo.category,
                   style: TextStyle(fontSize: 10, color: color)),
             ),
+            if (todo.isParent && todo.subtasks.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 4, right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length}',
+                  style: const TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.w600),
+                ),
+              ),
             if (todo.isOverdue && !todo.isDone) ...[
               const Icon(Icons.warning_amber, size: 12, color: Colors.red),
               const SizedBox(width: 2),

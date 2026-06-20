@@ -1,147 +1,205 @@
-# 软件系统架构设计
+# 项目结构与架构设计
 
-## 一、技术栈选型
+最后更新：2026-06-20
 
-| 层级 | 技术方案 | 说明 |
-|------|----------|------|
-| 跨平台框架 | Flutter 3.x + Dart 3.x | 一套代码覆盖 Android / iOS |
-| 状态管理 | Riverpod 2.x | 编译安全、可测试、异步数据流优雅 |
-| 本地数据库 | drift + sqlite3_flutter_libs | SQLite ORM，编译时类型安全 |
-| 路由 | go_router | 声明式路由，支持嵌套导航 |
-| AI 接口 | dio + OpenAI 兼容 API | 抽象接口，可切换供应商 |
-| 图表 | fl_chart | 折线图、柱状图、饼图 |
-| PDF 生成 | pdf + printing | A4 布局渲染 + 系统打印/分享 |
-| 本地通知 | flutter_local_notifications | 定时/即时通知 |
-| 图片处理 | image_picker | 拍照/相册 → Base64 存入 SQLite |
-| 备份导出 | 纯 JSON + Base64 内联图片 | 换设备/清缓存不丢数据 |
-| 国际化 | flutter_localizations + intl | .arb 文件管理多语言 |
-| 状态管理 | speech_to_text | AI 复盘语音输入 |
+本项目是一个本地优先的个人 AI 助手，当前代码形态为 Flutter + Riverpod + Drift。现阶段先完成产品功能设计与模块边界收敛，不改动业务代码。
 
-## 二、整体分层架构
+## 1. 当前产品定位
 
-```
-lib/
-├── main.dart                      # 入口
-├── app/                           # 全局配置
-│   ├── app.dart                   # MaterialApp + 主题 + 路由 + 数据库初始化
-│   ├── router/
-│   │   ├── app_router.dart        # go_router 路由表（5 Tab StatefulShellRoute）
-│   │   └── route_names.dart       # 路由名称常量
-│   └── theme/
-│       ├── app_theme.dart         # 主题定义 + 模式切换
-│       ├── app_colors.dart        # 色彩常量
-│       └── app_text_styles.dart   # 字体层级
-├── core/                          # 基础设施
-│   ├── ai/
-│   │   ├── ai_service.dart        # 抽象接口 (AIService)
-│   │   ├── openai_service.dart    # OpenAI 兼容实现（Dio）
-│   │   ├── ai_prompts.dart        # 提示词模板
-│   │   └── ai_provider.dart       # Riverpod Provider (自动加载/持久化配置)
-│   └── database/
-│       ├── app_database.dart      # AppDatabase + schemaV2 迁移
-│       ├── app_database.g.dart    # drift 自动生成（勿手动编辑）
-│       ├── app_database_provider.dart  # 异步数据库 FutureProvider
-│       ├── backup_service.dart    # JSON 导出/导入（含 Base64 图片内联）
-│       ├── user_preferences_dao.dart   # 用户偏好读写
-│       ├── converters/
-│       │   └── string_list_converter.dart  # List<String> ↔ JSON
-│       └── tables/
-│           └── user_preferences_table.dart
-└── features/                      # 按业务模块垂直切分
-    ├── collection/                # 文玩模块
-    │   ├── data/datasources/      # antique_dao + 3张表定义
-    │   ├── domain/entities/       # AntiqueEntity, PattingLogEntity
-    │   ├── domain/repositories/   # 抽象接口
-    │   └── presentation/          # 表单/详情/列表/网格卡片/时间线/对比
-    ├── todo/                      # 待办模块
-    ├── ai_assistant/              # AI 复盘模块（对话式）
-    ├── resume/                    # 简历模块
-    └── settings/                  # 设置页（主题/AI/备份/通知）
+个人助手不是纯聊天产品，而是一个以本地数据为核心的日常记录系统：
+
+| 目标 | 说明 |
+| --- | --- |
+| 本地优先 | 待办、文玩记录、复盘、简历数据默认写入本地 SQLite。 |
+| 低成本 AI | 白天只做轻量捕获，深夜集中调用高算力模型生成日报。 |
+| 长期记忆 | 深度日报进入向量记忆，用于周报、规划纠偏和简历素材沉淀。 |
+| 文玩记录保留 | 藏品、盘玩打卡、照片、估值、趣味榜单继续作为一等功能保留。 |
+| 简历资产化 | 日常高光通过 STAR 规则转为项目经历与简历素材。 |
+
+## 2. 当前主入口与路由
+
+当前 `MainShell` 是 3 个底部 Tab，AI 复盘与设置页面以全屏路由进入。
+
+```text
+/collection                 -> AntiqueListPage
+/collection/new             -> AntiqueFormPage
+/collection/:id             -> AntiqueDetailPage
+/collection/:id/edit        -> AntiqueFormPage(editId)
+
+/todos                      -> TodoListPage
+/todos/new                  -> TodoFormPage
+/todos/:id                  -> TodoDetailPage
+/todos/:id/edit             -> TodoFormPage(editId)
+
+/resume                     -> ResumeHomePage
+
+/settings                   -> SettingsPage
+
+/review/daily/new           -> DailyReviewChatPage
+/review/daily/edit/:date    -> DailyReviewChatPage(dateStr)
+/review/daily/:date         -> DailyReviewDetailPage
+/review/weekly/:id          -> WeeklyReportPage
 ```
 
-## 三、Feature 内部三层结构
+## 3. 当前目录结构
 
-每个 feature 内部遵循 Clean Architecture 分层：
-
+```text
+personal_assistant/
+├── lib/
+│   ├── main.dart
+│   ├── app/
+│   │   ├── app.dart
+│   │   ├── router/
+│   │   │   ├── app_router.dart
+│   │   │   └── route_names.dart
+│   │   └── theme/
+│   │       ├── app_colors.dart
+│   │       ├── app_text_styles.dart
+│   │       └── app_theme.dart
+│   ├── core/
+│   │   ├── ai/
+│   │   │   ├── ai_provider.dart
+│   │   │   ├── ai_prompts.dart
+│   │   │   ├── ai_service.dart
+│   │   │   ├── offline_review_generator.dart
+│   │   │   └── openai_service.dart
+│   │   ├── database/
+│   │   │   ├── app_database.dart
+│   │   │   ├── app_database_provider.dart
+│   │   │   ├── app_settings_persistence.dart
+│   │   │   ├── backup_service.dart
+│   │   │   ├── converters/
+│   │   │   └── tables/
+│   │   ├── models/
+│   │   ├── notification_service.dart
+│   │   └── utils/
+│   ├── features/
+│   │   ├── ai_assistant/
+│   │   ├── collection/
+│   │   ├── resume/
+│   │   ├── settings/
+│   │   └── todo/
+│   └── l10n/
+├── docs/
+├── test/
+├── android/
+├── web/
+├── windows/
+├── pubspec.yaml
+└── build_and_run.bat
 ```
+
+## 4. Feature 分层约定
+
+每个业务模块沿用 feature-first + Clean Architecture 的三层结构。
+
+```text
 feature/
-├── data/                          # 数据层
-│   ├── datasources/               # DAO（本地数据库操作）+ drift 表定义
-│   └── repositories/              # 仓库接口实现 + Riverpod Provider
-├── domain/                        # 业务层（纯 Dart，零 Flutter 依赖）
-│   ├── entities/                  # 纯 Dart 业务实体
-│   ├── repositories/              # 仓库抽象接口
-│   └── usecases/                  # 单一职责业务用例（部分模块）
-└── presentation/                  # 表示层
-    ├── providers/                 # Riverpod 状态管理
-    ├── pages/                     # 页面
-    └── widgets/                   # 本模块专用组件
+├── data/
+│   ├── datasources/      # Drift 表、DAO、本地数据源
+│   └── repositories/     # Repository 实现
+├── domain/
+│   ├── entities/         # 纯 Dart 实体
+│   └── repositories/     # Repository 抽象接口
+└── presentation/
+    ├── pages/
+    ├── providers/
+    └── widgets/
 ```
 
-## 四、路由设计
+## 5. 技术栈现状
 
-```
-/                         → MainShell (StatefulShellRoute, 5 Tab)
-Tab 0: /collection        → AntiqueListPage
-       /collection/new    → AntiqueFormPage
-       /collection/:id    → AntiqueDetailPage
-         /collection/:id/edit → AntiqueFormPage(editId)
-Tab 1: /todos             → TodoListPage
-       /todos/new         → TodoFormPage
-       /todos/:id         → TodoDetailPage
-         /todos/:id/edit  → TodoFormPage(editId)
-Tab 2: /review            → ReviewHomePage
-       /review/daily/new  → DailyReviewChatPage
-       /review/daily/:date → DailyReviewDetailPage
-       /review/weekly/:id → WeeklyReportPage
-Tab 3: /resume            → ResumeHomePage
-       /resume/preview    → ResumePreviewPage
-       /resume/templates  → ResumePreviewPage
-Tab 4: /settings          → SettingsPage
-```
+| 层级 | 当前依赖 | 状态 |
+| --- | --- | --- |
+| UI | Flutter 3.x / Dart 3.10 | 已接入 |
+| 状态管理 | flutter_riverpod 2.x | 已接入 |
+| 路由 | go_router 14.x | 已接入 |
+| 数据库 | drift 2.33 + sqlite3_flutter_libs | 已接入 |
+| 网络 | dio 5.x | 已接入，用于 OpenAI 兼容 API |
+| 图片 | image_picker, gal, path_provider | 已接入 |
+| 语音 | speech_to_text | 已接入 |
+| 文件选择 | file_picker | 已接入 |
+| 分享 | share_plus | 已接入 |
+| 图表 | fl_chart | 已接入，文玩估值/看板仍保留 |
+| 本地通知 | flutter_local_notifications + timezone | 已接入 |
 
-## 五、数据库设计（drift）
+说明：PDF 导出与向量数据库属于后续功能设计目标，当前 `pubspec.yaml` 未固定相关实现依赖。
 
-### 表清单（13 张）
+## 6. 数据库现状
 
-| 表名 | 用途 |
-|---|---|
-| `user_preferences` | 用户设置（主题/AI配置/通知/语言） |
-| `todos` | 待办事项 |
-| `antique_items` | 藏品主表（含 categoryMetadata JSON） |
-| `valuation_records` | 估值记录 |
-| `patting_logs` | 盘玩打卡日志 |
-| `daily_reviews` | 每日 AI 复盘 |
-| `weekly_reports` | 每周周报 |
-| `resume_profile` | 简历个人资料 |
+当前 `AppDatabase.schemaVersion = 6`，共 14 张业务表。
+
+| 表 | 用途 |
+| --- | --- |
+| `user_preferences` | 主题、AI 配置、通知、偏好设置 |
+| `collection_categories` | 文玩分类、子类与分类字段配置 |
+| `todo_lists` | 待办清单 |
+| `todos` | 待办任务与子任务，自关联 `parent_id` |
+| `antique_items` | 文玩藏品主表 |
+| `valuation_records` | 文玩估值记录 |
+| `patting_logs` | 文玩盘玩/打卡日志 |
+| `daily_reviews` | 每日复盘 |
+| `weekly_reports` | 每周复盘 |
+| `resume_profile` | 简历个人信息 |
 | `work_experiences` | 工作经历 |
 | `educations` | 教育经历 |
 | `skill_items` | 技能项 |
 | `project_experiences` | 项目经历 |
 
-### 版本管理
+## 7. Drift 迁移历史
 
-- `schemaVersion = 2`
-- v1→v2 迁移：`ALTER TABLE antique_items ADD COLUMN category_metadata TEXT`
+| 版本 | 变更 |
+| --- | --- |
+| v2 | `antique_items.category_metadata` |
+| v3 | 新增 `collection_categories` |
+| v4 | `user_preferences.todo_categories` |
+| v5 | `todos.deleted_at` |
+| v6 | 新增 `todo_lists`，并为 `todos` 增加 `list_id`、`parent_id`、`recurrence_rule` |
 
-### 图片存储方案
+## 8. 模块边界总览
 
-- 所有图片以 **Base64 字符串**直接存入 `imagePaths`/`photoPaths` 列表字段
-- **导出**：Base64 数据随 JSON 一并导出，换设备不丢
-- **导入**：检测 `base64:` 前缀 → 解码写入临时目录 → 恢复为文件路径
-- 备份文件为纯 JSON，无加密（用户自行管理文件安全）
+| 模块 | 负责 | 禁止越界 |
+| --- | --- | --- |
+| 数据捕获与日常对话 | 任务、文玩打卡、习惯打卡、短对话、离线便签 | 白天不查历史日报、不做 RAG、不长轮聊天 |
+| 深夜精炼与日报生成 | 打包当天数据，生成 Markdown 日报和高光判定 | 不在失败时无限重试，不上传超大原始流水账 |
+| 长效记忆与人生罗盘 | 向量化日报、五维目标、周报纠偏 | 不允许新增第 6 个战略维度 |
+| 高光摘取与简历生成 | 里程碑筛选、STAR 润色、项目经历沉淀 | 模型只产纯文本，不控制页面/PDF 样式 |
+| 文玩记录 | 藏品、照片、盘玩日志、估值、榜单 | 不因 AI 改造而删除现有记录能力 |
 
-## 六、模块间数据流
+## 9. 数据流
 
+```text
+白天：
+  Todo / 文玩盘玩 / 习惯打卡 / 教练式短对话
+      -> 本地 SQLite 原始素材
+
+深夜：
+  当日结构化数据 + 原始短文本
+      -> 云端大模型结构化输出
+      -> daily_reviews Markdown + 高光 JSON
+
+长期：
+  daily_reviews
+      -> Embedding 向量切片
+      -> 周报 / 人生罗盘纠偏 / 简历素材检索
+
+简历：
+  高光里程碑
+      -> STAR 纯文本 bullet
+      -> project_experiences / badges / keyDeliverables
 ```
-[待办模块: 完成任务数据] ─────────────────────┐
-                                             │
-[文玩模块: 盘玩打卡 + 照片记录] ──────────┐  ▼
-                                       ├──► [AI 复盘模块]
-[用户对话输入: 今日心得/不足/情绪] ──────┘     │
-                                               ▼
-                                         [每日日报 + 每周周报]
-                                               │
-                                    分析改进点置顶
-                                    周末自动汇总
-```
+
+## 10. 后续架构新增点
+
+为了落地新规格，后续代码阶段需要新增或迁移的能力包括：
+
+| 能力 | 建议落点 |
+| --- | --- |
+| 对话 turn 计数与离线便签 | `features/ai_assistant` + 新表 `chat_turns` |
+| 习惯打卡 | 可独立 `features/habit`，或先并入 `ai_assistant/data_capture` |
+| 深夜任务调度 | Android WorkManager 等后台任务封装 |
+| 充电/Wi-Fi 条件检测 | 平台通道或成熟插件 |
+| 结构化输出解析与重试 | `core/ai` 增加 JSON schema/validator |
+| 向量存储 | 本地轻量向量库或 SQLite 扩展封装 |
+| 人生罗盘 | 新表 `life_compass_goals` + 冷却校验 |
+| 里程碑库 | 新表 `milestones`，并关联 Todo / 文玩 / 日报 / 简历 |

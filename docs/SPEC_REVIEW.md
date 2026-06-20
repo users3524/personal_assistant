@@ -1,268 +1,187 @@
-# AI 复盘模块 — 详细规格说明
+# AI 复盘、深夜日报与长效记忆规格
 
-## 一、数据模型
+最后更新：2026-06-20
 
-### 1.1 日报表
+本规格覆盖数据捕获与日常对话、深夜精炼、长效记忆和人生罗盘。白天低成本捕获，深夜集中精炼，长期再进入 RAG 与规划纠偏。
 
-```dart
-// features/ai_assistant/data/datasources/daily_reviews_table.dart
-import 'package:drift/drift.dart';
-import '../../../../core/database/converters/string_list_converter.dart';
+## 1. 当前实现基线
 
-class DailyReviews extends Table {
-  @override
-  String get tableName => 'daily_reviews';
+当前已存在：
 
-  IntColumn get id => integer().autoIncrement()();
-  DateTimeColumn get date => dateTime().uniqueKey()();       // 每天一条，按日期唯一
-  TextColumn get summary => text()();                         // 今日总结（用户填写）
-  TextColumn get highlights => text().nullable()();           // 今日收获（用户填写）
-  TextColumn get improvements => text().nullable()();         // 今日不足（用户填写）
-  IntColumn get energyLevel => integer()();                   // 能量水平 1-5
-  IntColumn get moodLevel => integer()();                     // 情绪水平 1-5
+| 能力 | 现状 |
+| --- | --- |
+| AI 服务抽象 | `core/ai/ai_service.dart` |
+| OpenAI 兼容调用 | `core/ai/openai_service.dart`，基于 Dio |
+| 离线复盘 | `core/ai/offline_review_generator.dart` |
+| 日报表 | `daily_reviews` |
+| 周报表 | `weekly_reports` |
+| 复盘页面 | `DailyReviewChatPage`、`DailyReviewDetailPage`、`WeeklyReportPage` |
+| 语音输入依赖 | `speech_to_text` |
 
-  // 关联数据
-  TextColumn get completedTodoIds => text()
-      .map(const StringListConverter())
-      .withDefault(const Constant('[]'))();                   // 今日完成的待办 ID 列表
-  IntColumn get pattingMinutes => integer()
-      .withDefault(const Constant(0))();                       // 今日盘玩总时长
+后续设计不废弃当前日报/周报，而是在其上扩展原始素材捕获、结构化输出和长效记忆。
 
-  // AI 输出
-  TextColumn get aiComment => text().nullable()();            // AI 评语
-  TextColumn get aiSuggestion => text().nullable()();         // AI 改进建议
-  BoolColumn get isAiGenerated => boolean().withDefault(const Constant(false))();
-  BoolColumn get isManuallyEdited => boolean().withDefault(const Constant(false))();
+## 2. 模块一：数据捕获与日常对话
 
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+### 2.1 核心职责
+
+白天模块只负责收集当天发生的事实和短文本，严格控制 Token 与算力。
+
+| 功能 | 规范 |
+| --- | --- |
+| 待办创建 | 标题最多 100 字，描述最多 1000 字，`startedAt` 默认当前时间，`dueDate` 可选。 |
+| 习惯打卡 | 支持即时完成状态，单次最多挂载 4 张图片相对路径。 |
+| 文玩打卡 | 保留现有盘玩日志，作为兴趣和放松素材进入日报。 |
+| 教练式追问 | 高优任务完成时触发单轮追问，捕获突破或卡点。 |
+| Prompt 上下文 | 白天请求上下文控制在 2K tokens 以内。 |
+
+### 2.2 硬性边界
+
+| 边界 | 规则 |
+| --- | --- |
+| 每日对话轮数 | 用户与 AI 实时交互每天最多 15 轮。 |
+| 熔断后行为 | 达到 15 轮后切断云端 API，请求框转为离线文本便签模式。 |
+| 熔断提示 | “今日复盘素材已足够，深夜将为您合并生成深度日报”。 |
+| 文本输入 | 单次最多 500 字。 |
+| 语音输入 | 单次录音最长 60 秒，超时自动截断并识别。 |
+| 白天上下文 | 只携带当天对话上下文和当天待办列表。 |
+| 禁止 RAG | 白天禁止检索历史日报、周报或向量库。 |
+
+### 2.3 建议新增数据
+
+| 表或字段 | 用途 |
+| --- | --- |
+| `chat_turns` | 记录日期、角色、文本、是否云端生成、turn 序号。 |
+| `offline_notes` 或 `chat_turns.is_offline` | 熔断后的便签素材。 |
+| `habit_checkins` | 习惯打卡与图片路径。 |
+| `daily_capture_limits` | 记录当天 turn 计数和熔断状态，可由查询计算替代。 |
+
+## 3. 模块二：深夜精炼与日报生成
+
+### 3.1 触发条件
+
+| 条件 | 规则 |
+| --- | --- |
+| 时间窗口 | 凌晨 2:00 至 5:00。 |
+| 设备状态 | 手机必须正在充电。 |
+| 网络状态 | 必须连接 Wi-Fi。 |
+| 不满足条件 | 顺延至清晨用户首次打开 App，后台低优先级静默执行。 |
+
+### 3.2 打包输入
+
+深夜任务从本地 SQLite 聚合当天素材：
+
+| 数据 | 来源 |
+| --- | --- |
+| 待办 | `todos`，包含完成、取消、逾期、父子任务进度。 |
+| 文玩 | `patting_logs`、`antique_items`，包含时长、备注、藏品名称。 |
+| 习惯 | 未来 `habit_checkins`。 |
+| 对话 | 当日 15 轮内的原始对话与离线便签。 |
+| 情绪能量 | `daily_reviews` 现有字段或新输入。 |
+
+打包为固定结构化 JSON，再传给高参数云端模型。
+
+### 3.3 裁剪上限
+
+| 项 | 上限 |
+| --- | --- |
+| 原始文本 | 最多 8000 字。 |
+| 深夜 Input | 稳控在 10K tokens 内。 |
+| 裁剪优先级 | 优先保留 Todo 成果、教练式对话、高优任务卡点；剔除冗余随笔。 |
+
+### 3.4 输出内容
+
+模型必须生成第二人称 Markdown 日报，覆盖四个维度：
+
+1. 执行进度
+2. 情绪状态
+3. 认知卡点
+4. 意外收获
+
+写入目标为 `daily_reviews.summary` / `ai_comment` / `ai_suggestion`，或后续扩展的日报详情字段。
+
+### 3.5 结构化高光输出
+
+深夜生成必须使用结构化输出，返回高光判定 JSON。
+
+```json
+{
+  "hasMilestone": true,
+  "milestones": [
+    {
+      "sourceType": "todo",
+      "sourceId": 1,
+      "summary": "完成关键功能设计并明确模块边界",
+      "resumeTag": true
+    }
+  ],
+  "calibrationRequired": false
 }
 ```
 
-### 1.2 周报表
+| 规则 | 说明 |
+| --- | --- |
+| 单日高光上限 | 最多 2 条。 |
+| 无重大突破 | 直接输出 0 条。 |
+| 标签写入 | 对应待办、打卡或里程碑记录打上 `#简历素材`。 |
+| 用户可控 | 高光进入简历前必须可查看和撤销。 |
 
-```dart
-class WeeklyReports extends Table {
-  @override
-  String get tableName => 'weekly_reports';
+### 3.6 异常降级
 
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get weekNumber => integer()();                     // 年内第几周 (1-53)
-  IntColumn get year => integer()();
+| 场景 | 策略 |
+| --- | --- |
+| JSON 解析失败 | 最多自动重试 2 次。 |
+| 连续失败 | 停止重试，保存原始文本。 |
+| 结构化得分 | 标记为“待手动校准”。 |
+| 成本控制 | 严禁死循环重试。 |
 
-  // AI 生成的结构化内容
-  TextColumn get overview => text()();                          // 本周概览
-  TextColumn get highlights => text()();                        // 本周亮点
-  TextColumn get improvements => text()();                      // 待改进
-  TextColumn get nextWeekPlan => text()();                      // 下周计划
+## 4. 模块三：长效记忆与人生罗盘
 
-  BoolColumn get isAiGenerated => boolean().withDefault(const Constant(false))();
-  BoolColumn get isManuallyEdited => boolean().withDefault(const Constant(false))();
+### 4.1 向量化规则
 
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
+| 项 | 规则 |
+| --- | --- |
+| 输入 | 深夜生成的深度日报，不是白天碎片。 |
+| Embedding | 标准 1536 维向量。 |
+| 存储 | 本地轻量向量存储，后续选型。 |
+| 切片 | 每条检索切片最多 400 字。 |
 
-  // 唯一约束：每年每周一条
-  @override
-  Set<Column> get uniqueKey => {weekNumber, year};
-}
-```
+### 4.2 人生罗盘五维
 
-## 二、AI 服务设计
+人生罗盘必须固定为 5 个宏观责任领域：
 
-### 2.1 抽象接口
+1. 职业技术
+2. 身心健康
+3. 个人爱好
+4. 财务财富
+5. 社会关系
 
-```dart
-// core/ai/ai_service.dart
+系统拒绝用户自定义增加第 6 个维度。底层待办任务必须绑定五维之一，以防目标体系失焦。
 
-/// AI 日复盘输出
-class DailyReviewAIOutput {
-  final String comment;       // 评语（50-100 字）
-  final String suggestion;    // 改进建议（50-100 字）
-  final String sentimentTag;  // 情绪标签：高效/平稳/焦虑/疲惫
-}
+### 4.3 目标修改冷却
 
-/// 日报精简摘要（传给 AI 的结构化格式）
-class DailyReviewSummary {
-  final String date;
-  final String summary;
-  final String? highlights;
-  final String? improvements;
-  final int energyLevel;
-  final int moodLevel;
-  final int completedCount;
-  final int pattingMinutes;
-}
+长期目标和愿景描述保存后，30 天内仅允许修改一次。后续代码阶段需要在数据层记录 `last_modified_at` 并做保存前校验。
 
-/// AI 周报输出
-class WeeklyReportAIOutput {
-  final String overview;      // 周概览（100-150 字）
-  final String highlights;    // 亮点（3-5 条）
-  final String improvements;  // 待改进（2-3 条）
-  final String nextWeekPlan;  // 下周计划（3-5 条）
-}
+### 4.4 RAG 检索窗口
 
-abstract class AIService {
-  /// 生成日复盘 — ✅ 传入结构化精简文本，非全文，控制 Token
-  Future<DailyReviewAIOutput> generateDailyReview({
-    required String summary,
-    String? highlights,
-    String? improvements,
-    required int energyLevel,
-    required int moodLevel,
-    required List<String> completedTitles,   // 待办标题列表（仅标题，非全文）
-    required int pattingMinutes,
-  });
+| 场景 | 规则 |
+| --- | --- |
+| 周报生成 | Top-K 最多 5。 |
+| 人生规划纠偏 | Top-K 最多 5。 |
+| 单条切片 | 最多 400 字。 |
+| Prompt 总量 | 周报整体控制在 12K tokens 内。 |
+| 禁止行为 | 不允许全量读入历史日报。 |
 
-  /// 生成周报 — ✅ 传入本周日报的结构化精简摘要
-  Future<WeeklyReportAIOutput> generateWeeklyReport({
-    required int weekNumber,
-    required int year,
-    required List<DailyReviewSummary> weekReviews,  // 精简摘要列表
-  });
+## 5. 与文玩记录的关系
 
-  /// 自由对话
-  Future<String> chat(String message);
-}
-```
+文玩记录进入长效记忆时，应归入“个人爱好”维度。日报中可以总结盘玩持续性、审美变化、收藏管理，但不能把文玩模块降级为普通打卡。
 
-### 2.2 Token 控制策略
+## 6. 代码落地优先级
 
-```
-日报 Prompt 预估 Token 消耗：
-  - 系统消息：~200 tokens
-  - 用户输入（摘要+收获+不足）：~200 tokens
-  - 待办标题列表（平均 5 条 × 10 字）：~50 tokens
-  - 盘玩时长：~10 tokens
-  总计：~500 tokens / 次
-
-周报 Prompt 预估 Token 消耗：
-  - 系统消息：~300 tokens
-  - 7 天 × 日报精简摘要（每条 ~100 tokens）：~700 tokens
-  总计：~1000 tokens / 次
-```
-
-> **注意**：传入 AI 的日报数据**不是原始日报全文**，而是 `DailyReviewSummary` 结构化精简文本，每条仅包含 `summary`、`highlights`、`improvements` 三个核心字段，去除不必要的描述，大幅降低 Token 消耗。
-
-### 2.3 提示词模板
-
-```dart
-// core/ai/ai_prompts.dart
-
-class AIPrompts {
-  static String dailyReviewSystemPrompt() => '''
-你是一个温暖、专业的个人成长助手。用户的每日复盘数据如下：
-- 今日总结：{summary}
-- 今日收获：{highlights}
-- 今日不足：{improvements}
-- 能量水平：{energyLevel}/5
-- 情绪水平：{moodLevel}/5
-- 完成任务：{completedTitles}
-- 盘玩放松：{pattingMinutes}分钟
-
-请生成：
-1. 评语（50-100字，温暖鼓励的语气）
-2. 改进建议（50-100字，具体可操作）
-3. 情绪标签（高效/平稳/焦虑/疲惫）
-
-注意：不要说教，像朋友一样给出反馈。
-''';
-
-  static String weeklyReportSystemPrompt() => '''
-你是一个专业的职场复盘助手。以下是用户本周的每日复盘摘要：
-
-{weekReviews}
-
-请生成一份结构化周报：
-1. **本周概览**：100-150字，总结本周整体表现
-2. **本周亮点**：3-5条，具体可量化
-3. **待改进**：2-3条，建设性建议
-4. **下周计划**：3-5条，SMART原则
-
-格式要求：使用 Markdown 粗体标记标题，每条内容用短句。
-''';
-}
-```
-
-## 三、日报流程
-
-### 3.1 触发方式
-
-| 方式 | 说明 |
-|------|------|
-| 定时通知 | 默认 21:00 本地通知提醒 |
-| 手动进入 | 从 Tab 进入复盘页面 |
-| 完成后自动 | 当日完成所有待办后自动弹出提示 |
-
-### 3.2 填写步骤
-
-1. **数据准备**：页面自动加载当日已完成的 Todo 列表 + 盘玩总时长
-2. **用户填写**：
-   - 今日总结（必填，50-200 字）
-   - 今日收获（可选）
-   - 今日不足（可选）
-   - 能量水平（1-5 星）
-   - 情绪水平（1-5 星 + emoji）
-3. **AI 复盘**：点击「AI 复盘」按钮 → 调用 AI → 展示评语和建议
-4. **人工编辑**：用户可修改 AI 内容或重新生成
-5. **保存**：标记 `isAiGenerated` 和 `isManuallyEdited`
-
-## 四、周报流程
-
-### 4.1 触发方式
-
-| 方式 | 说明 |
-|------|------|
-| 定时通知 | 每周日 20:00 提醒 |
-| 手动生成 | 从周报列表页进入 |
-
-### 4.2 生成步骤
-
-1. **数据聚合**：读取本周 7 天的日报记录
-2. **构建精简摘要**：每条日报提取为 `DailyReviewSummary` 结构
-3. **调用 AI**：传入精简摘要列表给 `generateWeeklyReport()`
-4. **展示与编辑**：用户查看 AI 生成的结构化周报，可自由编辑
-5. **保存**：标记 `isAiGenerated` 和 `isManuallyEdited`
-
-## 五、数据看板
-
-| 图表 | 类型 | 数据源 |
-|------|------|--------|
-| 情绪曲线 | fl_chart 折线图 | 日报的 moodLevel |
-| 能量曲线 | fl_chart 折线图 | 日报的 energyLevel |
-| 情绪能量叠加图 | 双轴折线图 | moodLevel + energyLevel |
-| 日报完成率 | 日历热力图 | 是否有日报记录 |
-| 周报趋势 | 柱状图 | 每周完成率对比 |
-
-## 六、AI 亮点导入简历
-
-在周报详情页，每个 `highlights` 条目旁有一个「导入简历」按钮：
-
-1. 点击后弹出确认对话框，选择目标项目经历
-2. 将该高亮内容克隆为一个新的 `ProjectExperience` 条目
-3. 自动填入 `name`（周报第 X 周亮点）和 `description`
-4. 用户可在简历编辑页进一步修改
-
-## 七、DAO 接口
-
-```dart
-class ReviewDao {
-  // 日报
-  Future<DailyReview> insertDaily(DailyReviewsCompanion entry);
-  Future<DailyReview> updateDaily(int id, DailyReviewsCompanion entry);
-  Future<DailyReview?> getDailyByDate(DateTime date);
-  Future<List<DailyReview>> getDailyByMonth(int year, int month);
-  Future<List<DailyReview>> getDailyByWeek(int year, int weekNumber);
-
-  // 周报
-  Future<WeeklyReport> insertWeekly(WeeklyReportsCompanion entry);
-  Future<WeeklyReport> updateWeekly(int id, WeeklyReportsCompanion entry);
-  Future<WeeklyReport?> getWeekly(int year, int weekNumber);
-  Future<List<WeeklyReport>> getWeeklyByYear(int year);
-
-  // 统计
-  Future<double> averageMoodInRange(DateTime start, DateTime end);
-  Future<double> averageEnergyInRange(DateTime start, DateTime end);
-  Future<int> countDailyInRange(DateTime start, DateTime end);
-}
-```
+| 优先级 | 工作 |
+| --- | --- |
+| P0 | 每日 15 轮限制、500 字输入限制、白天禁 RAG。 |
+| P0 | 深夜结构化输出、2 次重试、失败降级。 |
+| P1 | 打包裁剪器，8000 字原文上限。 |
+| P1 | 高光 JSON 与 `#简历素材` 标记。 |
+| P2 | 1536 维向量存储与 Top-K 检索。 |
+| P2 | 人生罗盘 5 维与 30 天冷却。 |

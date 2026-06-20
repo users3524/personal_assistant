@@ -1,199 +1,103 @@
-# 文玩记录模块 — 详细规格说明
+# 文玩记录模块规格
 
-## 一、数据模型
+最后更新：2026-06-20
 
-### 1.1 藏品主表
+文玩记录模块必须保留。AI 助手重构不会删除藏品、盘玩打卡、照片、估值、榜单等既有能力。后续如做体积或 UI 瘦身，只能在确认后做展示降噪或可选增强，不能直接销毁用户数据。
 
-```dart
-// features/collection/data/datasources/antique_items_table.dart
-import 'package:drift/drift.dart';
-import '../../../../core/database/converters/string_list_converter.dart';
+## 1. 模块定位
 
-class AntiqueItems extends Table {
-  @override
-  String get tableName => 'antique_items';
+文玩模块负责沉淀用户的收藏与盘玩过程，是个人生活记录的重要组成部分，也会为每日复盘提供放松、兴趣、持续投入等素材。
 
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();
-  TextColumn get category => text()();  // 核桃 | 手串 | 把件 | 自定义
-  TextColumn get subtype => text().nullable()();  // 细分品类，如 "白狮子" "百香籽" "葫芦"
-  TextColumn get description => text().nullable()();
-  DateTimeColumn get acquiredDate => dateTime()();
-  RealColumn get acquiredPrice => real().nullable()();
-  TextColumn get sourceSeller => text().nullable()();
-  TextColumn get condition => text().withDefault(const Constant('good'))();  // perfect | good | fair | poor
-  RealColumn get currentValuation => real().nullable()();
-  TextColumn get imagePaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))();
-  TextColumn get categoryMetadata => text().nullable()();  // JSON: 分类专属字段 {"边宽(mm)":"42","重量(g)":"45"}
-  TextColumn get fingerprints => text().nullable()();
+| 范围 | 说明 |
+| --- | --- |
+| 藏品档案 | 名称、分类、子类、购入日期、购入价格、来源、品相、备注、专属字段。 |
+| 图片记录 | 藏品主图与盘玩照片，数据库保存路径列表。 |
+| 盘玩打卡 | 每次盘玩日期、时长、方式、备注、照片。 |
+| 估值记录 | 保留 `valuation_records`，用于记录市场估值变化。 |
+| 趣味榜单 | 保留现有排行榜/运势等轻量互动功能。 |
+| 复盘素材 | 深夜日报读取当日盘玩总时长、打卡备注、照片路径摘要。 |
 
-  TextColumn get notes => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
-}
-```
+## 2. 当前数据表
 
-### 1.2 估值记录表
+### `antique_items`
 
-```dart
-class ValuationRecords extends Table {
-  @override
-  String get tableName => 'valuation_records';
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 主键 |
+| `name` | 藏品名称 |
+| `category` | 大类 |
+| `subtype` | 子类 |
+| `description` | 描述 |
+| `acquired_date` | 入手日期 |
+| `acquired_price` | 入手价格 |
+| `source_seller` | 来源或卖家 |
+| `condition` | 品相 |
+| `current_valuation` | 当前估值 |
+| `image_paths` | 图片路径列表，`StringListConverter` |
+| `category_metadata` | 分类专属字段 JSON |
+| `fingerprints` | 指纹/特征记录 |
+| `notes` | 备注 |
+| `created_at` / `updated_at` | 时间戳 |
 
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get itemId => integer().references(AntiqueItems, #id, onDelete: KeyAction.cascade)();
-  DateTimeColumn get date => dateTime()();
-  RealColumn get amount => real()();
-  TextColumn get remark => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-}
-```
+### `patting_logs`
 
-### 1.3 盘玩日志表
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 主键 |
+| `item_id` | 关联 `antique_items.id`，藏品删除时级联删除 |
+| `date` | 打卡时间 |
+| `duration_minutes` | 盘玩时长 |
+| `method` | 盘玩方式，如 bare_hand / glove |
+| `note` | 备注 |
+| `photo_paths` | 打卡照片路径列表，`StringListConverter` |
+| `created_at` | 创建时间 |
 
-```dart
-class PattingLogs extends Table {
-  @override
-  String get tableName => 'patting_logs';
+### `valuation_records`
 
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get itemId => integer().references(AntiqueItems, #id, onDelete: KeyAction.cascade)();
-  DateTimeColumn get date => dateTime()();
-  IntColumn get durationMinutes => integer()();           // 盘玩时长（分钟）
-  TextColumn get method => text()();                      // bare_hand | glove
-  TextColumn get note => text().nullable()();
-  TextColumn get photoPaths => text().map(const StringListConverter()).withDefault(const Constant('[]'))(); // 盘玩后拍照（相对路径）
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-}
-```
+估值记录表继续保留，用于记录藏品在不同日期的估值变化。若未来移除图表依赖，也只移除展示层，不默认删除历史估值数据。
 
-## 二、图片存储方案（重点）
+## 3. 功能规格
 
-### 2.1 iOS 沙盒路径问题
+| 功能 | 规范 |
+| --- | --- |
+| 新增藏品 | 支持基础信息、分类、子类、分类专属字段和多图。 |
+| 编辑藏品 | 允许修改字段、增删图片、更新估值与备注。 |
+| 藏品详情 | 展示图片轮播、基础信息、分类参数、盘玩时间线。 |
+| 盘玩打卡 | 支持时长、方式、备注和多张照片。 |
+| 打卡对比 | 支持选择不同时间点照片做前后对比。 |
+| 估值追踪 | 可记录多条估值，展示当前估值与历史变化。 |
+| 分类管理 | 使用 `collection_categories` 管理大类、子类和专属字段。 |
+| 备份恢复 | 文玩主表、估值、打卡、分类均纳入备份。 |
 
-在 iOS 中，App 沙盒目录的绝对路径在应用更新后可能改变。如果数据库存储的是绝对路径，会导致图片加载失败。
+## 4. 图片存储边界
 
-### 2.2 解决方案：相对路径 + 动态拼接
+当前设计目标是数据库只保存路径，图片文件存放在应用沙盒或系统相册中。备份时可以将路径对应文件编码进导出文件，以保证换设备恢复。
 
-```dart
-// 存储时（在 AntiqueService 中）
-String saveAntiqueImage(Uint8List imageData, int itemId, int index) async {
-  final dir = await getApplicationDocumentsDirectory();
-  final relativePath = 'antiques/item_${itemId}_$index.jpg';
-  final file = File('${dir.path}/$relativePath');
-  await file.writeAsBytes(imageData);
-  return relativePath;  // 只存相对路径
-}
+| 规则 | 说明 |
+| --- | --- |
+| 数据库存储 | `image_paths` / `photo_paths` 存字符串列表。 |
+| 路径解析 | UI 通过 `core/utils/image_utils.dart` 解析相对路径。 |
+| 单次打卡图片上限 | 建议与习惯打卡一致，单次最多 4 张。 |
+| EXIF | 不依赖 EXIF 元数据，避免隐私泄露。 |
+| 备份 | 当前 JSON 备份会尝试将图片编码为 `base64:` 内容；长期目标是专有备份包。 |
 
-// 读取时（在 UI 层或 ImageProvider 中）
-Future<File> getAntiqueImageFile(String relativePath) async {
-  final dir = await getApplicationDocumentsDirectory();
-  return File('${dir.path}/$relativePath');
-}
+## 5. 与 AI 日报的关系
 
-// 使用 cached_network_image 的替代：
-// 使用 Image.file(File) 加载，配合 CachedMemoryImage 优化性能
-```
+白天阶段，文玩模块只写本地记录，不主动调用云端模型。深夜日报打包时可读取：
 
-### 2.3 图片处理流程
+| 数据 | 用途 |
+| --- | --- |
+| 当日盘玩总时长 | 反映兴趣投入与放松恢复。 |
+| 当日打卡备注 | 作为生活片段素材。 |
+| 藏品名称与分类 | 帮助日报生成具体上下文。 |
+| 照片路径数量 | 只作为结构化统计，不默认上传图片内容。 |
 
-1. 用户拍照/从相册选取（`image_picker`）
-2. 压缩图片至合理尺寸（最大 1920px，质量 80%）
-3. 生成相对路径文件名：`antiques/item_{id}_{index}.jpg`
-4. 写入 `ApplicationDocumentsDirectory/antiques/` 目录
-5. 将相对路径存入数据库 `imagePaths` 字段
-6. 渲染时通过 `path_provider` 获取当前沙盒路径，动态拼接绝对路径
+文玩数据默认不进入白天对话 Prompt；只有深夜日报或用户主动要求分析文玩记录时，才可进入 AI 流程。
 
-## 三、功能列表
+## 6. 不可破坏约束
 
-### 3.1 藏品管理
-
-| 功能 | 说明 |
-|------|------|
-| 新增藏品 | 填写表单 + 拍照/选取多图 + 分类专属字段 |
-| 编辑藏品 | 修改任意字段，增减图片 |
-| 删除藏品 | 级联删除估值记录 + 盘玩日志 + 图片文件 |
-| 分类管理 | 三大类：核桃、手串、把件，每类支持细分品类选择 + 自定义 |
-| 分类专属字段 | 核桃：边宽/肚厚/桩高/重量；手串：尺寸/串型/重量；把件：长宽高/重量 |
-| 新建首条打卡 | 新建藏品自动创建入手当天打卡记录（含照片） |
-
-### 3.2 浏览与查看
-
-| 视图 | 说明 |
-|------|------|
-| 网格视图 | 2 列网格，封面优先展示最新打卡照片 + 入手天数 + 品类标签 |
-| 详情页 | Banner 轮播（带页码指示器+全屏按钮）+ 信息卡片 + 详细参数 + 盘玩时间线 |
-| 打卡时间线 | 左侧第N天 + 时间圆点 + 右侧卡片（日期时间+备注+照片缩略图） |
-
-### 3.3 盘玩日志
-
-| 功能 | 说明 |
-|------|------|
-| 打卡记录 | 选择拍照/相册 → 预览 → 填写备注 → 选择打卡日期时间 → 保存 |
-| 图片存储 | XFile.readAsBytes → getApplicationDocumentsDirectory → File.writeAsBytes → Image.file |
-| 打卡对比 | 选择两条打卡记录，照片并排全屏对比 + 天数统计 |
-| 时间线 | 按日期排列所有盘玩记录 |
-| 盘玩进化录 | 选取多个时间点的照片生成前后对比图 |
-
-### 3.4 估值追踪
-
-| 功能 | 说明 |
-|------|------|
-| 记录估值 | 每次重估时新增 `ValuationRecords` 记录 |
-| 走势图 | fl_chart 折线图展示估值变化趋势 |
-| 当前估值 | 在列表页和详情页展示最新估值 |
-
-### 3.5 保养提醒
-
-| 提醒类型 | 间隔 | 说明 |
-|----------|------|------|
-| 清理 | 每月 | 提醒清理藏品表面灰尘 |
-| 上油 | 每季 | 提醒对特定材质上油保养 |
-| 静置 | 按需 | 提醒长时间盘玩后静置 |
-| 湿度检查 | 每周 | 检查存放环境湿度 |
-
-## 四、数据访问层（DAO）
-
-```dart
-class AntiqueDao {
-  // 基础 CRUD
-  Future<AntiqueItem> insert(AntiqueItemsCompanion entry);
-  Future<AntiqueItem> update(int id, AntiqueItemsCompanion entry);
-  Future<void> delete(int id);
-  Future<AntiqueItem?> getById(int id);
-  Future<List<AntiqueItem>> getAll();
-
-  // 查询与筛选
-  Future<List<AntiqueItem>> getByCategory(String category);
-  Future<List<AntiqueItem>> getByYearRange(int startYear, int endYear);
-  Future<List<AntiqueItem>> getByCondition(String condition);
-  Future<List<AntiqueItem>> search(String keyword);       // 全文搜索 name + description
-
-  // 估值记录
-  Future<List<ValuationRecord>> getValuations(int itemId);
-  Future<ValuationRecord> addValuation(ValuationRecordsCompanion entry);
-
-  // 盘玩日志
-  Future<List<PattingLog>> getPattingLogs(int itemId);
-  Future<List<PattingLog>> getPattingLogsByDate(DateTime date);
-  Future<PattingLog> addPattingLog(PattingLogsCompanion entry);
-
-  // 统计
-  Future<int> countByCategory();
-  Future<double> totalValuation();
-}
-```
-
-## 五、预置分类
-
-```
-松石 → 高瓷 / 普通
-南红 → 柿子红 / 樱桃红 / 冰飘
-菩提 → 金刚 / 星月 / 凤眼
-翡翠 → 玻璃种 / 冰种 / 糯种
-和田玉 → 羊脂 / 青玉 / 碧玉
-紫砂 → 朱泥 / 紫泥 / 段泥
-书画
-杂项 → 核桃 / 葫芦 / 折扇 / 印章
-自定义
-```
+1. 不删除 `antique_items`、`patting_logs`、`valuation_records` 的既有数据。
+2. 不把文玩记录降级为普通习惯打卡；它仍是独立业务模块。
+3. 不在未经确认的迁移中物理清除估值历史。
+4. 不让 AI 直接改写文玩档案，AI 只能生成建议，最终写入需用户确认。
+5. 不把图片大批量送入云端模型；默认只上传文本摘要。

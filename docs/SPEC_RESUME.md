@@ -1,262 +1,116 @@
-# 动态简历生成模块 — 详细规格说明
+# 高光摘取与动态简历规格
 
-## 一、数据模型
+最后更新：2026-06-20
 
-### 1.1 个人资料表（单例）
+简历模块负责把日常高价值事件转化为可复用的职业资产。AI 只能生成纯文本内容，最终展示、A4 布局、字号、间距与导出样式必须由 Flutter 模板硬编码控制。
 
-```dart
-// features/resume/data/datasources/resume_profile_table.dart
-import 'package:drift/drift.dart';
+## 1. 当前实现基线
 
-class ResumeProfile extends Table {
-  @override
-  String get tableName => 'resume_profile';
+当前已存在以下表：
 
-  IntColumn get id => integer().autoIncrement()();    // 始终 id=1（单例模式）
-  TextColumn get fullName => text()();
-  TextColumn get avatarPath => text().nullable()();
-  TextColumn get email => text().nullable()();
-  TextColumn get phone => text().nullable()();
-  TextColumn get personalSummary => text().nullable()();
-  TextColumn get website => text().nullable()();
-  TextColumn get location => text().nullable()();
-  TextColumn get jobTitle => text().nullable()();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
-}
+| 表 | 用途 |
+| --- | --- |
+| `resume_profile` | 个人信息 |
+| `work_experiences` | 工作经历 |
+| `educations` | 教育经历 |
+| `skill_items` | 技能项 |
+| `project_experiences` | 项目经历 |
+
+`project_experiences` 已包含 `tech_stack`、`key_deliverables`、`badges`，三者均使用 `StringListConverter` 存储字符串数组，适合承接高光标签和 STAR 结果。
+
+## 2. 项目经历数据模型
+
+| 字段 | 说明 |
+| --- | --- |
+| `name` | 项目名称 |
+| `role` | 角色 |
+| `description` | 项目描述或 STAR 文本 |
+| `tech_stack` | 技术栈数组，UI 以 Chip/Wrap 渲染 |
+| `key_deliverables` | 关键交付物或成果 bullet |
+| `badges` | 标签，如 `简历素材`、`高光` |
+| `link` | 链接 |
+| `start_date` / `end_date` | 项目周期 |
+| `is_visible` | 是否进入简历展示 |
+| `sort_order` | 排序 |
+
+## 3. 技术栈徽章化
+
+| 层 | 规则 |
+| --- | --- |
+| 数据层 | `tech_stack` 使用 `StringListConverter` 保存字符串数组。 |
+| 输入层 | UI 支持逗号分隔输入，并去除空白项。 |
+| 展示层 | 使用 `Wrap + Chip` 自动流式换行。 |
+| AI 层 | 模型不得生成样式，只可建议技术词条。 |
+
+## 4. 高光记录交叉筛选
+
+未来需要独立里程碑库，或先用标签关联现有数据。
+
+| 筛选方式 | 说明 |
+| --- | --- |
+| 关键词 | 在里程碑摘要、待办标题、日报内容、本地标签中检索。 |
+| 时间范围 | 支持按日、周、月、项目周期过滤。 |
+| 来源类型 | Todo、文玩打卡、习惯打卡、日报、手动记录。 |
+| 标签 | `#简历素材`、`#项目成果`、`#技术突破` 等。 |
+| 网络 | 全部基于本地数据库查询，不需要网络。 |
+
+## 5. 里程碑判定门槛
+
+| 规则 | 限制 |
+| --- | --- |
+| 单日自动高光 | 最多 2 条。 |
+| 普通日常行为 | 不进入高光库。 |
+| 无重大突破 | 高光记录为 0。 |
+| 来源可追溯 | 每条里程碑必须保留 sourceType/sourceId。 |
+| 用户确认 | 写入简历项目经历前必须可预览与撤销。 |
+
+## 6. STAR 叙事润色
+
+AI 提示词目标是把零碎、口语化的里程碑重构为符合招聘场景的项目成果。
+
+| 项 | 规则 |
+| --- | --- |
+| 输出格式 | 紧凑圆点列表，纯文本。 |
+| Bullet 上限 | 每个项目最多 3 条。 |
+| 持久化保护 | 超出 3 条的输出由代码丢弃。 |
+| 幻觉防护 | 不允许凭空添加数字、公司、用户规模或业务指标。 |
+| 事实来源 | 只能使用本地里程碑、项目描述和用户确认信息。 |
+
+示例输出形态：
+
+```text
+- 设计并落地待办四层级任务结构，统一父子任务状态流转，降低复盘统计失真风险。
+- 将每日高优任务完成情况沉淀为结构化复盘素材，为后续简历高光筛选提供可追溯来源。
 ```
 
-### 1.2 工作经历表
+## 7. 样式边界
 
-```dart
-class WorkExperiences extends Table {
-  @override
-  String get tableName => 'work_experiences';
+| 责任方 | 负责内容 |
+| --- | --- |
+| AI | 纯文本 bullet、摘要、技术词建议。 |
+| Flutter 模板 | 页面布局、字号、间距、颜色、A4 排版、导出样式。 |
+| 用户 | 最终确认、编辑、隐藏或删除。 |
 
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get company => text()();
-  TextColumn get position => text()();
-  DateTimeColumn get startDate => dateTime()();
-  DateTimeColumn get endDate => dateTime().nullable()();    // null = 至今
-  TextColumn get description => text().nullable()();        // Markdown 格式描述
-  TextColumn get techStack => text()
-      .map(const StringListConverter())
-      .withDefault(const Constant('[]'))();
-  BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime())();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime())();
-}
+模型绝对不参与 PDF / 页面排版样式控制。即使后续恢复或新增 PDF 依赖，最终模板仍由系统代码硬编码。
+
+## 8. 与日报的关系
+
+深夜日报负责高光初筛，简历模块负责二次加工。
+
+```text
+daily_reviews + structured milestone JSON
+  -> milestones / tags
+  -> 本地筛选
+  -> STAR 纯文本润色
+  -> project_experiences.key_deliverables / badges
 ```
 
-### 1.3 教育经历表
+## 9. 后续新增建议
 
-```dart
-class Educations extends Table {
-  @override
-  String get tableName => 'educations';
-
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get school => text()();
-  TextColumn get major => text()();
-  TextColumn get degree => text()();                       // 博士 / 硕士 / 本科 / 大专
-  DateTimeColumn get startDate => dateTime()();
-  DateTimeColumn get endDate => dateTime().nullable()();
-  TextColumn get description => text().nullable()();
-  BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-}
-```
-
-### 1.4 技能表
-
-```dart
-class SkillItems extends Table {
-  @override
-  String get tableName => 'skill_items';
-
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();
-  TextColumn get category => text()();                     // language | framework | tool | soft
-  IntColumn get proficiency => integer()();                // 1-5
-  BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-}
-```
-
-### 1.5 项目经历表
-
-```dart
-class ProjectExperiences extends Table {
-  @override
-  String get tableName => 'project_experiences';
-
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();
-  TextColumn get role => text()();
-  TextColumn get description => text().nullable()();       // Markdown 格式
-  TextColumn get techStack => text()
-      .map(const StringListConverter())
-      .withDefault(const Constant('[]'))();
-  TextColumn get link => text().nullable()();
-  DateTimeColumn get startDate => dateTime()();
-  DateTimeColumn get endDate => dateTime().nullable()();
-  BoolColumn get isVisible => boolean().withDefault(const Constant(true))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-}
-```
-
-## 二、简历引擎设计
-
-### 2.1 数据聚合
-
-```dart
-class ResumeData {
-  final ResumeProfile profile;
-  final List<WorkExperience> workExperiences;    // 已按 sortOrder 排序，仅 isVisible
-  final List<Education> educations;
-  final List<SkillItem> skills;
-  final List<ProjectExperience> projects;
-}
-
-class ResumeEngine {
-  /// 收集所有可见条目，按 sortOrder 排序
-  Future<ResumeData> buildResumeData({
-    required ResumeProfileDao profileDao,
-    required WorkExperienceDao workDao,
-    required EducationDao eduDao,
-    required SkillItemDao skillDao,
-    required ProjectExperienceDao projectDao,
-  }) async {
-    return ResumeData(
-      profile: (await profileDao.get())!,
-      workExperiences: (await workDao.getAllVisible()),
-      educations: (await eduDao.getAllVisible()),
-      skills: (await skillDao.getAllVisible()),
-      projects: (await projectDao.getAllVisible()),
-    );
-  }
-}
-```
-
-### 2.2 模板系统
-
-每个模板是一个接收 `ResumeData` 并返回 Widget 的 StatelessWidget：
-
-```dart
-abstract class ResumeTemplate {
-  String get name;
-  String get description;
-  Widget build(BuildContext context, ResumeData data);
-}
-
-// 模板 1：简洁经典
-class ClassicTemplate extends StatelessWidget implements ResumeTemplate {
-  // 单栏布局，黑白灰配色，适合传统行业
-}
-
-// 模板 2：现代卡片
-class ModernCardTemplate extends StatelessWidget implements ResumeTemplate {
-  // 双栏布局，彩色强调色，适合设计/产品岗
-}
-
-// 模板 3：技术极简
-class TechMinimalTemplate extends StatelessWidget implements ResumeTemplate {
-  // 单栏布局，等宽字体，适合程序员/技术岗
-}
-```
-
-## 三、功能列表
-
-### 3.1 编辑页（ResumeEditPage）
-
-| 区域 | 内容 |
-|------|------|
-| 个人信息 | 姓名、头像、邮箱、电话、简介、网站、地点、职位 |
-| 工作经历 Tab | 列表 + 新增/编辑/删除/拖拽排序/可见性开关 |
-| 教育经历 Tab | 同上 |
-| 技能 Tab | 同上，含分类下拉和熟练度星级 |
-| 项目经历 Tab | 同上，含「从周报导入」按钮 |
-
-### 3.2 预览页（ResumePreviewPage）
-
-| 功能 | 说明 |
-|------|------|
-| 实时预览 | 全屏展示当前选中模板的渲染效果 |
-| 模板切换 | 底部按钮切换 3 套模板，实时重渲染 |
-| 导出 PDF | 点击后生成 A4 PDF，调用系统分享面板 |
-| 复制 Markdown | 一键复制 Markdown 格式简历到剪贴板 |
-| 切换可见性 | 直接在预览页可勾选/取消某个条目 |
-
-### 3.3 一键导入周报亮点
-
-在项目经历列表 → 点击「从周报导入」→ 弹出周报选择器（仅显示有 `highlights` 的周报）→ 选择要导入的高亮条目 → 自动创建 `ProjectExperience`。
-
-## 四、PDF 导出方案
-
-### 4.1 技术选型
-
-| 包 | 用途 |
-|----|------|
-| `pdf` | 在 Dart 侧生成 PDF 文档（布局、字体、样式） |
-| `printing` | 调用系统打印/分享面板，或直接保存文件 |
-
-### 4.2 中文字体体积优化
-
-**问题**：完整 Noto Sans SC 字体包约 15-20 MB，直接打包会导致 APK/IPA 体积翻倍。
-
-**解决方案（三选一）**：
-
-| 方案 | 优点 | 缺点 |
-|------|------|------|
-| **A. 字体子集化（推荐）** | 仅保留简历常用的 3000+ 汉字，体积约 1-2 MB | 需要预处理工具 |
-| **B. 系统字体 fallback** | 零额外体积 | PDF 渲染效果不可控 |
-| **C. 首次在线下载** | 不影响安装包体积 | 需要网络，首次生成有延迟 |
-
-**推荐方案 A 实现步骤**：
-
-1. 使用 `fonttools`（Python）或在线工具对 Noto Sans SC 进行子集化
-2. 保留：常用汉字（3500 字）+ 英文字母 + 数字 + 标点
-3. 产出体积约 1.5 MB 的 `.ttf` 文件
-4. 放入 `assets/fonts/` 目录
-5. 在 PDF 生成时注册该字体
-
-```dart
-// PDF 生成示例
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-
-final font = pw.Font.ttf(
-  await rootBundle.load('assets/fonts/noto_sans_sc_subset.ttf')
-);
-
-final pdf = pw.Document();
-pdf.addPage(
-  pw.Page(
-    pageFormat: PdfPageFormat.a4,
-    build: (context) => pw.DefaultTextStyle(
-      style: pw.TextStyle(font: font, fontSize: 12),
-      child: _buildContent(data),
-    ),
-  ),
-);
-```
-
-## 五、DAO 接口概要
-
-```dart
-class ResumeProfileDao {
-  Future<ResumeProfile?> get();             // 查询单例
-  Future<void> upsert(ResumeProfile profile); // 插入或更新
-}
-
-class WorkExperienceDao {
-  Future<WorkExperience> insert(WorkExperiencesCompanion entry);
-  Future<WorkExperience> update(int id, WorkExperiencesCompanion entry);
-  Future<void> delete(int id);
-  Future<List<WorkExperience>> getAllVisible();  // isVisible = true, 按 sortOrder 排序
-  Future<List<WorkExperience>> getAll();
-  Future<void> updateSortOrder(int id, int newOrder);
-}
-
-// EducationDao, SkillItemDao, ProjectExperienceDao 类似结构
-```
+| 能力 | 建议 |
+| --- | --- |
+| `milestones` 表 | 保存 sourceType、sourceId、summary、tags、createdAt、confirmedAt。 |
+| 项目绑定 | 允许里程碑绑定到已有 `project_experiences`。 |
+| STAR 版本管理 | 保存 AI 原文、用户修改版、采纳时间。 |
+| 简历素材池 | 在简历页单独展示待采纳高光。 |
+| 导出 | 先稳定 Flutter 模板，再决定 PDF / Markdown / 图片导出。 |

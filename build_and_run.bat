@@ -31,7 +31,13 @@ set /p mode="Enter option [1-3]: "
 
 if "%mode%"=="1" (
     echo.
-    echo [2/3] Starting Flutter live debug...
+    echo [*] Running codegen to sync DB schema...
+    call dart run build_runner build --delete-conflicting-outputs >nul 2>&1
+    echo.
+    echo [2/3] Pre-building arm64 snapshot...
+    call flutter build apk --debug --target-platform android-arm64 >nul 2>&1
+    echo.
+    echo [3/3] Starting Flutter live debug...
     echo -----------------------------------------------------------
     echo Press [r] to hot reload, [R] to restart, [q] to quit.
     echo Keyboard input is fully unlocked (no call keyword).

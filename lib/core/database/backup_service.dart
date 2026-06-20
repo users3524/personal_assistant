@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'app_database.dart';
 import '../security/api_key_store.dart';
+import '../utils/image_utils.dart';
 
 class BackupService {
   final AppDatabase _db;
@@ -85,18 +86,21 @@ class BackupService {
     data['exportedAt'] = DateTime.now().toIso8601String();
 
     // 辅助：将路径列表转为 Base64 列表
-    List<String>? encodePaths(List<String>? paths) {
+    Future<List<String>?> encodePaths(List<String>? paths) async {
       if (paths == null || paths.isEmpty) return paths;
-      return paths.map((p) {
+      final encoded = <String>[];
+      for (final p in paths) {
         try {
-          final file = File(p);
-          if (file.existsSync()) {
-            final bytes = file.readAsBytesSync();
-            return 'base64:${base64Encode(bytes)}';
+          final file = await resolveImageFile(p);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            encoded.add('base64:${base64Encode(bytes)}');
+            continue;
           }
         } catch (_) {}
-        return p; // 兜底保留原始路径
-      }).toList();
+        encoded.add(p); // 兜底保留原始路径
+      }
+      return encoded;
     }
 
     data['user_preferences'] = (await _db.select(_db.userPreferences).get())
@@ -108,22 +112,30 @@ class BackupService {
     data['todos'] = (await _db.select(_db.todos).get())
         .map((r) => _rowToMap(r))
         .toList();
-    data['antique_items'] = (await _db.select(_db.antiqueItems).get()).map((r) {
-      final m = _rowToMap(r);
+    final antiqueItems = <Map<String, dynamic>>[];
+    for (final row in await _db.select(_db.antiqueItems).get()) {
+      final m = _rowToMap(row);
       m['currentValuation'] = null;
       if (m['imagePaths'] is List) {
-        m['imagePaths'] = encodePaths(m['imagePaths'] as List<String>?);
+        m['imagePaths'] = await encodePaths(
+          (m['imagePaths'] as List).cast<String>(),
+        );
       }
-      return m;
-    }).toList();
+      antiqueItems.add(m);
+    }
+    data['antique_items'] = antiqueItems;
     data['valuation_records'] = const <Map<String, dynamic>>[];
-    data['patting_logs'] = (await _db.select(_db.pattingLogs).get()).map((r) {
-      final m = _rowToMap(r);
+    final pattingLogs = <Map<String, dynamic>>[];
+    for (final row in await _db.select(_db.pattingLogs).get()) {
+      final m = _rowToMap(row);
       if (m['photoPaths'] is List) {
-        m['photoPaths'] = encodePaths(m['photoPaths'] as List<String>?);
+        m['photoPaths'] = await encodePaths(
+          (m['photoPaths'] as List).cast<String>(),
+        );
       }
-      return m;
-    }).toList();
+      pattingLogs.add(m);
+    }
+    data['patting_logs'] = pattingLogs;
     data['daily_reviews'] = (await _db.select(_db.dailyReviews).get())
         .map((r) => _rowToMap(r))
         .toList();

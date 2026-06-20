@@ -2,12 +2,16 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/backup_service.dart';
 import 'package:personal_assistant/core/security/api_key_store.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
+
   group('BackupService', () {
     late Directory tempDir;
     late AppDatabase sourceDb;
@@ -30,6 +34,8 @@ void main() {
       if (await tempDir.exists()) {
         await tempDir.delete(recursive: true);
       }
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(pathProviderChannel, null);
     });
 
     test('exports and restores schema v6 fields without data loss', () async {
@@ -216,6 +222,70 @@ void main() {
           .select(sourceDb.valuationRecords)
           .get();
       expect(valuationRows, isEmpty);
+    });
+
+    test('exports relative collection image paths as base64 assets', () async {
+      final appDocDir = Directory(
+        '${tempDir.path}${Platform.pathSeparator}app_docs',
+      );
+      await appDocDir.create();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(pathProviderChannel, (call) async {
+            if (call.method == 'getApplicationDocumentsDirectory') {
+              return appDocDir.path;
+            }
+            return null;
+          });
+
+      final imageFile = File(
+        '${appDocDir.path}${Platform.pathSeparator}antique_images'
+        '${Platform.pathSeparator}cover.jpg',
+      );
+      await imageFile.parent.create(recursive: true);
+      await imageFile.writeAsBytes([1, 2, 3, 4]);
+
+      final now = DateTime(2026, 6, 20, 10, 30);
+      final itemId = await sourceDb
+          .into(sourceDb.antiqueItems)
+          .insert(
+            AntiqueItemsCompanion.insert(
+              name: '长串试拍',
+              category: '长串',
+              acquiredDate: now,
+              imagePaths: const Value(['antique_images/cover.jpg']),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+      await sourceDb
+          .into(sourceDb.pattingLogs)
+          .insert(
+            PattingLogsCompanion.insert(
+              itemId: itemId,
+              date: now,
+              durationMinutes: 12,
+              method: 'bare_hand',
+              photoPaths: const Value(['antique_images/cover.jpg']),
+              createdAt: Value(now),
+            ),
+          );
+
+      final backupPath = await BackupService(
+        sourceDb,
+        apiKeyStore: apiKeyStore,
+      ).exportBackupTo(tempDir.path);
+      final backupJson =
+          jsonDecode(await File(backupPath).readAsString())
+              as Map<String, dynamic>;
+
+      final item =
+          (backupJson['antique_items'] as List<dynamic>).single
+              as Map<String, dynamic>;
+      final log =
+          (backupJson['patting_logs'] as List<dynamic>).single
+              as Map<String, dynamic>;
+      expect((item['imagePaths'] as List<dynamic>).single, 'base64:AQIDBA==');
+      expect((log['photoPaths'] as List<dynamic>).single, 'base64:AQIDBA==');
     });
   });
 }

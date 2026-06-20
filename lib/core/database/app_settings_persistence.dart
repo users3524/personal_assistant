@@ -75,15 +75,27 @@ class AppSettingsPersistence {
   }
 
   // ===== 文玩分类持久化 =====
+  Future<int> getCollectionCategoriesSchemaVersion() async {
+    final data = await _load();
+    return (data['collectionCategoriesSchemaVersion'] as num?)?.toInt() ?? 1;
+  }
+
   Future<List<Map<String, dynamic>>> getCollectionCategories() async {
     final data = await _load();
     return (data['collectionCategories'] as List<dynamic>?)
-            ?.cast<Map<String, dynamic>>() ?? [];
+            ?.cast<Map<String, dynamic>>() ??
+        [];
   }
 
-  Future<void> setCollectionCategories(List<Map<String, dynamic>> categories) async {
+  Future<void> setCollectionCategories(
+    List<Map<String, dynamic>> categories, {
+    int? schemaVersion,
+  }) async {
     final data = await _load();
     data['collectionCategories'] = categories;
+    if (schemaVersion != null) {
+      data['collectionCategoriesSchemaVersion'] = schemaVersion;
+    }
     await _save();
   }
 }

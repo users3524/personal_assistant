@@ -112,7 +112,7 @@
 
 | 功能 | 当前实现 |
 | --- | --- |
-| 分类 | 使用 `collectionCategoriesProvider`，默认核桃、手串、把件。 |
+| 分类 | 使用 `collectionCategoriesProvider`，新安装默认核桃、手串、把件、长串。旧本地分类配置会按轻量版本号补齐“长串”，但不会强制恢复用户已经删除的其他默认分类。 |
 | 自定义分类 | 表单可输入自定义分类，保存后加入分类 Provider。 |
 | 子类型 | 来自分类配置。 |
 | 专属字段 | 来自分类配置；核桃有硬编码兜底字段。 |
@@ -142,7 +142,7 @@
 
 | 功能 | 当前实现 |
 | --- | --- |
-| 默认分类 | 当前代码默认核桃、手串、把件；后续新增需求为加入“长串”。 |
+| 默认分类 | 当前代码默认核桃、手串、把件、长串；长串默认子类型包含星月、金刚、凤眼、百香籽、菩提根、椰蒂、紫檀，默认字段为颗数、尺寸(mm)、重量(g)。 |
 | 分类排序 | 文玩分类可拖拽排序。 |
 | 子类型管理 | 可增删、拖拽排序；正在被藏品使用的子类型禁止删除。 |
 | 专属字段管理 | 可增删、拖拽排序。 |
@@ -151,12 +151,12 @@
 
 ## 9. 图片路径
 
-当前新图片保存函数将文件写入应用文档目录的 `antique_images/` 子目录，并返回 `antique_images/xxx.jpg` 形式的相对路径；旧数据和部分导入数据仍可能是绝对路径。`core/utils/image_utils.dart` 可以解析绝对路径和相对路径，但部分 UI 仍直接使用 `File(path)`，这会让相对路径在某些展示、分享或保存入口中破图。
+当前新图片保存函数将文件写入应用文档目录的 `antique_images/` 或 `patting_images/` 子目录，并返回 `antique_images/xxx.jpg` / `patting_images/xxx.jpg` 形式的相对路径；旧数据和部分导入数据仍可能是绝对路径。`core/utils/image_utils.dart` 可以解析绝对路径和相对路径。`BackupService` 导出藏品图片和盘玩照片时已复用 `resolveImageFile()`，相对路径能被正确读出并内联为 `base64:`。部分 UI 仍直接使用 `File(path)`，这会让相对路径在某些展示、分享或保存入口中破图。
 
 后续图片路径统一原则：
 
 1. 数据库存储统一收敛为相对路径 token。
-2. UI、分享、保存、备份导出统一复用现有 `resolveImageFile()` 或等价单一服务解析路径，避免再造多个路径解析入口。
+2. UI、分享、保存继续统一复用现有 `resolveImageFile()` 或等价单一服务解析路径，避免再造多个路径解析入口。
 3. 备份恢复解码 `base64:` 图片时写入应用文档目录，而不是系统临时目录。
 4. 迁移旧绝对路径前先校验文件是否存在，能复制到 `antique_images/` 的再转相对路径，不能复制的保留原值并提示用户。
 
@@ -164,7 +164,7 @@
 
 ## 10. 备份与 AI 复盘衔接
 
-当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。恢复图片会写入系统临时目录，且导出图片时仍直接 `File(path)`，对相对路径不稳定。后续需要让备份服务复用图片解析 helper，保证相对路径和绝对路径都能被正确打包。
+当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。导出图片时已复用 `resolveImageFile()`，可稳定打包相对路径和绝对路径。恢复图片目前仍写入系统临时目录，后续需要改为应用文档目录并返回相对路径 token。
 
 AI 复盘侧当前 `DailyReviewChatPage` 生成日报时 `pattingMinutes` 固定传 0。后续深夜素材包应从 `patting_logs` 读取当天 `duration_minutes` 总和、打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入；白天文玩打卡本身不应触发云端请求。
 

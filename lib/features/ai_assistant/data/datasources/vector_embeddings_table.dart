@@ -47,7 +47,7 @@ class VectorEmbeddings extends Table {
         "(source_type <> 'manual' AND source_id IS NOT NULL))",
     'CHECK (dimension > 0)',
     'CHECK (length(vector_data) > 0)',
-    'CHECK (storage_backend = "sqlite_blob")',
-    'CHECK (encoding_version IN ("float32_le_v1"))',
+    "CHECK (storage_backend = 'sqlite_blob')",
+    "CHECK (encoding_version IN ('float32_le_v1'))",
   ];
 }

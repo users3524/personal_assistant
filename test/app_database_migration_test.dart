@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/chat_turns_table.dart';
@@ -10,7 +12,6 @@ import 'package:personal_assistant/features/ai_assistant/data/datasources/review
 import 'package:personal_assistant/features/ai_assistant/data/datasources/vector_embeddings_table.dart';
 import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
-import 'package:drift/native.dart';
 
 void main() {
   group('AppDatabase migrations', () {
@@ -38,6 +39,18 @@ void main() {
         await _vectorEmbeddingIndexNames(db),
         _expectedVectorEmbeddingIndexNames,
       );
+
+      final vectorEmbeddingsSql = await _createTableSql(
+        db,
+        'vector_embeddings',
+      );
+      expect(vectorEmbeddingsSql, contains("storage_backend = 'sqlite_blob'"));
+      expect(
+        vectorEmbeddingsSql,
+        contains("encoding_version IN ('float32_le_v1')"),
+      );
+      expect(vectorEmbeddingsSql, isNot(contains('storage_backend = "')));
+      expect(vectorEmbeddingsSql, isNot(contains('encoding_version IN ("')));
     });
 
     test('upgrades v6 databases with query indexes', () async {
@@ -481,6 +494,19 @@ WHERE type = 'index' AND tbl_name = 'vector_embeddings'
 AND name LIKE 'idx_vector_embeddings_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<String> _createTableSql(AppDatabase db, String tableName) async {
+  final row = await db
+      .customSelect(
+        '''
+SELECT sql FROM sqlite_master
+WHERE type = 'table' AND name = ?
+''',
+        variables: [Variable.withString(tableName)],
+      )
+      .getSingle();
+  return row.read<String>('sql');
 }
 
 Future<Set<String>> _columnNames(AppDatabase db, String tableName) async {

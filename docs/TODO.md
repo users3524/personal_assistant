@@ -97,7 +97,7 @@
 - [x] 高光判定：高门槛、单日最多 2 条、允许 0 条。
 - [x] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。
 - [x] 设计 `vector_embeddings`：sourceType/sourceId、embeddingModel、dimension、vectorData；sourceType 首版使用当前业务源名，避免写入尚无表支撑的 `habit_log`。
-- [ ] 明确 `vector_data` 编码格式：Float32/Float64、端序、归一化策略和版本字段。
+- [x] 明确 `vector_data` 编码格式：Float32/Float64、端序、归一化策略和版本字段。
 - [ ] 检索前校验 embedding 模型和维度，不兼容时拒绝相似度计算并触发重建。
 - [ ] 向量检索先实现 SQLite BLOB + Dart O(N) 余弦相似度，并记录性能基准。
 - [ ] 超过万级向量后按年份/人生罗盘维度过滤，并迁移计算到 Isolate。

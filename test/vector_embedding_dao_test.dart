@@ -5,6 +5,7 @@ import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/vector_embedding_dao.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/milestone_entity.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/vector_embedding_entity.dart';
+import 'package:personal_assistant/features/ai_assistant/domain/services/vector_data_codec.dart';
 
 void main() {
   group('VectorEmbeddingDao', () {
@@ -29,7 +30,7 @@ void main() {
             now: now,
             sourceType: MilestoneSourceType.dailyReview,
             sourceId: 7,
-            vectorData: Uint8List.fromList([1, 2, 3, 4]),
+            vectorData: _vector([1, 0, 0, 0]),
           ),
         );
 
@@ -47,10 +48,10 @@ void main() {
         expect(created.id, isNotNull);
         expect(bySource?.sourceType, MilestoneSourceType.dailyReview);
         expect(bySource?.sourceId, 7);
-        expect(bySource?.vectorData, [1, 2, 3, 4]);
-        expect(bySource?.storageBackend, 'sqlite_blob');
-        expect(bySource?.encodingVersion, 'float32_le_v1');
-        expect(byModel.single.id, bySource?.id);
+        expect(_decode(bySource!.vectorData), [1, 0, 0, 0]);
+        expect(bySource.storageBackend, 'sqlite_blob');
+        expect(bySource.encodingVersion, 'float32_le_v1');
+        expect(byModel.single.id, bySource.id);
       },
     );
 
@@ -61,7 +62,7 @@ void main() {
           now: now,
           sourceType: MilestoneSourceType.todo,
           sourceId: 1,
-          vectorData: Uint8List.fromList([1, 2, 3, 4]),
+          vectorData: _vector([1, 0, 0, 0]),
         ),
       );
       await dao.upsert(
@@ -69,7 +70,7 @@ void main() {
           now: now.add(const Duration(minutes: 1)),
           sourceType: MilestoneSourceType.todo,
           sourceId: 1,
-          vectorData: Uint8List.fromList([4, 3, 2, 1]),
+          vectorData: _vector([0, 1, 0, 0]),
           contentHash: 'changed',
         ),
       );
@@ -80,7 +81,7 @@ void main() {
       );
 
       expect(rows, hasLength(1));
-      expect(rows.single.vectorData, [4, 3, 2, 1]);
+      expect(_decode(rows.single.vectorData), [0, 1, 0, 0]);
       expect(rows.single.contentHash, 'changed');
     });
 
@@ -110,6 +111,16 @@ void main() {
       expect(
         () => dao.upsert(
           _embedding(now: now, vectorData: Uint8List(0), sourceId: 1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => dao.upsert(
+          _embedding(
+            now: now,
+            vectorData: Uint8List.fromList([1, 2, 3, 4]),
+            sourceId: 1,
+          ),
         ),
         throwsArgumentError,
       );
@@ -143,14 +154,14 @@ void main() {
         _embedding(
           now: now,
           sourceType: MilestoneSourceType.manual,
-          vectorData: Uint8List.fromList([1, 1, 1, 1]),
+          vectorData: _vector([1, 0, 0, 0]),
         ),
       );
       await dao.upsert(
         _embedding(
           now: now.add(const Duration(minutes: 1)),
           sourceType: MilestoneSourceType.manual,
-          vectorData: Uint8List.fromList([2, 2, 2, 2]),
+          vectorData: _vector([0, 0, 1, 0]),
         ),
       );
 
@@ -162,7 +173,7 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single.sourceType, MilestoneSourceType.manual);
       expect(rows.single.sourceId, null);
-      expect(rows.single.vectorData, [2, 2, 2, 2]);
+      expect(_decode(rows.single.vectorData), [0, 0, 1, 0]);
     });
   });
 }
@@ -181,9 +192,17 @@ VectorEmbeddingEntity _embedding({
     sourceId: sourceId,
     embeddingModel: embeddingModel,
     dimension: dimension,
-    vectorData: vectorData ?? Uint8List.fromList([0, 0, 0, 1]),
+    vectorData: vectorData ?? _vector([0, 0, 0, 1]),
     contentHash: contentHash,
     createdAt: now,
     updatedAt: now,
   );
+}
+
+Uint8List _vector(List<double> values) {
+  return const VectorDataCodec().encodeNormalized(values);
+}
+
+List<double> _decode(Uint8List bytes) {
+  return const VectorDataCodec().decode(bytes, dimension: 4);
 }

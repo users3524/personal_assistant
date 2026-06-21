@@ -9,6 +9,7 @@ import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/backup_service.dart';
 import 'package:personal_assistant/core/database/user_preferences_dao.dart';
 import 'package:personal_assistant/core/security/api_key_store.dart';
+import 'package:personal_assistant/features/ai_assistant/domain/services/vector_data_codec.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -91,9 +92,11 @@ void main() {
         1,
       );
       expect(backupJson['vector_embeddings'], hasLength(1));
+      final encodedVector =
+          'base64:${base64Encode(_vectorBytes([1, 0, 0, 0]))}';
       expect(
         (backupJson['vector_embeddings'] as List<dynamic>).single['vectorData'],
-        'base64:AQIDBA==',
+        encodedVector,
       );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
@@ -226,7 +229,7 @@ void main() {
       expect(vectorEmbedding.sourceId, daily.id);
       expect(vectorEmbedding.embeddingModel, 'text-embedding-3-small');
       expect(vectorEmbedding.dimension, 4);
-      expect(vectorEmbedding.vectorData, [1, 2, 3, 4]);
+      expect(_decodeVector(vectorEmbedding.vectorData), [1, 0, 0, 0]);
       expect(vectorEmbedding.storageBackend, 'sqlite_blob');
       expect(vectorEmbedding.encodingVersion, 'float32_le_v1');
       expect(await apiKeyStore.read(), null);
@@ -845,7 +848,7 @@ Future<void> _seedSourceDatabase(
           sourceId: Value(dailyId),
           embeddingModel: 'text-embedding-3-small',
           dimension: 4,
-          vectorData: Uint8List.fromList([1, 2, 3, 4]),
+          vectorData: _vectorBytes([1, 0, 0, 0]),
           storageBackend: const Value('sqlite_blob'),
           encodingVersion: const Value('float32_le_v1'),
           contentHash: const Value('daily-review-hash'),
@@ -896,4 +899,12 @@ Future<void> _seedSourceDatabase(
           createdAt: Value(now),
         ),
       );
+}
+
+Uint8List _vectorBytes(List<double> values) {
+  return const VectorDataCodec().encodeNormalized(values);
+}
+
+List<double> _decodeVector(Uint8List bytes) {
+  return const VectorDataCodec().decode(bytes, dimension: 4);
 }

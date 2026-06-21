@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'milestone_entity.dart';
+import '../services/vector_data_codec.dart';
 
 class VectorEmbeddingEntity {
   final int? id;
@@ -23,7 +24,7 @@ class VectorEmbeddingEntity {
     required this.dimension,
     required this.vectorData,
     this.storageBackend = 'sqlite_blob',
-    this.encodingVersion = 'float32_le_v1',
+    this.encodingVersion = VectorDataCodec.encodingVersion,
     this.contentHash,
     required this.createdAt,
     required this.updatedAt,

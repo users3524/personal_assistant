@@ -3,11 +3,16 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/milestone_entity.dart';
 import '../../domain/entities/vector_embedding_entity.dart';
+import '../../domain/services/vector_data_codec.dart';
 
 class VectorEmbeddingDao {
   final AppDatabase _db;
+  final VectorDataCodec _codec;
 
-  VectorEmbeddingDao(this._db);
+  VectorEmbeddingDao(
+    this._db, {
+    VectorDataCodec codec = const VectorDataCodec(),
+  }) : _codec = codec;
 
   VectorEmbeddingEntity _toEntity(VectorEmbedding row) {
     return VectorEmbeddingEntity(
@@ -123,6 +128,7 @@ class VectorEmbeddingDao {
         'Vector data must not be empty.',
       );
     }
+    _codec.validateBytes(entity.vectorData, dimension: entity.dimension);
     if (entity.storageBackend != 'sqlite_blob') {
       throw ArgumentError.value(
         entity.storageBackend,
@@ -130,11 +136,11 @@ class VectorEmbeddingDao {
         'Only sqlite_blob vector storage is supported.',
       );
     }
-    if (entity.encodingVersion != 'float32_le_v1') {
+    if (entity.encodingVersion != VectorDataCodec.encodingVersion) {
       throw ArgumentError.value(
         entity.encodingVersion,
         'encodingVersion',
-        'Only float32_le_v1 vector encoding is supported.',
+        'Only ${VectorDataCodec.encodingVersion} vector encoding is supported.',
       );
     }
   }

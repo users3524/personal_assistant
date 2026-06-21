@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/services/vector_data_codec.dart';
+
 const String createVectorEmbeddingsSourceIndex =
     'CREATE INDEX IF NOT EXISTS idx_vector_embeddings_source '
     'ON vector_embeddings(source_type, source_id)';
@@ -33,7 +35,7 @@ class VectorEmbeddings extends Table {
   TextColumn get storageBackend =>
       text().withDefault(const Constant('sqlite_blob'))();
   TextColumn get encodingVersion =>
-      text().withDefault(const Constant('float32_le_v1'))();
+      text().withDefault(const Constant(VectorDataCodec.encodingVersion))();
   TextColumn get contentHash => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();

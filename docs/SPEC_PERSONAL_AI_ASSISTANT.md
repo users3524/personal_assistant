@@ -2,125 +2,120 @@
 
 最后更新：2026-06-21
 
-本文按当前代码填写，不把未实现设计写成已实现功能。后续 AI 助手增强、深夜引擎、RAG、STAR 生成等规划见 `ROADMAP.md` 和 `TODO.md`。
+本文是项目总览。它既记录当前代码事实，也记录重新整体审视后的产品边界。模块细节分别见各 `SPEC_*.md`。
 
-## 1. 当前模块清单
+## 1. 当前定位
 
-| 模块 | 当前入口 | 当前核心能力 |
-| --- | --- | --- |
-| 文玩/盘串 | `/collection` | 藏品档案、图片、分类字段、盘玩打卡、月历、照片对比、每日翻牌、趣味榜单。 |
-| 待办 | `/todos` | 待办树、子任务、状态流转、软删除、归档、周/月视图、今日复盘入口。 |
-| 简历 | `/resume` | 三模板预览、编辑资料/经历/技能/项目、拖拽排序、可见性开关、图片导出分享。 |
-| 设置 | `/settings` | AI 配置、通知、分类管理、文玩设置、JSON 备份导入导出、许可页。 |
-| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 独立复盘历史入口、月度复盘日历、对话式日报、日报详情、ISO 周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界、PromptBuilder 预算、每日 15 轮云端请求限制。 |
+`寸积` 是一个本地优先个人工具，核心不是“AI 聊天”，而是：
 
-## 2. 当前数据库表
+> 把行动、兴趣和复盘沉淀为可回看、可整理、可输出的个人证据。
 
-当前 `schemaVersion = 15`，表结构来自 Drift 手写表定义。
+当前最值得坚持的产品主线：
+
+```text
+待办/文玩/对话碎片
+  -> 每日复盘
+  -> 高光候选
+  -> 项目经历 / 长期记忆 / 周报
+  -> 简历或自我回顾输出
+```
+
+## 2. 模块清单
+
+| 模块 | 当前入口 | 当前核心能力 | 下一阶段角色 |
+| --- | --- | --- | --- |
+| 文玩/盘串 | `/collection` | 藏品、照片、盘玩打卡、月历、照片对比、趣味榜单 | 作为兴趣和情绪调节素材来源 |
+| 待办 | `/todos` | 待办树、子任务、状态流转、清单、软删除、归档、周/月视图、复盘入口 | 作为行动事实来源 |
+| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 复盘历史、月度日历、对话日报、日报详情、ISO 周报、AI 输入边界、每日云端 turn 限制 | 下一阶段中枢 |
+| 简历 | `/resume` | 三模板预览、编辑资料/经历/技能/项目、拖拽排序、可见性开关、PNG 导出 | 作为证据输出端 |
+| 设置 | `/settings` | AI 配置、通知、分类管理、文玩设置、JSON 备份、许可页 | 配置和安全入口 |
+
+不再扩张的方向：
+
+1. 文玩估值不再作为产品能力扩展。
+2. 底部 Tab 暂不增加 AI 复盘，避免主导航变重。
+3. 在深夜生成和高光确认闭环完成前，不继续铺新的 AI 表。
+4. 不承诺后台任务准点运行，Android WorkManager 只作为机会性触发。
+
+## 3. 数据库现状
+
+当前 `schemaVersion = 15`，20 张表：
 
 | 表 | 所属模块 | 当前状态 |
 | --- | --- | --- |
-| `user_preferences` | 设置 | 使用中。 |
-| `collection_categories` | 文玩/设置 | 使用中。 |
-| `todo_lists` | 待办 | DAO 支持，UI 使用仍有限。 |
-| `todos` | 待办 | 使用中。 |
-| `antique_items` | 文玩 | 使用中。 |
-| `patting_logs` | 文玩 | 使用中。 |
-| `valuation_records` | 文玩估值遗留兼容 | 应用层已下线；新备份不导出估值历史，旧备份导入时归档到藏品备注。 |
-| `daily_reviews` | AI 复盘 | 使用中。 |
-| `weekly_reports` | AI 复盘 | 使用中。 |
-| `chat_turns` | AI 复盘 | 使用中；保存复盘对话、离线便签和每日云端 turn 计数。 |
-| `review_generation_jobs` | AI 复盘 | 使用中；保存深夜/前台补偿生成任务状态和原始素材 dump。 |
-| `milestones` | AI 复盘/简历素材 | 使用中；高光主表，当前有 DAO、迁移、备份和测试。 |
-| `milestone_relations` | AI 复盘/简历素材 | 使用中；高光与待办、日报、文玩打卡或手动来源的多源关系。 |
-| `resume_profile` | 简历 | 使用中。 |
-| `work_experiences` | 简历 | 使用中。 |
-| `educations` | 简历 | 使用中。 |
-| `skill_items` | 简历 | 使用中。 |
-| `project_experiences` | 简历 | 使用中。 |
-| `project_milestone_relations` | 简历素材 | 使用中；项目经历与多个高光的多对多关系。 |
-| `vector_embeddings` | AI 长期记忆 | 使用中；保存本地 SQLite BLOB 向量、模型、维度和来源元数据。 |
-
-schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引；schema v9 增加非敏感 AI 策略 JSON；schema v10 增加 `chat_turns`；schema v11 增加 `review_generation_jobs`；schema v12 为 `daily_reviews` 增加 `calibration_required`；schema v13-v15 依次增加高光、多对多项目高光关系和本地向量表。
-
-## 3. 当前已实现的数据关系
-
-```text
-todos.parent_id -> todos.id
-todos.list_id -> todo_lists.id
-patting_logs.item_id -> antique_items.id
-valuation_records.item_id -> antique_items.id
-daily_reviews.completed_todo_ids -> List<String> 保存 Todo ID
-project_experiences.tech_stack/key_deliverables/badges -> List<String>
-work_experiences.responsibilities/tech_stack -> List<String>
-```
+| `user_preferences` | 设置 | 使用中；含非敏感 AI 策略 JSON |
+| `collection_categories` | 文玩/设置 | 使用中 |
+| `todo_lists` | 待办 | 使用中，但仍可继续强化清单工作流 |
+| `todos` | 待办 | 使用中 |
+| `antique_items` | 文玩 | 使用中 |
+| `patting_logs` | 文玩 | 使用中 |
+| `valuation_records` | 文玩估值遗留 | 应用层已下线，新备份导出为空 |
+| `daily_reviews` | AI 复盘 | 使用中 |
+| `weekly_reports` | AI 复盘 | 使用中 |
+| `chat_turns` | AI 复盘 | 使用中；保存对话、离线便签和云端 turn 计数 |
+| `review_generation_jobs` | AI 复盘 | 使用中；保存生成任务状态和 raw dump |
+| `milestones` | AI 复盘/简历素材 | 使用中；底座已落地，确认 UI 未完成 |
+| `milestone_relations` | AI 复盘/简历素材 | 使用中；多源关系 |
+| `resume_profile` | 简历 | 使用中 |
+| `work_experiences` | 简历 | 使用中 |
+| `educations` | 简历 | 使用中 |
+| `skill_items` | 简历 | 使用中 |
+| `project_experiences` | 简历 | 使用中 |
+| `project_milestone_relations` | 简历素材 | 使用中；底座已落地，项目绑定 UI 未完成 |
+| `vector_embeddings` | AI 长期记忆 | 使用中；底座已落地，embedding 生成和 RAG 链路未完成 |
 
 ## 4. 当前 AI 能力边界
 
 已实现：
 
-| 能力 | 代码位置 |
-| --- | --- |
-| `AIService` 抽象 | `core/ai/ai_service.dart` |
-| 离线模板生成日报/周报 | `core/ai/offline_review_generator.dart` |
-| OpenAI 兼容 Chat Completions 调用 | `core/ai/openai_service.dart` |
-| 多供应商配置 | `settings_page.dart` |
-| 日报 Prompt | `AIPrompts.dailyReviewSystemPrompt` |
-| 周报 Prompt | `AIPrompts.weeklyReportSystemPrompt` |
-| PromptBuilder 预算 | `PromptBuilder` 按字符预算裁剪 prompt，以 ASCII 每 4 字符约 1 token、非 ASCII 每字符约 1 token 的启发式估算成本。 |
-| 纯文本解析降级 | `AIOutputParser` 保留未按格式返回的原始输出，并生成用户可见提示。 |
-| 日报文玩分钟输入 | `DailyReviewChatPage` 通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取当日盘玩分钟。 |
-| 单次文本 500 字限制 | `DailyReviewChatPage` 输入框和发送入口共同限制。 |
-| STT 60 秒截断 | `DailyReviewChatPage` 本地计时器自动停止识别并发送已识别文本。 |
-| 每日 15 轮熔断 | `DailyReviewChatPage` + `chat_turns` 只统计真实云端 user turn，达到上限后转离线便签。 |
-
-未实现：
-
 | 能力 | 当前状态 |
 | --- | --- |
-| 深夜 2:00-5:00 后台引擎 | 已有 Android WorkManager 注册、No-Op 平台实现和前台 Catch-Up Guard；尚未实现 WorkManager 唤醒后的素材组包、AI 生成和日报写入闭环。 |
-| 结构化 JSON 输出/重试 | 当前 OpenAI 输出仍按纯文本解析，未接入 JSON schema 和重试。 |
-| RAG / 人生罗盘 | 当前无完整产品闭环；向量表、线性检索和兼容校验底座已落地，但未接入 embedding 生成与 RAG 调用链。 |
-| STAR 简历生成 | 当前无 AI 简历润色流程。 |
+| 离线日报/周报模板 | 可用 |
+| OpenAI 兼容 Chat Completions | 可用 |
+| 多供应商配置 | OpenAI、DeepSeek、通义、硅基流动、自定义 |
+| PromptBuilder | 字符预算、token 粗估、输出 token 上限 |
+| 输入成本闸门 | 文本 500 字、STT 60 秒、每日 15 轮云端 user turn |
+| 纯文本解析降级 | AI 未按格式输出时保留原始内容并提示用户 |
+| 深夜任务状态表 | `review_generation_jobs` |
+| 前台补偿 | `ReviewCatchUpGuard` 创建/保留昨日 pending 任务 |
+| 结构化重试 runner | 已有 JSON -> 修复 JSON -> 纯文本降级的服务层 |
+| 高光底座 | `milestones`、`milestone_relations`、候选选择和 DAO |
+| 向量底座 | `vector_embeddings`、Float32 BLOB、线性检索和兼容守卫 |
+| 简历 AI 安全策略 | STAR 事实约束、AI 输出清洗、PDF 布局计划底座 |
 
-## 5. 文玩估值模块口径
+未完成的产品闭环：
 
-产品口径：文玩记录继续保留，估值模块不再保留为产品功能。
-
-当前已完成应用层下线：
-
-1. 删除 `ValuationChart` 和 `fl_chart` 依赖。
-2. 删除 `ValuationRecordEntity`、估值仓库接口/实现和 `totalValuationProvider`。
-3. 移除网格卡片估值展示，以及财富榜、潜力榜等估值榜单。
-4. `AntiqueEntity` 不再暴露 `currentValuation`。
-5. `BackupService` 新导出的 `valuation_records` 为空；旧备份导入时将 `valuation_records.date/amount/remark` 和旧 `current_valuation` 归档到 `antique_items.notes`。
-
-暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v8 中，避免本阶段引入破坏性迁移。已评估结论是下一版 schema 不主动物理移除；若未来确需移除，应作为独立 schema 版本发布，并配套旧库升级、旧备份导入和估值归档测试。
-
-## 6. 已吸收的未来设计原则
-
-以下来自新的智能化规划，只作为后续方向，不属于当前功能。
-
-| 方向 | 设计原则 |
+| 能力 | 缺口 |
 | --- | --- |
-| 数据迁移 | 先补 schema 和备份兼容，再接状态拦截器和后台调度，确保现有数据无损。 |
-| 策略配置 | 模型供应商、模型名和 embedding 策略配置化；统一走 Drift 存储，不新增 Hive/SharedPreferences。 |
-| PromptBuilder | 白天捕获的预算、裁剪、turn 拦截和离线切换放在业务服务层，不放在 Dio 拦截器。 |
-| 白天捕获 | 低成本、短上下文、禁止历史/RAG，达到本地 turn 上限后转离线便签。 |
-| 深夜精炼 | 接受后台调度漂移；用基于任务状态的打开补偿兜底；原始素材进入冷数据任务表并延迟清理。 |
-| 高光拓扑 | 高光独立成表；来源和项目绑定都走多对多关联，并由应用层事务维护多态清理。 |
-| 长期记忆 | RAG 检索限窗，向量记录模型/维度元数据，检索前做兼容校验；大规模后按分区和 Isolate 优化。 |
-| 简历资产化 | 高光门槛高、单日数量少、STAR 只基于事实，AI 不参与排版，PDF 由确定性模板和测试保障。 |
+| 深夜日报生成 | raw context pack 尚未真实组包并写入日报 |
+| WorkManager 回调 | 当前安全空执行，没有生成闭环 |
+| 高光确认 | 没有用户确认/忽略/编辑 UI |
+| 高光投递简历 | 没有项目经历选择、排序和投递入口 |
+| RAG | 没有 embedding 生成、重建任务和检索入口 |
+| 人生罗盘 | 只有策略服务，没有持久化表和 UI |
+| PDF 导出 | 只有布局计划，未接 `pdf` / `printing` |
 
-## 7. 文档索引
+## 5. 当前最不合理的地方
+
+| 问题 | 为什么不合理 | 处理原则 |
+| --- | --- | --- |
+| AI 底座过多但用户不可见 | schema 和服务已经复杂，产品收益还没有显现 | 优先做端到端闭环，不再先建新表 |
+| TODO 全部完成但没有下一阶段 | 无法指导继续实现 | TODO 改成下一阶段 backlog |
+| 后台任务容易被误解为可靠定时 | 移动系统不会保证准点运行 | UI 和文档统一称“机会性后台 + 前台补偿” |
+| 文玩模块趣味性强但可能继续膨胀 | 容易偏离个人证据主线 | 保留趣味榜单，不再扩估值和复杂交易能力 |
+| 简历模块还没有证据输入 | 当前仍像独立编辑器 | 先接高光投递，再做 STAR/PDF |
+| 备份是明文覆盖导入 | 数据越来越多，风险变大 | 增加 manifest、预检、错误报告和可选加密 |
+
+## 6. 文档索引
 
 | 文档 | 记录内容 |
 | --- | --- |
-| `ARCHITECTURE.md` | 当前项目结构、路由、数据库、依赖关系。 |
-| `SPEC_TODO.md` | 当前待办功能、表、DAO、Provider、页面行为。 |
-| `SPEC_COLLECTION.md` | 当前文玩功能和估值移除口径。 |
-| `SPEC_REVIEW.md` | 当前 AI 复盘功能和未实现边界。 |
-| `SPEC_RESUME.md` | 当前动态简历功能。 |
-| `SECURITY.md` | 当前安全、备份、AI Key 风险。 |
-| `ROADMAP.md` | 后续规划。 |
-| `TODO.md` | 待办清单。 |
+| `ARCHITECTURE.md` | 架构现状、整体诊断、表与依赖 |
+| `PLAN.md` | 重新规划后的阶段计划 |
+| `ROADMAP.md` | 中长期路线图 |
+| `TODO.md` | 下一阶段可执行任务清单 |
+| `SPEC_TODO.md` | 待办模块规格 |
+| `SPEC_COLLECTION.md` | 文玩模块规格 |
+| `SPEC_REVIEW.md` | AI 复盘规格 |
+| `SPEC_RESUME.md` | 简历模块规格 |
+| `SECURITY.md` | 安全与备份现状和风险 |

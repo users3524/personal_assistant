@@ -56,5 +56,15 @@ void main() {
       expect(prefs.aiApiKey, null);
       expect(await apiKeyStore.read(), 'legacy-secret-key');
     });
+
+    test('stores resume template id', () async {
+      expect(await dao.getResumeTemplateId(), 0);
+
+      await dao.setResumeTemplateId(2);
+
+      final prefs = await dao.getOrCreate();
+      expect(prefs.resumeTemplateId, 2);
+      expect(await dao.getResumeTemplateId(), 2);
+    });
   });
 }

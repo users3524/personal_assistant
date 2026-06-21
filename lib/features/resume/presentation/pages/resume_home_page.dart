@@ -28,7 +28,7 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
   @override
   Widget build(BuildContext context) {
     final dataAsync = ref.watch(resumeDataProvider);
-    final templateId = ref.watch(selectedTemplateIdProvider);
+    final templateId = ref.watch(selectedTemplateIdProvider).valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -61,7 +61,7 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
             icon: const Icon(Icons.design_services),
             tooltip: '切换模板',
             onSelected: (id) =>
-                ref.read(selectedTemplateIdProvider.notifier).state = id,
+                ref.read(selectedTemplateIdProvider.notifier).select(id),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 0,

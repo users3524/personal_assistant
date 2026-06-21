@@ -99,7 +99,7 @@
 | 功能 | 当前实现 |
 | --- | --- |
 | 默认预览 | `/resume` 直接显示当前模板。 |
-| 模板切换 | AppBar 菜单切换 0/1/2。 |
+| 模板切换 | AppBar 菜单切换 0/1/2，并持久化到 `user_preferences.resume_template_id`。 |
 | 模板 0 | `ClassicResumeTemplate`，简洁经典，单栏。 |
 | 模板 1 | `ModernResumeTemplate`，现代卡片，双栏侧边栏。 |
 | 模板 2 | `TechResumeTemplate`，技术极简，类 Markdown/等宽风格。 |
@@ -141,7 +141,6 @@
 | --- | --- | --- |
 | 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `work_experiences` 导入列缺 `responsibilities`。 | 补齐导入字段，并增加导出-导入镜像测试。 |
 | 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `project_experiences` 导入列缺 `key_deliverables` / `badges`。 | 补齐导入字段，并覆盖 `StringListConverter` 字段。 |
-| 模板未持久化 | `selectedTemplateIdProvider` 是内存 `StateProvider<int>`；`user_preferences.resume_template_id` 字段存在但当前未接入。 | 切换模板时写入偏好，初始化时读取。 |
 | 项目成果编辑缺口 | 模板可展示 `keyDeliverables` / `badges`，编辑页已支持两者编辑。 | 后续接入高光导入时继续复用字段。 |
 
 ## 8. 当前未实现
@@ -150,7 +149,6 @@
 2. 从日报/周报高光导入项目经历。
 3. 里程碑素材池。
 4. PDF 生成与打印。
-5. 简历模板持久化到 `user_preferences.resume_template_id`。
 
 ## 9. 未来 AI 简历规划原则
 

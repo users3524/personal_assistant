@@ -108,6 +108,20 @@ class UserPreferencesDao {
     );
   }
 
+  /// 获取简历模板 ID
+  Future<int> getResumeTemplateId() async {
+    final prefs = await getOrCreate();
+    return prefs.resumeTemplateId;
+  }
+
+  /// 保存简历模板 ID
+  Future<void> setResumeTemplateId(int templateId) async {
+    await getOrCreate();
+    await (_db.update(_db.userPreferences)..where((t) => t.id.equals(1))).write(
+      UserPreferencesCompanion(resumeTemplateId: Value(templateId)),
+    );
+  }
+
   // ===== 待办分类持久化 =====
 
   /// 获取持久化的待办分类列表

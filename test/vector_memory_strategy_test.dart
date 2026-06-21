@@ -119,5 +119,28 @@ void main() {
       expect(decision.shouldRebuild, false);
       expect(decision.reason, isEmpty);
     });
+
+    test('allows blank stored provider when model and dimension match', () {
+      const strategy = VectorMemoryStrategy(
+        enabled: true,
+        embeddingProfile: EmbeddingProfile(
+          provider: 'OpenAI',
+          model: 'text-embedding-3-small',
+          dimension: 1536,
+        ),
+      );
+
+      final decision = strategy.evaluateIndex(
+        const VectorIndexMetadata(
+          embeddingProfile: EmbeddingProfile(
+            model: 'text-embedding-3-small',
+            dimension: 1536,
+          ),
+        ),
+      );
+
+      expect(decision.status, VectorMemoryIndexStatus.ready);
+      expect(decision.canSearch, true);
+    });
   });
 }

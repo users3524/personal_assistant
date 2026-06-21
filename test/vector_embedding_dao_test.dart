@@ -85,6 +85,26 @@ void main() {
       expect(rows.single.contentHash, 'changed');
     });
 
+    test('reads current index metadata for search guard', () async {
+      final now = DateTime(2026, 6, 21, 9);
+      expect(await dao.getIndexMetadata(), null);
+
+      await dao.upsert(
+        _embedding(
+          now: now,
+          sourceType: MilestoneSourceType.dailyReview,
+          sourceId: 7,
+          vectorData: _vector([1, 0, 0, 0]),
+        ),
+      );
+
+      final metadata = await dao.getIndexMetadata();
+
+      expect(metadata?.storageBackend.storageValue, 'sqlite_blob');
+      expect(metadata?.embeddingProfile.model, 'text-embedding-3-small');
+      expect(metadata?.embeddingProfile.dimension, 4);
+    });
+
     test('enforces source id and vector metadata rules', () async {
       final now = DateTime(2026, 6, 21, 9);
 

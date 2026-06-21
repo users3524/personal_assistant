@@ -65,8 +65,7 @@ class EmbeddingProfile {
     );
   }
 
-  bool get isConfigured =>
-      provider.trim().isNotEmpty && model.trim().isNotEmpty && dimension > 0;
+  bool get isConfigured => model.trim().isNotEmpty && dimension > 0;
 
   Map<String, dynamic> toJson() => {
     'provider': provider,
@@ -185,7 +184,8 @@ class VectorMemoryStrategy {
     }
 
     final currentProfile = currentIndex.embeddingProfile;
-    if (currentProfile.provider != embeddingProfile.provider) {
+    if (currentProfile.provider.isNotEmpty &&
+        currentProfile.provider != embeddingProfile.provider) {
       return const VectorMemoryIndexDecision(
         status: VectorMemoryIndexStatus.providerMismatch,
         canSearch: false,

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../../../core/ai/vector_memory_strategy.dart';
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/milestone_entity.dart';
 import '../../domain/entities/vector_embedding_entity.dart';
@@ -88,6 +89,22 @@ class VectorEmbeddingDao {
               ..orderBy([(t) => OrderingTerm.asc(t.id)]))
             .get();
     return rows.map(_toEntity).toList();
+  }
+
+  Future<VectorIndexMetadata?> getIndexMetadata() async {
+    final row =
+        await (_db.select(_db.vectorEmbeddings)
+              ..orderBy([(t) => OrderingTerm.asc(t.id)])
+              ..limit(1))
+            .getSingleOrNull();
+    if (row == null) return null;
+    return VectorIndexMetadata(
+      storageBackend: VectorStorageBackend.fromStorage(row.storageBackend),
+      embeddingProfile: EmbeddingProfile(
+        model: row.embeddingModel,
+        dimension: row.dimension,
+      ),
+    );
   }
 
   Future<int> deleteBySource({

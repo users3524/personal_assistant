@@ -62,7 +62,7 @@
 | 对象 | 规划用途 | 注意事项 |
 | --- | --- | --- |
 | `user_preferences.ai_config` | 保存首版 `LLMStrategyConfig` JSON。 | 已在 schema v9 落地；API Key 不放 JSON，继续走安全存储。 |
-| `chat_turns` | 保存日间对话、离线便签、在线 turn 计数。 | `turn_date` 使用本地 `YYYY-MM-DD` 字符串。 |
+| `chat_turns` | 保存日间对话、离线便签、在线 turn 计数。 | `turn_date` 使用本地 `YYYY-MM-DD` 字符串；索引 `turn_date + consumes_cloud_turn` 和 `turn_date + created_at`。 |
 | `review_generation_jobs` | 保存深夜生成任务、状态、`raw_assets_dump`、`attempt_count`、失败原因。 | `target_date` 使用本地 `YYYY-MM-DD`；成功 7 天后清理 raw dump。 |
 | `daily_reviews.calibration_required` | 日报热表增加校准状态。 | 只保存高频读取字段，不把原始长文本塞入日报表。 |
 | `milestones` | 高光中转池/正式池。 | `is_confirmed_by_user = false` 时不得直接投递正式简历。 |
@@ -74,7 +74,7 @@
 
 | 版本 | 阶段 | 范围 | 验证重点 |
 | --- | --- | --- |
-| v10 | 捕获层 | 新增 `chat_turns`，必要时扩展策略预算字段；不改 `daily_reviews`。 | 15 轮熔断、离线便签、白天 prompt 预算；旧备份无 `chat_turns` 时可导入。 |
+| v10 | 捕获层 | 新增 `chat_turns`，必要时扩展策略预算字段；不改 `daily_reviews`。 | 15 轮熔断按 `role=user AND consumes_cloud_turn=true` 计数；旧备份无 `chat_turns` 时可导入为空表。 |
 | v11 | 生成任务层 | 新增 `review_generation_jobs`，为 `daily_reviews` 追加 `calibration_required` 等热字段。 | Catch-Up Guard、raw dump 留存、解析降级；`daily_reviews.date` / `summary` 不改名、不改类型。 |
 | v12 | 高光层 | 新增 `milestones`、`milestone_relations`、`project_milestone_relations`。 | 高光确认流、多源追溯、源数据删除时事务清理多态关联。 |
 | v13 | 向量层 | 新增 `vector_embeddings` 和人生罗盘相关表/字段。 | embedding 模型/维度兼容校验、线性检索性能基准、分区/Isolate 策略。 |

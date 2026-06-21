@@ -111,7 +111,7 @@ feature/
 
 来源：`lib/core/database/app_database.dart`
 
-当前 `schemaVersion = 8`，注册 14 张表：
+当前 `schemaVersion = 9`，注册 14 张表：
 
 | 表 | 当前用途 |
 | --- | --- |
@@ -141,6 +141,7 @@ feature/
 | `<6` | 创建 `todo_lists`，并为 `todos` 增加 `list_id`、`parent_id`、`recurrence_rule`。 |
 | `<7` | 为待办树查询、清单筛选、活跃任务统计和今日完成统计补充 `todos` 索引。 |
 | `<8` | 为文玩榜单与日期区间统计补充 `patting_logs(item_id, date DESC)`、`patting_logs(date, item_id)` 索引。 |
+| `<9` | 为 `user_preferences` 增加 `ai_config`，保存非敏感 LLM 策略 JSON。 |
 
 ## 6. 当前模块依赖流
 

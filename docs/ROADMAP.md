@@ -55,13 +55,13 @@
 | 测试补齐 | 当前测试是占位，需要 DAO、Provider、迁移、备份恢复测试。 |
 | API Key 安全边界 | 已接入平台安全存储并从 JSON 备份中剔除；后续需要做真机平台验证和加密备份格式评估。 |
 
-## 4. 下一版 Schema 草案
+## 4. 下一版 Schema 微迁移顺序
 
-以下是智能化迁移的 schema 草案，不属于当前 `schemaVersion = 8`。
+以下是智能化迁移的 schema 草案，不属于当前 `schemaVersion = 9`。后续应按小版本递增释放，每个版本只覆盖一个风险面，并配套迁移、备份恢复和 DAO/Provider 测试。
 
 | 对象 | 规划用途 | 注意事项 |
 | --- | --- | --- |
-| `user_preferences.ai_config` | 保存首版 `LLMStrategyConfig` JSON。 | 不引入额外 KV 存储；API Key 不放 JSON，改走安全存储。暂不新增 `system_configs`。 |
+| `user_preferences.ai_config` | 保存首版 `LLMStrategyConfig` JSON。 | 已在 schema v9 落地；API Key 不放 JSON，继续走安全存储。 |
 | `chat_turns` | 保存日间对话、离线便签、在线 turn 计数。 | `turn_date` 使用本地 `YYYY-MM-DD` 字符串。 |
 | `review_generation_jobs` | 保存深夜生成任务、状态、`raw_assets_dump`、`attempt_count`、失败原因。 | `target_date` 使用本地 `YYYY-MM-DD`；成功 7 天后清理 raw dump。 |
 | `daily_reviews.calibration_required` | 日报热表增加校准状态。 | 只保存高频读取字段，不把原始长文本塞入日报表。 |
@@ -70,13 +70,14 @@
 | `project_milestone_relations` | 项目经历与高光多对多。 | 避免 `project_experiences` 单外键限制。 |
 | `vector_embeddings` | 向量存储。 | 需明确 Float32/Float64 编码、字节序、模型、维度和重建策略。 |
 
-迁移阶段建议：
+建议版本顺序：
 
-| 阶段 | 范围 | 验证重点 |
+| 版本 | 阶段 | 范围 | 验证重点 |
 | --- | --- | --- |
-| 捕获层 | `chat_turns`、策略配置字段/表。 | 15 轮熔断、离线便签、白天 prompt 预算。 |
-| 生成/高光层 | `review_generation_jobs`、`daily_reviews.calibration_required`、`milestones`、关联表。 | Catch-Up Guard、raw dump 留存、解析降级、高光确认流。 |
-| 向量层 | `vector_embeddings`、人生罗盘相关字段/表。 | 模型/维度兼容校验、线性检索性能、分区/Isolate 策略。 |
+| v10 | 捕获层 | 新增 `chat_turns`，必要时扩展策略预算字段；不改 `daily_reviews`。 | 15 轮熔断、离线便签、白天 prompt 预算；旧备份无 `chat_turns` 时可导入。 |
+| v11 | 生成任务层 | 新增 `review_generation_jobs`，为 `daily_reviews` 追加 `calibration_required` 等热字段。 | Catch-Up Guard、raw dump 留存、解析降级；`daily_reviews.date` / `summary` 不改名、不改类型。 |
+| v12 | 高光层 | 新增 `milestones`、`milestone_relations`、`project_milestone_relations`。 | 高光确认流、多源追溯、源数据删除时事务清理多态关联。 |
+| v13 | 向量层 | 新增 `vector_embeddings` 和人生罗盘相关表/字段。 | embedding 模型/维度兼容校验、线性检索性能基准、分区/Isolate 策略。 |
 
 存量热表保护：`daily_reviews.date` 和 `daily_reviews.summary` 是当前代码使用中的核心字段，后续迁移只做追加列，不重命名、不改类型。
 

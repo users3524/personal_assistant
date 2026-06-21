@@ -79,7 +79,7 @@
 | v12 | 高光层 | 新增 `milestones`、`milestone_relations`、`project_milestone_relations`。 | 高光确认流、多源追溯、源数据删除时事务清理多态关联。 |
 | v13 | 向量层 | 新增 `vector_embeddings` 和人生罗盘相关表/字段。 | embedding 模型/维度兼容校验、线性检索性能基准、分区/Isolate 策略。 |
 
-存量热表保护：`daily_reviews.date` 和 `daily_reviews.summary` 是当前代码使用中的核心字段，后续迁移只做追加列，不重命名、不改类型。
+存量热表保护：`daily_reviews.date` 和 `daily_reviews.summary` 是当前代码使用中的核心字段，后续迁移只做追加列，不重命名、不改类型。每个触及复盘 schema 的迁移测试都要断言这两列仍存在、类型不变，并用旧备份恢复一条日报验证语义不丢失。
 
 ## 5. P1：待办改进
 

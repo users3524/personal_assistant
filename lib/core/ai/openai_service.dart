@@ -4,18 +4,20 @@ library;
 import 'package:dio/dio.dart';
 
 import '../../../core/ai/ai_output_parser.dart';
+import '../../../core/ai/llm_strategy_config.dart';
 import '../../../core/ai/ai_service.dart';
-import '../../../core/ai/ai_prompts.dart';
+import '../../../core/ai/prompt_builder.dart';
 
 class OpenAIService implements AIService {
   final Dio _dio;
   final String _model;
-  final String _apiKey;
+  final PromptBuilder _promptBuilder;
 
   OpenAIService({
     required String baseUrl,
     required String apiKey,
     String model = 'gpt-3.5-turbo',
+    LLMStrategyConfig strategy = const LLMStrategyConfig(),
     Dio? dio,
   }) : _dio =
            dio ??
@@ -31,7 +33,7 @@ class OpenAIService implements AIService {
              ),
            ),
        _model = model,
-       _apiKey = apiKey;
+       _promptBuilder = PromptBuilder(strategy: strategy);
 
   @override
   Future<DailyReviewAIOutput> generateDailyReview({
@@ -43,7 +45,7 @@ class OpenAIService implements AIService {
     required List<String> completedTitles,
     required int pattingMinutes,
   }) async {
-    final prompt = AIPrompts.dailyReviewSystemPrompt(
+    final prompt = _promptBuilder.buildDailyReviewPrompt(
       summary: summary,
       highlights: highlights,
       improvements: improvements,
@@ -59,10 +61,10 @@ class OpenAIService implements AIService {
         'model': _model,
         'messages': [
           {'role': 'system', 'content': '你是一个温暖、专业的个人成长助手。'},
-          {'role': 'user', 'content': prompt},
+          {'role': 'user', 'content': prompt.prompt},
         ],
         'temperature': 0.7,
-        'max_tokens': 500,
+        'max_tokens': prompt.maxOutputTokens,
       },
     );
 
@@ -91,7 +93,7 @@ class OpenAIService implements AIService {
         })
         .join('\n');
 
-    final prompt = AIPrompts.weeklyReportSystemPrompt(
+    final prompt = _promptBuilder.buildWeeklyReportPrompt(
       weekReviewsText: reviewsText,
     );
 
@@ -101,10 +103,10 @@ class OpenAIService implements AIService {
         'model': _model,
         'messages': [
           {'role': 'system', 'content': '你是一个专业的职场复盘助手。'},
-          {'role': 'user', 'content': prompt},
+          {'role': 'user', 'content': prompt.prompt},
         ],
         'temperature': 0.7,
-        'max_tokens': 1000,
+        'max_tokens': prompt.maxOutputTokens,
       },
     );
 
@@ -115,15 +117,16 @@ class OpenAIService implements AIService {
 
   @override
   Future<String> chat(String message) async {
+    final prompt = _promptBuilder.buildChatPrompt(message);
     final response = await _dio.post(
       '/v1/chat/completions',
       data: {
         'model': _model,
         'messages': [
-          {'role': 'user', 'content': message},
+          {'role': 'user', 'content': prompt.prompt},
         ],
         'temperature': 0.7,
-        'max_tokens': 1000,
+        'max_tokens': prompt.maxOutputTokens,
       },
     );
 

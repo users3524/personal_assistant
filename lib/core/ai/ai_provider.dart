@@ -112,5 +112,6 @@ final aiServiceProvider = Provider<AIService?>((ref) {
     baseUrl: config.baseUrl,
     apiKey: config.apiKey,
     model: config.model,
+    strategy: config.strategy,
   );
 });

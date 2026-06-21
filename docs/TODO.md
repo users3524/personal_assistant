@@ -73,7 +73,7 @@
 - [x] `LLMStrategyConfig` 只保存供应商、模型、baseUrl、预算等非敏感配置；API Key 只读安全存储引用。
 - [x] 设计下一版 schema 微迁移顺序：捕获层、生成/高光层、向量层分阶段释放。
 - [x] 迁移时禁止重命名或变更 `daily_reviews.date` / `summary` 类型，只追加新列。
-- [ ] 设计 `PromptBuilder` 服务层：prompt 组装、预算估算、裁剪、turn 拦截、离线切换。
+- [x] 设计 `PromptBuilder` 服务层：prompt 组装、预算估算、裁剪、turn 拦截、离线切换。
 - [ ] 设计 `chat_turns` 表或等价存储：日期、角色、内容、是否离线、是否消耗云端请求。
 - [ ] 实现每日 15 轮在线请求限制。
 - [ ] 熔断后进入离线便签模式，只本地落盘，不请求云端。

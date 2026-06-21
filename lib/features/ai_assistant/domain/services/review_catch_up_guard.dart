@@ -29,16 +29,14 @@ class ReviewCatchUpGuard {
     ).subtract(const Duration(days: 1));
     final targetDate = formatLocalDate(yesterday);
     final existing = await _jobs.getByTargetDate(targetDate);
-    final shouldRunCatchUp =
-        existing == null ||
-        existing.status == ReviewGenerationJobStatus.pending ||
-        existing.status == ReviewGenerationJobStatus.failed;
+    final shouldRunCatchUp = _shouldRunCatchUp(existing);
 
     final job = shouldRunCatchUp
         ? await _jobs.getOrCreatePending(targetDate, now: now)
-        : existing;
+        : existing!;
 
-    if (existing?.status == ReviewGenerationJobStatus.failed) {
+    if (existing?.status == ReviewGenerationJobStatus.failed &&
+        shouldRunCatchUp) {
       await _jobs.markPending(targetDate, now: now);
       final pending = await _jobs.getByTargetDate(targetDate);
       return ReviewCatchUpGuardResult(
@@ -60,5 +58,13 @@ class ReviewCatchUpGuard {
     return '${local.year.toString().padLeft(4, '0')}-'
         '${local.month.toString().padLeft(2, '0')}-'
         '${local.day.toString().padLeft(2, '0')}';
+  }
+
+  bool _shouldRunCatchUp(ReviewGenerationJobEntity? job) {
+    if (job == null) return true;
+    if (job.status == ReviewGenerationJobStatus.success) return false;
+    if (job.hasExhaustedStructuredCalls) return false;
+    return job.status == ReviewGenerationJobStatus.pending ||
+        job.status == ReviewGenerationJobStatus.failed;
   }
 }

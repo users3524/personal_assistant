@@ -70,8 +70,10 @@ class ReviewGenerationJobDao implements ReviewGenerationJobStore {
 
   Future<bool> needsCatchUp(String targetDate) async {
     final job = await getByTargetDate(targetDate);
-    return job == null ||
-        job.status == ReviewGenerationJobStatus.pending ||
+    if (job == null) return true;
+    if (job.status == ReviewGenerationJobStatus.success) return false;
+    if (job.hasExhaustedStructuredCalls) return false;
+    return job.status == ReviewGenerationJobStatus.pending ||
         job.status == ReviewGenerationJobStatus.failed;
   }
 
@@ -94,6 +96,22 @@ class ReviewGenerationJobDao implements ReviewGenerationJobStore {
     );
   }
 
+  @override
+  Future<int> incrementAttempt(String targetDate, {DateTime? now}) async {
+    await getOrCreatePending(targetDate, now: now);
+    await _db.customStatement(
+      '''
+UPDATE review_generation_jobs
+SET attempt_count = attempt_count + 1
+WHERE target_date = ?
+''',
+      [targetDate],
+    );
+    final job = await getByTargetDate(targetDate);
+    return job?.attemptCount ?? 0;
+  }
+
+  @override
   Future<void> markSuccess(
     String targetDate, {
     String? rawAssetsDump,
@@ -107,6 +125,7 @@ class ReviewGenerationJobDao implements ReviewGenerationJobStore {
     );
   }
 
+  @override
   Future<void> markFailed(
     String targetDate, {
     String? rawAssetsDump,
@@ -149,7 +168,6 @@ class ReviewGenerationJobDao implements ReviewGenerationJobStore {
 UPDATE review_generation_jobs
 SET status = ?,
     raw_assets_dump = ?,
-    attempt_count = attempt_count + 1,
     failure_reason = ?,
     processed_at = ?
 WHERE target_date = ?

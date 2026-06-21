@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'ai_service.dart';
 
 class AIOutputParser {
@@ -43,6 +45,44 @@ class AIOutputParser {
           : 'AI 返回内容缺少改进建议，请参考评语字段手动补全。',
       sentimentTag: sentimentTag,
     );
+  }
+
+  static DailyReviewAIOutput? tryParseDailyJson(String text) {
+    try {
+      final decoded = jsonDecode(_extractJsonObject(text.trim()));
+      if (decoded is! Map<String, dynamic>) return null;
+
+      final comment = _readJsonString(decoded, [
+        'comment',
+        'ai_comment',
+        'aiComment',
+        '评语',
+      ]);
+      final suggestion = _readJsonString(decoded, [
+        'suggestion',
+        'ai_suggestion',
+        'aiSuggestion',
+        '改进建议',
+        '建议',
+      ]);
+      final sentimentTag = _readJsonString(decoded, [
+        'sentiment_tag',
+        'sentimentTag',
+        '情绪标签',
+      ]);
+
+      if (comment == null || suggestion == null || sentimentTag == null) {
+        return null;
+      }
+
+      return DailyReviewAIOutput(
+        comment: comment,
+        suggestion: suggestion,
+        sentimentTag: _normalizeSentimentTag(sentimentTag),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   static WeeklyReportAIOutput parseWeekly(String text) {
@@ -136,6 +176,23 @@ class AIOutputParser {
     if (raw.contains('焦虑')) return '焦虑';
     if (raw.contains('疲惫')) return '疲惫';
     return '平稳';
+  }
+
+  static String _extractJsonObject(String raw) {
+    final start = raw.indexOf('{');
+    final end = raw.lastIndexOf('}');
+    if (start == -1 || end < start) return raw;
+    return raw.substring(start, end + 1);
+  }
+
+  static String? _readJsonString(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
   }
 
   static String? _weeklySectionOf(String line) {

@@ -40,6 +40,7 @@ void main() {
       await dao.getOrCreatePending('2026-06-20');
       expect(await dao.needsCatchUp('2026-06-20'), true);
 
+      expect(await dao.incrementAttempt('2026-06-20'), 1);
       await dao.markFailed(
         '2026-06-20',
         failureReason: 'json parse failed',
@@ -57,11 +58,29 @@ void main() {
       final job = await dao.getByTargetDate('2026-06-20');
       expect(job?.status, ReviewGenerationJobStatus.success);
       expect(job?.rawAssetsDump, '{"target_date":"2026-06-20"}');
-      expect(job?.attemptCount, 2);
+      expect(job?.attemptCount, 1);
       expect(job?.processedAt, DateTime(2026, 6, 21, 3));
     });
 
+    test('does not need catch-up after three structured calls fail', () async {
+      await dao.getOrCreatePending('2026-06-20');
+      await dao.incrementAttempt('2026-06-20');
+      await dao.incrementAttempt('2026-06-20');
+      await dao.incrementAttempt('2026-06-20');
+      await dao.markFailed(
+        '2026-06-20',
+        failureReason: 'structured output exhausted',
+        processedAt: DateTime(2026, 6, 21, 2),
+      );
+
+      expect(await dao.needsCatchUp('2026-06-20'), false);
+      final job = await dao.getByTargetDate('2026-06-20');
+      expect(job?.attemptCount, 3);
+      expect(job?.status, ReviewGenerationJobStatus.failed);
+    });
+
     test('mark pending clears failure details but keeps attempts', () async {
+      await dao.incrementAttempt('2026-06-20');
       await dao.markFailed(
         '2026-06-20',
         rawAssetsDump: '{"bad":true}',

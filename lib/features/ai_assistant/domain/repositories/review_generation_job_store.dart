@@ -9,4 +9,19 @@ abstract class ReviewGenerationJobStore {
   });
 
   Future<void> markPending(String targetDate, {DateTime? now});
+
+  Future<int> incrementAttempt(String targetDate, {DateTime? now});
+
+  Future<void> markSuccess(
+    String targetDate, {
+    String? rawAssetsDump,
+    DateTime? processedAt,
+  });
+
+  Future<void> markFailed(
+    String targetDate, {
+    String? rawAssetsDump,
+    String? failureReason,
+    DateTime? processedAt,
+  });
 }

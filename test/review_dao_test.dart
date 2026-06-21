@@ -63,6 +63,36 @@ void main() {
 
       expect(daily?.calibrationRequired, true);
     });
+
+    test('marks existing daily review as calibration required', () async {
+      await dao.insertDaily(_daily(DateTime(2026, 6, 21), 'Normal day'));
+
+      await dao.markDailyCalibrationRequired(
+        DateTime(2026, 6, 21),
+        now: DateTime(2026, 6, 22, 3),
+      );
+
+      final daily = await dao.getDailyByDate(DateTime(2026, 6, 21));
+      expect(daily?.summary, 'Normal day');
+      expect(daily?.calibrationRequired, true);
+      expect(daily?.updatedAt, DateTime(2026, 6, 22, 3));
+    });
+
+    test(
+      'creates placeholder daily review when calibration is required',
+      () async {
+        await dao.markDailyCalibrationRequired(
+          DateTime(2026, 6, 21, 15),
+          now: DateTime(2026, 6, 22, 3),
+        );
+
+        final daily = await dao.getDailyByDate(DateTime(2026, 6, 21));
+        expect(daily?.date, DateTime(2026, 6, 21));
+        expect(daily?.summary, contains('深夜 AI 生成失败'));
+        expect(daily?.calibrationRequired, true);
+        expect(daily?.createdAt, DateTime(2026, 6, 22, 3));
+      },
+    );
   });
 }
 

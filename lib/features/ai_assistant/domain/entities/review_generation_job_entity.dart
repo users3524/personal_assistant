@@ -13,6 +13,8 @@ enum ReviewGenerationJobStatus {
   String get storageValue => name;
 }
 
+const int maxNightlyStructuredReviewCalls = 3;
+
 class ReviewGenerationJobEntity {
   final int? id;
   final String targetDate;
@@ -33,6 +35,9 @@ class ReviewGenerationJobEntity {
     this.processedAt,
     required this.createdAt,
   });
+
+  bool get hasExhaustedStructuredCalls =>
+      attemptCount >= maxNightlyStructuredReviewCalls;
 
   ReviewGenerationJobEntity copyWith({
     int? id,

@@ -54,6 +54,8 @@ class ReviewDao {
       isAiGenerated: Value(entity.isAiGenerated),
       isManuallyEdited: Value(entity.isManuallyEdited),
       calibrationRequired: Value(entity.calibrationRequired),
+      createdAt: Value(entity.createdAt),
+      updatedAt: Value(entity.updatedAt),
     );
   }
 
@@ -146,6 +148,41 @@ class ReviewDao {
       _dailyToCompanion(entity).copyWith(updatedAt: Value(DateTime.now())),
     );
     return entity;
+  }
+
+  Future<DailyReviewEntity> markDailyCalibrationRequired(
+    DateTime date, {
+    bool calibrationRequired = true,
+    DateTime? now,
+  }) async {
+    final existing = await getDailyByDate(date);
+    final updatedAt = now ?? DateTime.now();
+    if (existing != null) {
+      final updated = existing.copyWith(
+        calibrationRequired: calibrationRequired,
+        updatedAt: updatedAt,
+      );
+      await (_db.update(
+        _db.dailyReviews,
+      )..where((t) => t.id.equals(existing.id!))).write(
+        DailyReviewsCompanion(
+          calibrationRequired: Value(calibrationRequired),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+      return updated;
+    }
+
+    final normalized = DateTime(date.year, date.month, date.day);
+    return insertDaily(
+      DailyReviewEntity(
+        date: normalized,
+        summary: '深夜 AI 生成失败，请手动校准当日复盘。',
+        calibrationRequired: calibrationRequired,
+        createdAt: updatedAt,
+        updatedAt: updatedAt,
+      ),
+    );
   }
 
   Future<void> deleteDaily(DateTime date) async {

@@ -58,6 +58,28 @@ void main() {
       expect(result.job.failureReason, null);
       expect(result.job.processedAt, null);
     });
+
+    test('does not reset failed job after three structured calls', () async {
+      final store = _FakeReviewGenerationJobStore();
+      store.jobs['2026-06-20'] = _job(
+        '2026-06-20',
+        ReviewGenerationJobStatus.failed,
+        attemptCount: 3,
+        failureReason: 'structured output exhausted',
+        processedAt: DateTime(2026, 6, 21, 2),
+      );
+      final guard = ReviewCatchUpGuard(
+        store,
+        now: () => DateTime(2026, 6, 21, 8),
+      );
+
+      final result = await guard.ensureYesterdayJob();
+
+      expect(result.shouldRunCatchUp, false);
+      expect(result.job.status, ReviewGenerationJobStatus.failed);
+      expect(result.job.attemptCount, 3);
+      expect(result.job.failureReason, 'structured output exhausted');
+    });
   });
 }
 
@@ -93,11 +115,58 @@ class _FakeReviewGenerationJobStore implements ReviewGenerationJobStore {
       createdAt: existing.createdAt,
     );
   }
+
+  @override
+  Future<int> incrementAttempt(String targetDate, {DateTime? now}) async {
+    final existing = await getOrCreatePending(targetDate, now: now);
+    final next = existing.copyWith(attemptCount: existing.attemptCount + 1);
+    jobs[targetDate] = next;
+    return next.attemptCount;
+  }
+
+  @override
+  Future<void> markSuccess(
+    String targetDate, {
+    String? rawAssetsDump,
+    DateTime? processedAt,
+  }) async {
+    final existing = await getOrCreatePending(targetDate, now: processedAt);
+    jobs[targetDate] = ReviewGenerationJobEntity(
+      id: existing.id,
+      targetDate: existing.targetDate,
+      status: ReviewGenerationJobStatus.success,
+      attemptCount: existing.attemptCount,
+      rawAssetsDump: rawAssetsDump,
+      processedAt: processedAt,
+      createdAt: existing.createdAt,
+    );
+  }
+
+  @override
+  Future<void> markFailed(
+    String targetDate, {
+    String? rawAssetsDump,
+    String? failureReason,
+    DateTime? processedAt,
+  }) async {
+    final existing = await getOrCreatePending(targetDate, now: processedAt);
+    jobs[targetDate] = ReviewGenerationJobEntity(
+      id: existing.id,
+      targetDate: existing.targetDate,
+      status: ReviewGenerationJobStatus.failed,
+      rawAssetsDump: rawAssetsDump,
+      attemptCount: existing.attemptCount,
+      failureReason: failureReason,
+      processedAt: processedAt,
+      createdAt: existing.createdAt,
+    );
+  }
 }
 
 ReviewGenerationJobEntity _job(
   String targetDate,
   ReviewGenerationJobStatus status, {
+  int attemptCount = 0,
   String? failureReason,
   DateTime? processedAt,
 }) {
@@ -105,6 +174,7 @@ ReviewGenerationJobEntity _job(
     id: 1,
     targetDate: targetDate,
     status: status,
+    attemptCount: attemptCount,
     failureReason: failureReason,
     processedAt: processedAt,
     createdAt: DateTime(2026, 6, 21),

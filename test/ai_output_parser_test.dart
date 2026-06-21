@@ -24,6 +24,26 @@ void main() {
       expect(output.sentimentTag, '平稳');
     });
 
+    test('parses strict daily JSON output', () {
+      final output = AIOutputParser.tryParseDailyJson('''
+{
+  "comment": "今天节奏稳定，关键任务推进得很踏实。",
+  "suggestion": "明天先处理最重要的一件事，再安排零散事项。",
+  "sentiment_tag": "高效"
+}
+''');
+
+      expect(output?.comment, '今天节奏稳定，关键任务推进得很踏实。');
+      expect(output?.suggestion, '明天先处理最重要的一件事，再安排零散事项。');
+      expect(output?.sentimentTag, '高效');
+    });
+
+    test('rejects malformed daily JSON output', () {
+      final output = AIOutputParser.tryParseDailyJson('{"comment":"缺字段"}');
+
+      expect(output, null);
+    });
+
     test('fills missing weekly sections with visible placeholders', () {
       final output = AIOutputParser.parseWeekly('''
 【本周概览】

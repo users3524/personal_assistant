@@ -39,6 +39,60 @@ void main() {
     });
 
     test(
+      'saves todo lists in creation order and keeps task list links',
+      () async {
+        final firstCreatedAt = DateTime(2026, 6, 20, 9);
+        final secondCreatedAt = DateTime(2026, 6, 21, 9);
+
+        final later = await dao.saveList(
+          TodoListEntity(
+            name: 'Later',
+            category: '工作',
+            createdAt: secondCreatedAt,
+          ),
+        );
+        final earlier = await dao.saveList(
+          TodoListEntity(
+            name: 'Earlier',
+            category: '生活',
+            createdAt: firstCreatedAt,
+          ),
+        );
+        await dao.insert(
+          _todo(
+            'Listed task',
+            firstCreatedAt,
+            listId: earlier.id,
+            category: '生活',
+          ),
+        );
+
+        final lists = await dao.getLists();
+        final tasks = await dao.getTree();
+
+        expect(lists.map((list) => list.name), ['Earlier', 'Later']);
+        expect(later.id, isNotNull);
+        expect(tasks.single.listId, earlier.id);
+        expect(tasks.single.category, '生活');
+      },
+    );
+
+    test('deleting todo list keeps tasks and clears list id', () async {
+      final now = DateTime(2026, 6, 20, 9);
+      final list = await dao.saveList(
+        TodoListEntity(name: 'Focus', category: '工作', createdAt: now),
+      );
+      final task = await dao.insert(_todo('Listed task', now, listId: list.id));
+
+      await dao.deleteList(list.id!);
+
+      expect(await dao.getLists(), isEmpty);
+      final reloaded = await dao.getById(task.id!);
+      expect(reloaded, isNotNull);
+      expect(reloaded!.listId, null);
+    });
+
+    test(
       'counts today total from parent tasks only with half-open day',
       () async {
         final now = DateTime.now();
@@ -284,10 +338,12 @@ TodoEntity _todo(
   DateTime? deletedAt,
   int? actualMinutes,
   String? recurrenceRule,
+  int? listId,
+  String category = '工作',
 }) {
   return TodoEntity(
     title: title,
-    category: '工作',
+    category: category,
     status: status,
     dueDate: dueDate,
     startedAt: startedAt ?? now,
@@ -296,6 +352,7 @@ TodoEntity _todo(
     deletedAt: deletedAt,
     actualMinutes: actualMinutes,
     recurrenceRule: recurrenceRule,
+    listId: listId,
     createdAt: now,
     updatedAt: now,
   );

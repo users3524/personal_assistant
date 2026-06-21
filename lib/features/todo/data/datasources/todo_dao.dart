@@ -17,7 +17,9 @@ class TodoDao {
   // ===== 清单 CRUD =====
 
   Future<List<TodoListEntity>> getLists() async {
-    final rows = await _db.select(_db.todoLists).get();
+    final rows = await (_db.select(
+      _db.todoLists,
+    )..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).get();
     return rows
         .map(
           (r) => TodoListEntity(
@@ -48,13 +50,22 @@ class TodoDao {
           TodoListsCompanion(
             name: Value(list.name),
             category: Value(list.category),
+            createdAt: Value(list.createdAt),
           ),
         );
     return list.copyWith(id: id);
   }
 
   Future<void> deleteList(int id) async {
-    await (_db.delete(_db.todoLists)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      await (_db.update(_db.todos)..where((t) => t.listId.equals(id))).write(
+        TodosCompanion(
+          listId: const Value<int?>(null),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      await (_db.delete(_db.todoLists)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   // ===== 实体转换 =====

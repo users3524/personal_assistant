@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../domain/entities/todo_entity.dart';
+import '../providers/todo_categories_provider.dart';
 import '../providers/todo_providers.dart';
 import '../../../ai_assistant/presentation/providers/review_providers.dart';
 
@@ -40,6 +41,9 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   @override
   Widget build(BuildContext context) {
     final todoListAsync = ref.watch(todoListProvider);
+    final todoLists =
+        ref.watch(todoListsProvider).valueOrNull ?? const <TodoListEntity>[];
+    final selectedListFilter = ref.watch(selectedTodoListFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,6 +81,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
           _buildCalendarHeader(),
           _buildCalendarGrid(),
           const Divider(height: 1),
+          _buildTodoListFilterBar(todoListAsync.valueOrNull ?? const []),
           // 统计仪表盘（仅周视图）
           if (_viewMode == CalendarView.week) const TodoStatsCard(),
           // 选中日期的待办列表
@@ -93,8 +98,12 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                             (t) => _isSameDay(t.displayDate, _selectedDate),
                           )
                           .toList();
+                final filteredTodos = _filterByTodoList(
+                  dayTodos,
+                  selectedListFilter,
+                );
 
-                if (dayTodos.isEmpty) {
+                if (filteredTodos.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -107,16 +116,20 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                           ).colorScheme.primary.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          '当天没有待办',
-                          style: TextStyle(color: Colors.grey),
+                        Text(
+                          _emptyMessageForFilter(selectedListFilter, todoLists),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
                   );
                 }
                 return TodoListView(
-                  todos: dayTodos,
+                  todos: filteredTodos,
+                  listNames: {
+                    for (final list in todoLists)
+                      if (list.id != null) list.id!: list.name,
+                  },
                   onToggle: (todo) {
                     if (todo.isDone || todo.status == TodoStatus.cancelled) {
                       ref.read(todoListProvider.notifier).reopenTodo(todo.id!);
@@ -165,9 +178,167 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/todos/new'),
+        onPressed: () => _openNewTodoForm(todoLists, selectedListFilter),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  List<TodoEntity> _filterByTodoList(
+    List<TodoEntity> todos,
+    int? selectedListId,
+  ) {
+    if (selectedListId == null) return todos;
+    if (selectedListId == unlistedTodoListFilter) {
+      return todos.where((todo) => todo.listId == null).toList();
+    }
+    return todos.where((todo) => todo.listId == selectedListId).toList();
+  }
+
+  String _emptyMessageForFilter(
+    int? selectedListId,
+    List<TodoListEntity> lists,
+  ) {
+    if (selectedListId == null) return '当天没有待办';
+    if (selectedListId == unlistedTodoListFilter) return '未归清单里没有当天待办';
+    final selectedList = lists.where((list) => list.id == selectedListId);
+    final name = selectedList.isEmpty ? '这个清单' : selectedList.first.name;
+    return '「$name」没有当天待办';
+  }
+
+  void _openNewTodoForm(List<TodoListEntity> lists, int? selectedListId) {
+    final selectedList =
+        selectedListId == null || selectedListId == unlistedTodoListFilter
+        ? null
+        : _findTodoList(lists, selectedListId);
+    final queryParameters = selectedList == null
+        ? null
+        : {
+            'listId': selectedList.id.toString(),
+            'category': selectedList.category,
+          };
+    context.push(
+      Uri(path: '/todos/new', queryParameters: queryParameters).toString(),
+    );
+  }
+
+  TodoListEntity? _findTodoList(List<TodoListEntity> lists, int id) {
+    for (final list in lists) {
+      if (list.id == id) return list;
+    }
+    return null;
+  }
+
+  Widget _buildTodoListFilterBar(List<TodoEntity> todos) {
+    final listsAsync = ref.watch(todoListsProvider);
+    final selectedListId = ref.watch(selectedTodoListFilterProvider);
+
+    return listsAsync.when(
+      data: (lists) {
+        final parentTodos = todos.where((todo) => todo.isParent).toList();
+        final totalCount = parentTodos.length;
+        final unlistedCount = parentTodos
+            .where((todo) => todo.listId == null)
+            .length;
+        final countsByListId = <int, int>{};
+        for (final todo in parentTodos) {
+          final listId = todo.listId;
+          if (listId == null) continue;
+          countsByListId[listId] = (countsByListId[listId] ?? 0) + 1;
+        }
+
+        return SizedBox(
+          height: 54,
+          child: Row(
+            children: [
+              Expanded(
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  children: [
+                    _buildFilterChip(
+                      label: '全部',
+                      icon: Icons.inbox_outlined,
+                      count: totalCount,
+                      selected: selectedListId == null,
+                      onTap: () =>
+                          ref
+                                  .read(selectedTodoListFilterProvider.notifier)
+                                  .state =
+                              null,
+                    ),
+                    _buildFilterChip(
+                      label: '未归清单',
+                      icon: Icons.folder_off_outlined,
+                      count: unlistedCount,
+                      selected: selectedListId == unlistedTodoListFilter,
+                      onTap: () =>
+                          ref
+                                  .read(selectedTodoListFilterProvider.notifier)
+                                  .state =
+                              unlistedTodoListFilter,
+                    ),
+                    ...lists.map(
+                      (list) => _buildFilterChip(
+                        label: list.name,
+                        icon: Icons.folder_outlined,
+                        count: countsByListId[list.id] ?? 0,
+                        selected: selectedListId == list.id,
+                        onTap: () =>
+                            ref
+                                .read(selectedTodoListFilterProvider.notifier)
+                                .state = list
+                                .id,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: '管理清单',
+                icon: const Icon(Icons.tune),
+                onPressed: () => _showTodoListManager(context),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox(
+        height: 54,
+        child: Center(child: LinearProgressIndicator()),
+      ),
+      error: (err, _) =>
+          SizedBox(height: 54, child: Center(child: Text('清单加载失败: $err'))),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    required int count,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        showCheckmark: false,
+        avatar: Icon(icon, size: 16),
+        label: Text('$label $count'),
+        selected: selected,
+        onSelected: (_) => onTap(),
+      ),
+    );
+  }
+
+  void _showTodoListManager(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => const _TodoListManagerSheet(),
     );
   }
 
@@ -475,6 +646,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
 /// 待办列表视图 — 支持双向滑动（左滑删除，右滑切换完成状态）。
 class TodoListView extends StatelessWidget {
   final List<TodoEntity> todos;
+  final Map<int, String> listNames;
   final Function(TodoEntity) onToggle;
   final Function(TodoEntity) onDelete;
   final Function(TodoEntity) onTap;
@@ -483,6 +655,7 @@ class TodoListView extends StatelessWidget {
   const TodoListView({
     super.key,
     required this.todos,
+    this.listNames = const {},
     required this.onToggle,
     required this.onDelete,
     required this.onTap,
@@ -546,6 +719,7 @@ class TodoListView extends StatelessWidget {
               : done[index - pending.length - (done.isNotEmpty ? 1 : 0)];
           return _TodoListTile(
             todo: todo,
+            listName: todo.listId == null ? null : listNames[todo.listId],
             onToggle: () => onToggle(todo),
             onDelete: () => onDelete(todo),
             onTap: () => onTap(todo),
@@ -558,12 +732,14 @@ class TodoListView extends StatelessWidget {
 
 class _TodoListTile extends StatelessWidget {
   final TodoEntity todo;
+  final String? listName;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onTap;
 
   const _TodoListTile({
     required this.todo,
+    required this.listName,
     required this.onToggle,
     required this.onDelete,
     required this.onTap,
@@ -649,56 +825,37 @@ class _TodoListTile extends StatelessWidget {
             fontWeight: todo.isDone ? FontWeight.normal : FontWeight.w500,
           ),
         ),
-        subtitle: Row(
+        subtitle: Wrap(
+          spacing: 6,
+          runSpacing: 4,
           children: [
-            Container(
-              margin: const EdgeInsets.only(top: 4, right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
+            _TodoMetaChip(label: todo.category, color: color),
+            if (listName != null)
+              _TodoMetaChip(
+                label: listName!,
+                color: Colors.indigo,
+                icon: Icons.folder_outlined,
               ),
-              child: Text(
-                todo.category,
-                style: TextStyle(fontSize: 10, color: color),
-              ),
-            ),
             if (todo.isParent && todo.subtasks.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 4, right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.teal.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.teal,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              _TodoMetaChip(
+                label:
+                    '${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length}',
+                color: Colors.teal,
+                icon: Icons.account_tree_outlined,
               ),
-            if (todo.isOverdue && !todo.isDone) ...[
-              const Icon(Icons.warning_amber, size: 12, color: Colors.red),
-              const SizedBox(width: 2),
-              const Text(
-                '逾期',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
+            if (todo.isOverdue && !todo.isDone)
+              const _TodoMetaChip(
+                label: '逾期',
+                color: Colors.red,
+                icon: Icons.warning_amber,
+                isStrong: true,
+              )
+            else if (todo.dueDate != null && !todo.isDone)
+              _TodoMetaChip(
+                label: '${todo.dueDate!.month}/${todo.dueDate!.day}',
+                color: Colors.grey,
+                icon: Icons.event,
               ),
-            ] else if (todo.dueDate != null && !todo.isDone) ...[
-              Icon(Icons.event, size: 12, color: Colors.grey.shade500),
-              const SizedBox(width: 2),
-              Text(
-                '${todo.dueDate!.month}/${todo.dueDate!.day}',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-              ),
-            ],
           ],
         ),
         trailing: todo.isDone
@@ -721,6 +878,280 @@ class _TodoListTile extends StatelessWidget {
               ),
       ),
     );
+  }
+}
+
+class _TodoMetaChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  final bool isStrong;
+
+  const _TodoMetaChip({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.isStrong = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 2),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: isStrong ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodoListManagerSheet extends ConsumerWidget {
+  const _TodoListManagerSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listsAsync = ref.watch(todoListsProvider);
+    final todos = ref.watch(todoListProvider).valueOrNull ?? const [];
+    final countsByListId = <int, int>{};
+    for (final todo in todos.where((todo) => todo.isParent)) {
+      final listId = todo.listId;
+      if (listId == null) continue;
+      countsByListId[listId] = (countsByListId[listId] ?? 0) + 1;
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.72,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '清单管理',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: '新建清单',
+                      icon: const Icon(Icons.create_new_folder_outlined),
+                      onPressed: () => _showListDialog(context, ref),
+                    ),
+                    IconButton(
+                      tooltip: '关闭',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: listsAsync.when(
+                  data: (lists) {
+                    if (lists.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          '还没有清单',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: lists.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final list = lists[index];
+                        final count = countsByListId[list.id] ?? 0;
+                        return ListTile(
+                          leading: const Icon(Icons.folder_outlined),
+                          title: Text(list.name),
+                          subtitle: Text('${list.category} · $count 个待办'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: '编辑',
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () =>
+                                    _showListDialog(context, ref, list: list),
+                              ),
+                              IconButton(
+                                tooltip: '删除',
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () =>
+                                    _confirmDelete(context, ref, list, count),
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            ref
+                                .read(selectedTodoListFilterProvider.notifier)
+                                .state = list
+                                .id;
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('加载失败: $err')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showListDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    TodoListEntity? list,
+  }) async {
+    final nameController = TextEditingController(text: list?.name ?? '');
+    final categories =
+        ref.read(todoCategoriesProvider).valueOrNull ?? ['生活', '工作'];
+    var selectedCategory = list?.category ?? categories.first;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(list == null ? '新建清单' : '编辑清单'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                maxLength: 50,
+                decoration: const InputDecoration(
+                  labelText: '清单名称',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: '所属分类',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                items: categories
+                    .map(
+                      (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => selectedCategory = value);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isEmpty) return;
+                final now = DateTime.now();
+                await ref
+                    .read(todoListsProvider.notifier)
+                    .saveList(
+                      TodoListEntity(
+                        id: list?.id,
+                        name: name,
+                        category: selectedCategory,
+                        createdAt: list?.createdAt ?? now,
+                      ),
+                    );
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameController.dispose();
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    TodoListEntity list,
+    int count,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除清单'),
+        content: Text('删除「${list.name}」后，$count 个待办会保留并移到未归清单。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(todoListsProvider.notifier).deleteList(list.id!);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已删除「${list.name}」')));
+      }
+    }
   }
 }
 

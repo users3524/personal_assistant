@@ -201,7 +201,17 @@ GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
                 routes: [
                   GoRoute(
                     path: 'new',
-                    builder: (context, state) => const TodoFormPage(),
+                    builder: (context, state) {
+                      final initialListId = int.tryParse(
+                        state.uri.queryParameters['listId'] ?? '',
+                      );
+                      final initialCategory =
+                          state.uri.queryParameters['category'];
+                      return TodoFormPage(
+                        initialListId: initialListId,
+                        initialCategory: initialCategory,
+                      );
+                    },
                   ),
                   GoRoute(
                     path: ':id',

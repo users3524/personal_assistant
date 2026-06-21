@@ -18,16 +18,63 @@ import '../../domain/repositories/todo_repository.dart';
 /// 当前选中的分类筛选（null = 全部）
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
+/// 清单筛选中“未归清单”的哨兵值。
+const int unlistedTodoListFilter = -1;
+
+/// 当前选中的清单筛选（null = 全部，-1 = 未归清单）
+final selectedTodoListFilterProvider = StateProvider<int?>((ref) => null);
+
 /// 排序方式
 final sortModeProvider = StateProvider<String>((ref) => 'createdAt');
+
+// ===== 清单 Provider =====
+
+final todoListsProvider =
+    AsyncNotifierProvider<TodoListsNotifier, List<TodoListEntity>>(
+      TodoListsNotifier.new,
+    );
+
+class TodoListsNotifier extends AsyncNotifier<List<TodoListEntity>> {
+  @override
+  Future<List<TodoListEntity>> build() async {
+    final repo = await ref.watch(todoRepositoryProvider.future);
+    return repo.getLists();
+  }
+
+  Future<TodoRepository> _getRepo() async {
+    return ref.read(todoRepositoryProvider.future);
+  }
+
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+  }
+
+  Future<TodoListEntity> saveList(TodoListEntity list) async {
+    final repo = await _getRepo();
+    final saved = await repo.saveList(list);
+    state = AsyncData(await repo.getLists());
+    ref.invalidate(todoListProvider);
+    return saved;
+  }
+
+  Future<void> deleteList(int id) async {
+    final repo = await _getRepo();
+    await repo.deleteList(id);
+    state = AsyncData(await repo.getLists());
+    if (ref.read(selectedTodoListFilterProvider) == id) {
+      ref.read(selectedTodoListFilterProvider.notifier).state = null;
+    }
+    ref.invalidate(todoListProvider);
+  }
+}
 
 // ===== 待办列表 Provider =====
 
 /// 可刷新待办总列表
 final todoListProvider =
     AsyncNotifierProvider<TodoListNotifier, List<TodoEntity>>(
-  TodoListNotifier.new,
-);
+      TodoListNotifier.new,
+    );
 
 class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
   @override
@@ -129,17 +176,20 @@ class TodoListNotifier extends AsyncNotifier<List<TodoEntity>> {
 
 // ===== 分类待办列表 =====
 
-final todosByCategoryProvider =
-    FutureProvider.family<List<TodoEntity>, String>((ref, category) {
-  return ref.watch(todoRepositoryProvider.future).then((repo) {
-    return repo.getByCategory(category);
-  });
-});
+final todosByCategoryProvider = FutureProvider.family<List<TodoEntity>, String>(
+  (ref, category) {
+    return ref.watch(todoRepositoryProvider.future).then((repo) {
+      return repo.getByCategory(category);
+    });
+  },
+);
 
 // ===== 搜索 =====
 
-final searchTodosProvider =
-    FutureProvider.family<List<TodoEntity>, String>((ref, keyword) {
+final searchTodosProvider = FutureProvider.family<List<TodoEntity>, String>((
+  ref,
+  keyword,
+) {
   return ref.watch(todoRepositoryProvider.future).then((repo) {
     return repo.search(keyword);
   });

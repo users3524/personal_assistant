@@ -131,4 +131,4 @@
 | STAR 润色 | 当前简历无 AI 生成项目 bullet。 |
 | 素材池 | 当前无里程碑表；应先定义 `milestones` 和 `milestone_relations` 多源关联。 |
 | 项目-高光关联 | 当前无 `project_milestone_relations`；后续用于支持一个项目关联多个高光。 |
-| PDF 导出 | 当前简历只支持图片分享；PDF 前需先设计确定性模板、分页算法和 golden 测试。 |
+| PDF 导出 | 当前简历只支持图片分享；PDF 前置方案已落在 `SPEC_RESUME.md`，实现时再接入 `pdf` / `printing`。 |

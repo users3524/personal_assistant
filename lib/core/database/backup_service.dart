@@ -215,6 +215,7 @@ class BackupService {
         'ai_api_key',
         'ai_base_url',
         'ai_model',
+        'ai_config',
         'daily_review_time',
         'weekly_report_day',
         'resume_template_id',

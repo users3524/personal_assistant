@@ -69,7 +69,7 @@
 
 ## P2：未来 AI 助手设计
 
-- [ ] `LLMStrategyConfig` 首版落到 `user_preferences` 的 JSON 配置字段；暂不新增 `system_configs`，除非后续出现多配置 profile 需求。
+- [x] `LLMStrategyConfig` 首版落到 `user_preferences` 的 JSON 配置字段；暂不新增 `system_configs`，除非后续出现多配置 profile 需求。
 - [ ] `LLMStrategyConfig` 只保存供应商、模型、baseUrl、预算等非敏感配置；API Key 只读安全存储引用。
 - [ ] 设计下一版 schema 微迁移顺序：捕获层、生成/高光层、向量层分阶段释放。
 - [ ] 迁移时禁止重命名或变更 `daily_reviews.date` / `summary` 类型，只追加新列。

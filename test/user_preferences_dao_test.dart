@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_assistant/core/ai/llm_strategy_config.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/user_preferences_dao.dart';
 import 'package:personal_assistant/core/security/api_key_store.dart';
@@ -65,6 +66,51 @@ void main() {
       final prefs = await dao.getOrCreate();
       expect(prefs.resumeTemplateId, 2);
       expect(await dao.getResumeTemplateId(), 2);
+    });
+
+    test('stores non-sensitive LLM strategy config as JSON', () async {
+      const config = LLMStrategyConfig(
+        provider: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        dailyReviewMaxTokens: 600,
+        weeklyReportMaxTokens: 1400,
+        chatMaxTokens: 900,
+        promptBudgetChars: 10000,
+      );
+
+      await dao.setLLMStrategyConfig(config);
+
+      final prefs = await dao.getOrCreate();
+      final restored = await dao.getLLMStrategyConfig();
+
+      expect(prefs.aiConfig, contains('"provider":"OpenAI"'));
+      expect(prefs.aiConfig, isNot(contains('apiKey')));
+      expect(restored.provider, config.provider);
+      expect(restored.baseUrl, config.baseUrl);
+      expect(restored.model, config.model);
+      expect(restored.dailyReviewMaxTokens, 600);
+      expect(restored.promptBudgetChars, 10000);
+    });
+
+    test('falls back to legacy AI columns when JSON is absent', () async {
+      await dao.setAIConfig(
+        provider: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com',
+        model: 'deepseek-chat',
+        apiKey: 'secret-key',
+      );
+
+      await (db.update(db.userPreferences)..where((t) => t.id.equals(1))).write(
+        const UserPreferencesCompanion(aiConfig: Value(null)),
+      );
+
+      final config = await dao.getLLMStrategyConfig();
+
+      expect(config.provider, 'DeepSeek');
+      expect(config.baseUrl, 'https://api.deepseek.com');
+      expect(config.model, 'deepseek-chat');
+      expect(await dao.getAiApiKey(), 'secret-key');
     });
   });
 }

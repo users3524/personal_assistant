@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ai/ai_provider.dart';
+import '../../../../core/ai/llm_strategy_config.dart';
 import '../../../../core/database/backup_service.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/database/user_preferences_dao.dart';
@@ -153,15 +154,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final db = await ref.read(appDatabaseProvider.future);
       _prefsDao = UserPreferencesDao(db);
       final prefs = await _prefsDao!.getOrCreate();
+      final strategy = await _prefsDao!.getLLMStrategyConfig();
       final apiKey = await _prefsDao!.getAiApiKey();
 
       if (!mounted) return;
       setState(() {
         _savedApiKey = apiKey;
-        _savedBaseUrl = prefs.aiBaseUrl ?? 'https://api.openai.com/v1';
-        _savedModel = prefs.aiModel ?? 'gpt-4o-mini';
-        _savedProvider = prefs.aiProvider;
-        _selectedProvider = prefs.aiProvider;
+        _savedBaseUrl = strategy.baseUrl;
+        _savedModel = strategy.model;
+        _savedProvider = strategy.provider;
+        _selectedProvider = strategy.provider;
         _notificationEnabled = prefs.notificationEnabled;
         // 加载通知时间
         final dailyTime = prefs.dailyReviewTime;
@@ -185,6 +187,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             baseUrl: _savedBaseUrl,
             model: _savedModel,
             apiKey: _savedApiKey,
+            strategy: strategy,
           );
     } catch (_) {
       // 数据库加载失败，使用默认内存配置
@@ -194,6 +197,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _saveAIConfigToDb() async {
     if (_prefsDao == null) return;
     try {
+      final strategy = LLMStrategyConfig.fromLegacy(
+        provider: _savedProvider,
+        baseUrl: _savedBaseUrl,
+        model: _savedModel,
+      );
       await _prefsDao!.setAIConfig(
         provider: _savedProvider,
         baseUrl: _savedBaseUrl,
@@ -207,6 +215,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             baseUrl: _savedBaseUrl,
             model: _savedModel,
             apiKey: _savedApiKey,
+            strategy: strategy,
           );
     } catch (e) {
       if (mounted) {

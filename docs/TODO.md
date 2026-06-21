@@ -79,7 +79,7 @@
 - [x] 熔断后进入离线便签模式，只本地落盘，不请求云端。
 - [x] 设计 prompt builder 和 token/字符预算估算，首版用字符/中英文比例启发式，不引入本地 tokenizer；白天禁止读取历史日报、周报、RAG。
 - [x] 设计深夜 raw context pack：待办、离线便签、复盘对话、文玩 `patting_logs`。
-- [ ] 实现素材 8000 字左右优先级裁剪策略。
+- [x] 实现素材 8000 字左右优先级裁剪策略。
 - [ ] 深夜引擎先实现前台 Catch-Up Guard 补偿闭环，再调研 Android 后台调度；目标窗口为 2:00-5:00、充电、Wi-Fi。
 - [ ] 抽象 `AILogScheduler` 域接口，Android WorkManager 与桌面/Web No-Op 实现放到 infrastructure 层。
 - [ ] Android WorkManager 只使用充电 + unmetered network 等可达约束，不把 `RequiresDeviceIdle` 作为硬条件。

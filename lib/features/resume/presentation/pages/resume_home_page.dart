@@ -49,8 +49,10 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
           IconButton(
             icon: _isExporting
                 ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.share),
             tooltip: '导出分享',
             onPressed: _isExporting ? null : _exportAsImage,
@@ -62,29 +64,32 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
                 ref.read(selectedTemplateIdProvider.notifier).state = id,
             itemBuilder: (context) => [
               const PopupMenuItem(
-                  value: 0,
-                  child: ListTile(
-                    leading: Icon(Icons.article),
-                    title: Text('简洁经典'),
-                    subtitle: Text('单栏布局，适合传统行业'),
-                    dense: true,
-                  )),
+                value: 0,
+                child: ListTile(
+                  leading: Icon(Icons.article),
+                  title: Text('简洁经典'),
+                  subtitle: Text('单栏布局，适合传统行业'),
+                  dense: true,
+                ),
+              ),
               const PopupMenuItem(
-                  value: 1,
-                  child: ListTile(
-                    leading: Icon(Icons.credit_card),
-                    title: Text('现代卡片'),
-                    subtitle: Text('双栏布局，适合设计/产品岗'),
-                    dense: true,
-                  )),
+                value: 1,
+                child: ListTile(
+                  leading: Icon(Icons.credit_card),
+                  title: Text('现代卡片'),
+                  subtitle: Text('双栏布局，适合设计/产品岗'),
+                  dense: true,
+                ),
+              ),
               const PopupMenuItem(
-                  value: 2,
-                  child: ListTile(
-                    leading: Icon(Icons.code),
-                    title: Text('技术极简'),
-                    subtitle: Text('等宽字体，适合程序员'),
-                    dense: true,
-                  )),
+                value: 2,
+                child: ListTile(
+                  leading: Icon(Icons.code),
+                  title: Text('技术极简'),
+                  subtitle: Text('等宽字体，适合程序员'),
+                  dense: true,
+                ),
+              ),
             ],
           ),
         ],
@@ -132,8 +137,9 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
   Future<void> _exportAsImage() async {
     setState(() => _isExporting = true);
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _repaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) throw Exception('无法获取预览区域');
 
       final image = await boundary.toImage(pixelRatio: 3.0);
@@ -141,18 +147,21 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
       if (byteData == null) throw Exception('编码失败');
 
       final dir = Directory.systemTemp;
-      final file = File('${dir.path}/resume_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File(
+        '${dir.path}/resume_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
+        text:
+            '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -216,36 +225,59 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
     final projects = await repo.getProjects();
     if (mounted) {
       setState(() {
-        _works = works.map((w) => _WorkEditItem(
-          id: w.id,
-          companyCtrl: TextEditingController(text: w.company),
-          positionCtrl: TextEditingController(text: w.position),
-          descCtrl: TextEditingController(text: w.description ?? ''),
-          techStackCtrl: TextEditingController(text: w.techStack.join(', ')),
-          isVisible: w.isVisible,
-        )).toList();
-        _educations = educations.map((e) => _EduEditItem(
-          id: e.id,
-          schoolCtrl: TextEditingController(text: e.school),
-          majorCtrl: TextEditingController(text: e.major),
-          degreeCtrl: TextEditingController(text: e.degree),
-          isVisible: e.isVisible,
-        )).toList();
-        _skills = skills.map((s) => _SkillEditItem(
-          id: s.id,
-          nameCtrl: TextEditingController(text: s.name),
-          categoryCtrl: TextEditingController(text: s.category),
-          proficiency: s.proficiency,
-          isVisible: s.isVisible,
-        )).toList();
-        _projects = projects.map((p) => _ProjectEditItem(
-          id: p.id,
-          nameCtrl: TextEditingController(text: p.name),
-          roleCtrl: TextEditingController(text: p.role ?? ''),
-          descCtrl: TextEditingController(text: p.description ?? ''),
-          techStackCtrl: TextEditingController(text: p.techStack.join(', ')),
-          isVisible: p.isVisible,
-        )).toList();
+        _works = works
+            .map(
+              (w) => _WorkEditItem(
+                id: w.id,
+                companyCtrl: TextEditingController(text: w.company),
+                positionCtrl: TextEditingController(text: w.position),
+                descCtrl: TextEditingController(text: w.description ?? ''),
+                techStackCtrl: TextEditingController(
+                  text: w.techStack.join(', '),
+                ),
+                isVisible: w.isVisible,
+              ),
+            )
+            .toList();
+        _educations = educations
+            .map(
+              (e) => _EduEditItem(
+                id: e.id,
+                schoolCtrl: TextEditingController(text: e.school),
+                majorCtrl: TextEditingController(text: e.major),
+                degreeCtrl: TextEditingController(text: e.degree),
+                isVisible: e.isVisible,
+              ),
+            )
+            .toList();
+        _skills = skills
+            .map(
+              (s) => _SkillEditItem(
+                id: s.id,
+                nameCtrl: TextEditingController(text: s.name),
+                categoryCtrl: TextEditingController(text: s.category),
+                proficiency: s.proficiency,
+                isVisible: s.isVisible,
+              ),
+            )
+            .toList();
+        _projects = projects
+            .map(
+              (p) => _ProjectEditItem(
+                id: p.id,
+                nameCtrl: TextEditingController(text: p.name),
+                roleCtrl: TextEditingController(text: p.role ?? ''),
+                descCtrl: TextEditingController(text: p.description ?? ''),
+                techStackCtrl: TextEditingController(
+                  text: p.techStack.join(', '),
+                ),
+                keyDeliverablesCtrl: TextEditingController(
+                  text: p.keyDeliverables.join('\n'),
+                ),
+                isVisible: p.isVisible,
+              ),
+            )
+            .toList();
         _isLoading = false;
       });
     }
@@ -279,6 +311,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       p.roleCtrl.dispose();
       p.descCtrl.dispose();
       p.techStackCtrl.dispose();
+      p.keyDeliverablesCtrl.dispose();
     }
     super.dispose();
   }
@@ -286,67 +319,100 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
   Future<void> _saveAll() async {
     final repo = await ref.read(resumeRepositoryProvider.future);
 
-    await repo.saveProfile(ResumeProfileEntity(
-      fullName: _nameCtrl.text.trim(),
-      jobTitle: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-      location: _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
-      personalSummary: _summaryCtrl.text.trim().isEmpty ? null : _summaryCtrl.text.trim(),
-      updatedAt: DateTime.now(),
-    ));
+    await repo.saveProfile(
+      ResumeProfileEntity(
+        fullName: _nameCtrl.text.trim(),
+        jobTitle: _titleCtrl.text.trim().isEmpty
+            ? null
+            : _titleCtrl.text.trim(),
+        email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        location: _locationCtrl.text.trim().isEmpty
+            ? null
+            : _locationCtrl.text.trim(),
+        personalSummary: _summaryCtrl.text.trim().isEmpty
+            ? null
+            : _summaryCtrl.text.trim(),
+        updatedAt: DateTime.now(),
+      ),
+    );
 
     for (final w in _works) {
-      await repo.saveWorkExperience(WorkExperienceEntity(
-        id: w.id,
-        company: w.companyCtrl.text.trim(),
-        position: w.positionCtrl.text.trim(),
-        description: w.descCtrl.text.trim().isEmpty ? null : w.descCtrl.text.trim(),
-        techStack: w.techStackCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-        startDate: DateTime.now(),
-        isVisible: w.isVisible,
-      ));
+      await repo.saveWorkExperience(
+        WorkExperienceEntity(
+          id: w.id,
+          company: w.companyCtrl.text.trim(),
+          position: w.positionCtrl.text.trim(),
+          description: w.descCtrl.text.trim().isEmpty
+              ? null
+              : w.descCtrl.text.trim(),
+          techStack: w.techStackCtrl.text
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList(),
+          startDate: DateTime.now(),
+          isVisible: w.isVisible,
+        ),
+      );
     }
 
     for (final e in _educations) {
-      await repo.saveEducation(EducationEntity(
-        id: e.id,
-        school: e.schoolCtrl.text.trim(),
-        major: e.majorCtrl.text.trim(),
-        degree: e.degreeCtrl.text.trim().isEmpty ? '本科' : e.degreeCtrl.text.trim(),
-        startDate: DateTime.now(),
-        isVisible: e.isVisible,
-      ));
+      await repo.saveEducation(
+        EducationEntity(
+          id: e.id,
+          school: e.schoolCtrl.text.trim(),
+          major: e.majorCtrl.text.trim(),
+          degree: e.degreeCtrl.text.trim().isEmpty
+              ? '本科'
+              : e.degreeCtrl.text.trim(),
+          startDate: DateTime.now(),
+          isVisible: e.isVisible,
+        ),
+      );
     }
 
     for (final s in _skills) {
-      await repo.saveSkill(SkillItemEntity(
-        id: s.id,
-        name: s.nameCtrl.text.trim(),
-        category: s.categoryCtrl.text.trim().isEmpty ? 'tool' : s.categoryCtrl.text.trim(),
-        proficiency: s.proficiency,
-        isVisible: s.isVisible,
-      ));
+      await repo.saveSkill(
+        SkillItemEntity(
+          id: s.id,
+          name: s.nameCtrl.text.trim(),
+          category: s.categoryCtrl.text.trim().isEmpty
+              ? 'tool'
+              : s.categoryCtrl.text.trim(),
+          proficiency: s.proficiency,
+          isVisible: s.isVisible,
+        ),
+      );
     }
 
     for (final p in _projects) {
-      await repo.saveProject(ProjectExperienceEntity(
-        id: p.id,
-        name: p.nameCtrl.text.trim(),
-        role: p.roleCtrl.text.trim().isEmpty ? null : p.roleCtrl.text.trim(),
-        description: p.descCtrl.text.trim().isEmpty ? null : p.descCtrl.text.trim(),
-        techStack: p.techStackCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-        startDate: DateTime.now(),
-        isVisible: p.isVisible,
-      ));
+      await repo.saveProject(
+        ProjectExperienceEntity(
+          id: p.id,
+          name: p.nameCtrl.text.trim(),
+          role: p.roleCtrl.text.trim().isEmpty ? null : p.roleCtrl.text.trim(),
+          description: p.descCtrl.text.trim().isEmpty
+              ? null
+              : p.descCtrl.text.trim(),
+          techStack: p.techStackCtrl.text
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList(),
+          keyDeliverables: _splitLines(p.keyDeliverablesCtrl.text),
+          startDate: DateTime.now(),
+          isVisible: p.isVisible,
+        ),
+      );
     }
 
     ref.read(resumeRefreshProvider.notifier).state++;
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('简历已保存')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('简历已保存')));
       Navigator.pop(context);
     }
   }
@@ -376,30 +442,46 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameCtrl,
-                      decoration: const InputDecoration(labelText: '姓名 *', border: OutlineInputBorder()),
-                      validator: (v) => v == null || v.trim().isEmpty ? '姓名不能为空' : null,
+                      decoration: const InputDecoration(
+                        labelText: '姓名 *',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty ? '姓名不能为空' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _titleCtrl,
-                      decoration: const InputDecoration(labelText: '职位头衔', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: '职位头衔',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _emailCtrl,
-                      decoration: const InputDecoration(labelText: '邮箱', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: '邮箱',
+                        border: OutlineInputBorder(),
+                      ),
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _phoneCtrl,
-                      decoration: const InputDecoration(labelText: '手机号', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: '手机号',
+                        border: OutlineInputBorder(),
+                      ),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _locationCtrl,
-                      decoration: const InputDecoration(labelText: '所在地', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: '所在地',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -429,20 +511,25 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                         });
                       },
                       buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) => ReorderableDragStartListener(
-                        key: ValueKey('work_$index'),
-                        index: index,
-                        child: _buildWorkCard(index, _works[index]),
-                      ),
+                      itemBuilder: (context, index) =>
+                          ReorderableDragStartListener(
+                            key: ValueKey('work_$index'),
+                            index: index,
+                            child: _buildWorkCard(index, _works[index]),
+                          ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
-                        setState(() => _works.add(_WorkEditItem(
-                          companyCtrl: TextEditingController(),
-                          positionCtrl: TextEditingController(),
-                          descCtrl: TextEditingController(),
-                          techStackCtrl: TextEditingController(),
-                        )));
+                        setState(
+                          () => _works.add(
+                            _WorkEditItem(
+                              companyCtrl: TextEditingController(),
+                              positionCtrl: TextEditingController(),
+                              descCtrl: TextEditingController(),
+                              techStackCtrl: TextEditingController(),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('添加工作经历'),
@@ -465,19 +552,24 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                         });
                       },
                       buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) => ReorderableDragStartListener(
-                        key: ValueKey('edu_$index'),
-                        index: index,
-                        child: _buildEduCard(index, _educations[index]),
-                      ),
+                      itemBuilder: (context, index) =>
+                          ReorderableDragStartListener(
+                            key: ValueKey('edu_$index'),
+                            index: index,
+                            child: _buildEduCard(index, _educations[index]),
+                          ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
-                        setState(() => _educations.add(_EduEditItem(
-                          schoolCtrl: TextEditingController(),
-                          majorCtrl: TextEditingController(),
-                          degreeCtrl: TextEditingController(text: '本科'),
-                        )));
+                        setState(
+                          () => _educations.add(
+                            _EduEditItem(
+                              schoolCtrl: TextEditingController(),
+                              majorCtrl: TextEditingController(),
+                              degreeCtrl: TextEditingController(text: '本科'),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('添加教育经历'),
@@ -500,18 +592,23 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                         });
                       },
                       buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) => ReorderableDragStartListener(
-                        key: ValueKey('skill_$index'),
-                        index: index,
-                        child: _buildSkillCard(index, _skills[index]),
-                      ),
+                      itemBuilder: (context, index) =>
+                          ReorderableDragStartListener(
+                            key: ValueKey('skill_$index'),
+                            index: index,
+                            child: _buildSkillCard(index, _skills[index]),
+                          ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
-                        setState(() => _skills.add(_SkillEditItem(
-                          nameCtrl: TextEditingController(),
-                          categoryCtrl: TextEditingController(text: 'tool'),
-                        )));
+                        setState(
+                          () => _skills.add(
+                            _SkillEditItem(
+                              nameCtrl: TextEditingController(),
+                              categoryCtrl: TextEditingController(text: 'tool'),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('添加技能'),
@@ -534,20 +631,26 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                         });
                       },
                       buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) => ReorderableDragStartListener(
-                        key: ValueKey('proj_$index'),
-                        index: index,
-                        child: _buildProjectCard(index, _projects[index]),
-                      ),
+                      itemBuilder: (context, index) =>
+                          ReorderableDragStartListener(
+                            key: ValueKey('proj_$index'),
+                            index: index,
+                            child: _buildProjectCard(index, _projects[index]),
+                          ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
-                        setState(() => _projects.add(_ProjectEditItem(
-                          nameCtrl: TextEditingController(),
-                          roleCtrl: TextEditingController(),
-                          descCtrl: TextEditingController(),
-                          techStackCtrl: TextEditingController(),
-                        )));
+                        setState(
+                          () => _projects.add(
+                            _ProjectEditItem(
+                              nameCtrl: TextEditingController(),
+                              roleCtrl: TextEditingController(),
+                              descCtrl: TextEditingController(),
+                              techStackCtrl: TextEditingController(),
+                              keyDeliverablesCtrl: TextEditingController(),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('添加项目经历'),
@@ -562,7 +665,10 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
   }
 
   Widget _sectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    );
   }
 
   Widget _buildWorkCard(int index, _WorkEditItem item) {
@@ -576,17 +682,28 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               children: [
                 ReorderableDragStartListener(
                   index: index,
-                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                  child: const Icon(
+                    Icons.drag_handle,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text('工作 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  '工作 ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 Switch(
                   value: item.isVisible,
                   onChanged: (v) => setState(() => item.isVisible = v),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
                   onPressed: () => setState(() => _works.removeAt(index)),
                 ),
               ],
@@ -594,22 +711,40 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: item.companyCtrl,
-              decoration: const InputDecoration(labelText: '公司', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '公司',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.positionCtrl,
-              decoration: const InputDecoration(labelText: '职位', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '职位',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.techStackCtrl,
-              decoration: const InputDecoration(labelText: '技术栈', hintText: '逗号分隔，如: C, RT-Thread', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '技术栈',
+                hintText: '逗号分隔，如: C, RT-Thread',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.descCtrl,
-              decoration: const InputDecoration(labelText: '描述', hintText: '换行自动转圆点列表', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '描述',
+                hintText: '换行自动转圆点列表',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
               maxLines: 2,
             ),
           ],
@@ -629,17 +764,28 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               children: [
                 ReorderableDragStartListener(
                   index: index,
-                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                  child: const Icon(
+                    Icons.drag_handle,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text('教育 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  '教育 ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 Switch(
                   value: item.isVisible,
                   onChanged: (v) => setState(() => item.isVisible = v),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
                   onPressed: () => setState(() => _educations.removeAt(index)),
                 ),
               ],
@@ -647,17 +793,29 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: item.schoolCtrl,
-              decoration: const InputDecoration(labelText: '学校', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '学校',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.majorCtrl,
-              decoration: const InputDecoration(labelText: '专业', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '专业',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.degreeCtrl,
-              decoration: const InputDecoration(labelText: '学历', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '学历',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
           ],
         ),
@@ -676,26 +834,41 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               children: [
                 ReorderableDragStartListener(
                   index: index,
-                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                  child: const Icon(
+                    Icons.drag_handle,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text('技能 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  '技能 ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 Text('熟练度: ${item.proficiency}/5'),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline, size: 18),
                   onPressed: () {
-                    if (item.proficiency < 5) setState(() => item.proficiency++);
+                    if (item.proficiency < 5) {
+                      setState(() => item.proficiency++);
+                    }
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.remove_circle_outline, size: 18),
                   onPressed: () {
-                    if (item.proficiency > 1) setState(() => item.proficiency--);
+                    if (item.proficiency > 1) {
+                      setState(() => item.proficiency--);
+                    }
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
                   onPressed: () => setState(() => _skills.removeAt(index)),
                 ),
               ],
@@ -703,7 +876,11 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: item.nameCtrl,
-              decoration: const InputDecoration(labelText: '技能名称', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '技能名称',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
@@ -711,7 +888,8 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               decoration: const InputDecoration(
                 labelText: '分类',
                 hintText: 'language / framework / tool / soft',
-                border: OutlineInputBorder(), isDense: true,
+                border: OutlineInputBorder(),
+                isDense: true,
               ),
             ),
           ],
@@ -731,17 +909,28 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               children: [
                 ReorderableDragStartListener(
                   index: index,
-                  child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+                  child: const Icon(
+                    Icons.drag_handle,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                Text('项目 ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  '项目 ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 Switch(
                   value: item.isVisible,
                   onChanged: (v) => setState(() => item.isVisible = v),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
                   onPressed: () => setState(() => _projects.removeAt(index)),
                 ),
               ],
@@ -749,22 +938,51 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: item.nameCtrl,
-              decoration: const InputDecoration(labelText: '项目名称', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '项目名称',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.roleCtrl,
-              decoration: const InputDecoration(labelText: '角色', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '角色',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.techStackCtrl,
-              decoration: const InputDecoration(labelText: '核心技术栈', hintText: '逗号分隔', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '核心技术栈',
+                hintText: '逗号分隔',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: item.descCtrl,
-              decoration: const InputDecoration(labelText: '描述', hintText: '换行自动转圆点列表', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: '描述',
+                hintText: '换行自动转圆点列表',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: item.keyDeliverablesCtrl,
+              decoration: const InputDecoration(
+                labelText: '关键交付',
+                hintText: '每行一条，会在模板中显示为项目亮点',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
               maxLines: 3,
             ),
           ],
@@ -772,6 +990,12 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       ),
     );
   }
+
+  List<String> _splitLines(String value) => value
+      .split(RegExp(r'\r?\n'))
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
 }
 
 // ===== 编辑项数据类 =====
@@ -832,6 +1056,7 @@ class _ProjectEditItem {
   final TextEditingController roleCtrl;
   final TextEditingController descCtrl;
   final TextEditingController techStackCtrl;
+  final TextEditingController keyDeliverablesCtrl;
   bool isVisible;
 
   _ProjectEditItem({
@@ -840,6 +1065,7 @@ class _ProjectEditItem {
     required this.roleCtrl,
     required this.descCtrl,
     required this.techStackCtrl,
+    required this.keyDeliverablesCtrl,
     this.isVisible = true,
   });
 }

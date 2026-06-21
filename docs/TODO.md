@@ -61,7 +61,7 @@
 
 ## P1：简历
 
-- [ ] 为 `project_experiences.key_deliverables` 增加编辑 UI。
+- [x] 为 `project_experiences.key_deliverables` 增加编辑 UI。
 - [ ] 为 `project_experiences.badges` 增加编辑 UI。
 - [ ] 将选中模板持久化到 `user_preferences.resume_template_id`。
 - [ ] 将简历 PNG 导出抽成服务，补齐 `debugNeedsPaint` 等待、分享前 mounted 检查和临时目录策略。

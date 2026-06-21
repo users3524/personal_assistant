@@ -1,0 +1,2965 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>个人全能助手</title>
+  <style>
+    /* ================= CSS Variables & Reset ================= */
+    :root {
+      --bg: #F8F5EF;
+      --card: #FFFFFF;
+      --text: #1F1B16;
+      --sub: #8B857B;
+      --wood: #9A6A43;
+      --gold: #C9A24D;
+      --blue: #4F7CAC;
+      --green: #4F8F67;
+      --orange: #E19A3B;
+      --red: #D85C4A;
+      --line: #EEE8DD;
+
+      --r-lg: 22px;
+      --r-md: 16px;
+      --r-sm: 14px;
+      --r-pill: 999px;
+
+      --shadow: 0 8px 24px rgba(31, 27, 22, 0.04);
+      --shadow-btn: 0 4px 12px rgba(154, 106, 67, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #E5E5E5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* ================= Device Simulator ================= */
+    .device {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-bar-safe {
+      height: 44px;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .bottom-safe {
+      height: 34px;
+      width: 100%;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .app-content {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ================= Utility Classes ================= */
+
+    .absolute {
+      position: absolute;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .col {
+      flex-direction: column;
+    }
+
+    .row {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .jb {
+      justify-content: space-between;
+    }
+
+    .jc {
+      justify-content: center;
+    }
+
+    .ac {
+      align-items: center;
+    }
+
+    .wrap {
+      flex-wrap: wrap;
+    }
+
+    .cursor {
+      cursor: pointer;
+    }
+
+    .flex-1 {
+      flex: 1;
+    }
+
+    .gap-4 {
+      gap: 4px;
+    }
+
+    .gap-8 {
+      gap: 8px;
+    }
+
+    .gap-12 {
+      gap: 12px;
+    }
+
+    .gap-16 {
+      gap: 16px;
+    }
+
+    .width-100 {
+      width: 100%;
+    }
+
+    .p-16 {
+      padding: 16px;
+    }
+
+    .p-24 {
+      padding: 24px;
+    }
+
+    .px-16 {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .py-12 {
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    .pt-8 {
+      padding-top: 8px;
+    }
+
+    .pb-80 {
+      padding-bottom: 80px;
+    }
+
+    /* safe area for bottom nav */
+    .pb-24 {
+      padding-bottom: 24px;
+    }
+
+    .mt-4 {
+      margin-top: 4px;
+    }
+
+    .mt-8 {
+      margin-top: 8px;
+    }
+
+    .mt-12 {
+      margin-top: 12px;
+    }
+
+    .mt-16 {
+      margin-top: 16px;
+    }
+
+    .mt-24 {
+      margin-top: 24px;
+    }
+
+    .mb-4 {
+      margin-bottom: 4px;
+    }
+
+    .mb-8 {
+      margin-bottom: 8px;
+    }
+
+    .mb-12 {
+      margin-bottom: 12px;
+    }
+
+    .mb-16 {
+      margin-bottom: 16px;
+    }
+
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+
+    .mb-24 {
+      margin-bottom: 24px;
+    }
+
+    .ml-15 {
+      margin-left: 15px;
+    }
+
+    .mr-10 {
+      margin-right: 10px;
+    }
+
+    .mr-20 {
+      margin-right: 20px;
+    }
+
+    .mr-30 {
+      margin-right: 30px;
+    }
+
+    .text-main {
+      color: var(--text);
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-sub {
+      color: var(--sub);
+    }
+
+    .text-wood {
+      color: var(--wood);
+    }
+
+    .text-gold {
+      color: var(--gold);
+    }
+
+    .text-blue {
+      color: var(--blue);
+    }
+
+    .text-red {
+      color: var(--red);
+    }
+
+    .text-green {
+      color: var(--green);
+    }
+
+    .text-orange {
+      color: var(--orange);
+    }
+
+    .text-white {
+      color: #fff;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .f-24 {
+      font-size: 24px;
+    }
+
+    .f-20 {
+      font-size: 20px;
+    }
+
+    .f-16 {
+      font-size: 16px;
+    }
+
+    .f-15 {
+      font-size: 15px;
+    }
+
+    .f-14 {
+      font-size: 14px;
+    }
+
+    .f-12 {
+      font-size: 12px;
+    }
+
+    .w-600 {
+      font-weight: 600;
+    }
+
+    .w-700 {
+      font-weight: 700;
+    }
+
+    .border-b {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .border-r {
+      border-right: 1px solid var(--line);
+    }
+
+    .bg-card {
+      background: var(--card);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow);
+    }
+
+    .bg-card-lg {
+      background: var(--card);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .bg-bg {
+      background: var(--bg);
+    }
+
+    .bg-trans {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    .radius-pill {
+      border-radius: var(--r-pill);
+    }
+
+    .radius-sm {
+      border-radius: var(--r-sm);
+    }
+
+    .radius-md {
+      border-radius: var(--r-md);
+    }
+
+    /* ================= Components ================= */
+    .page {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .nav-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+      padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--sub);
+      font-size: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 50px;
+    }
+
+    .nav-item .icon {
+      font-size: 20px;
+      filter: grayscale(1) opacity(0.6);
+      transition: 0.2s;
+    }
+
+    .nav-item.active {
+      color: var(--wood);
+      font-weight: 600;
+      gap: 0px;
+      font-size: 15px;
+    }
+
+    .nav-item.active .icon {
+      filter: none;
+      transform: translateY(-1px);
+      font-size: 30px;
+    }
+
+    .btn {
+      background: var(--wood);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: var(--r-sm);
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      box-shadow: var(--shadow-btn);
+    }
+
+    .btn-secondary {
+      background: var(--line);
+      color: var(--text);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--wood);
+      padding: 8px;
+    }
+
+    .btn-block {
+      display: flex;
+      width: 100%;
+    }
+
+    .tag {
+      padding: 4px 10px;
+      border-radius: var(--r-pill);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .tag-wood {
+      background: rgba(154, 106, 67, 0.1);
+      color: var(--wood);
+    }
+
+    .tag-blue {
+      background: rgba(79, 124, 172, 0.1);
+      color: var(--blue);
+    }
+
+    .tag-orange {
+      background: rgba(225, 154, 59, 0.1);
+      color: var(--orange);
+    }
+
+    .tag-green {
+      background: rgba(79, 143, 103, 0.1);
+      color: var(--green);
+    }
+
+    .tag-gray {
+      background: var(--bg);
+      color: var(--sub);
+    }
+
+    .input-base {
+      width: 100%;
+      border: 1px solid transparent;
+      background: var(--bg);
+      padding: 12px 16px;
+      border-radius: var(--r-sm);
+      font-size: 14px;
+      outline: none;
+      transition: 0.2s;
+      color: var(--text);
+    }
+
+    .input-base:focus {
+      border-color: var(--wood);
+      background: #fff;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .input-group label {
+      font-size: 12px;
+      color: var(--sub);
+      font-weight: 600;
+      padding-left: 4px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    .top-bar.trans {
+      background: rgba(248, 245, 239, 0.9);
+      backdrop-filter: blur(10px);
+    }
+
+    .fab {
+      position: absolute;
+      right: 20px;
+      bottom: 84px;
+      width: 56px;
+      height: 56px;
+      background: var(--wood);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      box-shadow: 0 10px 20px rgba(154, 106, 67, 0.3);
+      z-index: 90;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+
+    .fab:active {
+      transform: scale(0.9);
+    }
+
+    .toast {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(31, 27, 22, 0.85);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: var(--r-pill);
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ================= Specific Page Styles ================= */
+    .avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--wood), var(--gold));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .task-item:last-child {
+      border-bottom: none;
+    }
+
+    .task-check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--sub);
+      border-radius: 6px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: transparent;
+      cursor: pointer;
+    }
+
+    .task-item.done .task-check {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .task-item.done .task-title {
+      text-decoration: line-through;
+      color: var(--sub);
+    }
+
+    .task-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .asset-img-placeholder {
+      background: linear-gradient(135deg, #E6D9C8, #F5EFEB);
+      border-radius: var(--r-sm);
+      object-fit: cover;
+    }
+
+    .asset-hero {
+      height: 280px;
+      width: 100%;
+      background: linear-gradient(180deg, #D4C4B1 0%, var(--bg) 100%);
+      position: relative;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      padding-bottom: 20px;
+    }
+
+    .asset-hero-img {
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, #A67E5D, #6B492B);
+      border-radius: 50%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .timeline-container {
+      padding: 16px 0 16px 24px;
+      border-left: 2px solid var(--line);
+      margin-left: 16px;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -29px;
+      top: 2px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--wood);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px var(--bg);
+    }
+
+    .chat-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .chat-ai {
+      background: #fff;
+      border-bottom-left-radius: 4px;
+      box-shadow: var(--shadow);
+      align-self: flex-start;
+    }
+
+    .chat-user {
+      background: var(--wood);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+      box-shadow: var(--shadow-btn);
+      align-self: flex-end;
+    }
+
+    .compare-slider {
+      position: relative;
+      height: 400px;
+      width: 100%;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      background: #ddd;
+    }
+
+    .compare-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .compare-before {
+      width: 100%;
+      background: linear-gradient(135deg, #A67E5D, #8B6343);
+    }
+
+    .compare-after {
+      width: 50%;
+      background: linear-gradient(135deg, #7A5335, #4A2E1B);
+      border-right: 2px solid #fff;
+    }
+
+    .compare-handle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      color: var(--wood);
+      font-size: 12px;
+    }
+
+    .week-cal {
+      display: flex;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .day-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .day-date {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .day-col.active .day-date {
+      background: var(--wood);
+      color: #fff;
+    }
+
+    .health-card {
+      background: linear-gradient(135deg, #fff, #fcfcfc);
+      padding: 16px;
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .health-num {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 8px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .hide-nav {
+      padding-bottom: 20px !important;
+    }
+
+    /* ======== 新增：复盘页平滑曲线图表样式 ======== */
+    .chart-card-new {
+      background: #fff;
+      border-radius: var(--r-md);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 140px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-svg-new {
+      width: 100%;
+      height: 50px;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+    }
+
+    .chart-val {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .chart-val span {
+      font-size: 14px;
+      color: var(--sub);
+      font-weight: normal;
+    }
+
+    /* ======== 新增：文玩月历独立样式 ======== */
+    .cal-grid-new {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 16px 0;
+      text-align: center;
+      background: #fff;
+      padding: 20px 16px;
+      margin: 0 -16px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .cal-head-new {
+      font-size: 12px;
+      color: var(--sub);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .cal-day-new {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 42px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .cal-date-new {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      z-index: 2;
+      border-radius: 50%;
+    }
+
+    .cal-day-new.active .cal-date-new {
+      border: 1px solid var(--wood);
+      color: var(--wood);
+    }
+
+    .cal-dots-new {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .cal-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+    }
+
+    .cal-dot.wood {
+      background: #B28F66;
+    }
+
+    .cal-dot.blue {
+      background: #6699CC;
+    }
+
+    .cal-dot.green {
+      background: #66B28F;
+    }
+
+    .record-card {
+      background: #fff;
+      border: 1px solid #F0ECE4;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .record-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .stat-label {
+      color: var(--sub);
+    }
+
+    .stat-val {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .bottom-actions-fixed {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      padding: 16px 20px 34px;
+      background: linear-gradient(180deg, rgba(248, 245, 239, 0) 0%, #F8F5EF 30%);
+      display: flex;
+      gap: 16px;
+      z-index: 90;
+    }
+
+    .btn-brown {
+      background: #B38659;
+      color: #fff;
+      flex: 1;
+      border-radius: 12px;
+      padding: 14px 0;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 10px rgba(179, 134, 89, 0.25);
+      cursor: pointer;
+      border: none;
+    }
+
+    /* ======== 新增：领奖台图表样式 ======== */
+    .podium-wrap {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 160px;
+      padding-top: 16px;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .podium-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .podium-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .podium-base {
+      width: 100%;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      justify-content: center;
+      padding-top: 6px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 700;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .podium-1 .podium-base {
+      height: 60px;
+      background: linear-gradient(180deg, #E6C280, #B38659);
+      border-top: 3px solid #9A6A43;
+      z-index: 2;
+    }
+
+    .podium-2 .podium-base {
+      height: 45px;
+      background: linear-gradient(180deg, #D9E2E8, #9CAFB7);
+      border-top: 3px solid #7E97A6;
+    }
+
+    .podium-3 .podium-base {
+      height: 30px;
+      background: linear-gradient(180deg, #E5D5C5, #C4A482);
+      border-top: 3px solid #A88160;
+    }
+
+    .podium-rank {
+      font-size: 16px;
+      font-style: italic;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .podium-1 .podium-rank {
+      font-size: 22px;
+    }
+
+    /* 新增：左/右核参数卡片独立样式 */
+    .spec-box {
+      border: 1px solid var(--line);
+      background: #FAFAFA;
+      border-radius: var(--r-sm);
+    }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .spec-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .drag-handle {
+      color: var(--sub);
+      font-size: 18px;
+      cursor: grab;
+      padding: 0 8px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(16px);
+    }
+
+    input:checked+.slider {
+      background-color: var(--green);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .dynamic-form {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .dynamic-form.active {
+      max-height: 300px;
+      opacity: 1;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 299;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s;
+    }
+
+    .action-sheet.show {
+      transform: translateY(0);
+    }
+
+    .action-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      padding-bottom: 34px;
+      z-index: 300;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(100%);
+    }
+
+    .resume-nav-wrap {
+      position: sticky;
+      top: 56px;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="device">
+    <div class="status-bar-safe"></div>
+
+    <div class="app-content" id="app-content">
+
+      <div class="page active px-16 pb-80" id="page-home">
+        <div class="top-bar trans px-0">
+          <div class="col">
+            <div class="f-20 w-600 text-main">今天也慢慢推进</div>
+            <div class="f-12 text-sub mt-4">任务、盘玩、复盘和履历都在这里</div>
+          </div>
+          <div class="avatar cursor" onclick="navTo('page-settings')">☕️</div>
+        </div>
+
+        <div class="bg-card p-16 mt-8 flex row jb text-center">
+          <div class="col flex-1">
+            <div class="f-12 text-sub">今日任务</div>
+            <div class="f-20 w-700 mt-4">6</div>
+          </div>
+          <div class="col flex-1">
+            <div class="f-12 text-sub">已完成</div>
+            <div class="f-20 w-700 mt-4 text-green">3</div>
+          </div>
+          <div class="col flex-1">
+            <div class="f-12 text-sub">待复盘</div>
+            <div class="f-20 w-700 mt-4 text-orange">1</div>
+          </div>
+          <div class="col flex-1">
+            <div class="f-12 text-sub">今日盘玩</div>
+            <div class="f-20 w-700 mt-4 text-wood">40<span class="f-12">m</span></div>
+          </div>
+        </div>
+
+        <div class="mt-24 mb-16 flex row jb ac">
+          <div class="f-16 w-600 text-main">今日待办</div>
+          <div class="f-12 text-sub cursor" onclick="navTo('page-todzo', document.querySelectorAll('.nav-item')[1])">
+            查看全部
+          </div>
+        </div>
+        <div class="bg-card">
+          <div class="task-item">
+            <div class="task-check" onclick="toggleTask(this)">✓</div>
+            <div class="col gap-4 flex-1 cursor" onclick="navTo('page-todo-detail')">
+              <div class="flex row gap-8">
+                <span class="tag tag-blue">工作</span>
+                <span class="task-title">个人全能助手 App V1.0</span>
+              </div>
+            </div>
+          </div>
+          <div class="task-item done">
+            <div class="task-check" onclick="toggleTask(this)">✓</div>
+            <div class="col gap-4 flex-1 cursor">
+              <div class="flex row gap-8">
+                <span class="tag tag-orange">高优</span>
+                <span class="task-title">整理简历项目经历</span>
+                <span class="f-12 text-sub" style="margin-left: auto">18:00前</span>
+              </div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-check" onclick="toggleTask(this)">✓</div>
+            <div class="col gap-4 flex-1 cursor">
+              <div class="flex row gap-8">
+                <span class="tag tag-gray">生活</span>
+                <span class="task-title">晚上 20:30 复盘</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-24 mb-16 flex row jb ac">
+          <div class="f-16 w-600 text-main">今日文玩养护</div>
+          <div class="f-12 text-sub cursor" onclick="navTo('page-asset', document.querySelectorAll('.nav-item')[0])">
+            查看全部</div>
+        </div>
+
+        <div class="flex col gap-4">
+          <div class="bg-card p-12 flex row gap-16 ac cursor" onclick="navTo('page-asset-detail')">
+            <div class="asset-img-placeholder" style="width: 60px; height: 60px;"></div>
+            <div class="col flex-1 gap-4">
+              <div class="f-15 w-600">南疆石狮子头</div>
+              <div class="f-12 text-sub">累计盘玩 1240 分钟</div>
+            </div>
+            <div class="col ac gap-4">
+              <span class="tag tag-orange" style="
+                  font-size: 13px;
+                  margin-right: 10px;
+              ">6 天未盘</span>
+            </div>
+          </div>
+          <div class="bg-card p-12 flex row gap-16 ac">
+            <div class="asset-img-placeholder"
+              style="width: 60px; height: 60px; background: linear-gradient(135deg, #D9E2E8, #F0F4F8);"></div>
+            <div class="col flex-1 gap-4">
+              <div class="f-15 w-600">星月菩提 108</div>
+              <div class="f-12 text-sub">包浆变化明显</div>
+            </div>
+            <span class="tag tag-orange" style="
+                  font-size: 13px;
+                  margin-right: 10px;
+              ">推荐打卡</span>
+          </div>
+        </div>
+
+        <div class="mt-24 flex row gap-12">
+          <div class="bg-card p-16 col jb">
+            <div class="col gap-4 cursor" onclick="navTo('page-review', document.querySelectorAll('.nav-item')[3])">
+              <div class="f-15 w-600">今日复盘</div>
+              <div class="f-12 text-sub">状态：未完成</div>
+            </div>
+            <div class="btn btn-primary btn-block mt-16" onclick="navTo('page-review-chat')">开始复盘</div>
+          </div>
+          <div class="bg-card p-16 col jb">
+            <div class="col gap-4">
+              <div class="f-15 w-600">履历沉淀</div>
+              <div class="f-12 text-sub">完成2项工作，可提取项目经历</div>
+            </div>
+            <div class="btn btn-outline btn-block mt-16"
+              onclick="navTo('page-resume', document.querySelectorAll('.nav-item')[4])">查看简历</div>
+          </div>
+        </div>
+        <div class="pb-24"></div>
+      </div>
+
+      <div class="page pb-80" id="page-todo">
+        <div class="top-bar trans">
+          <div class="f-20 w-600 text-main">待办</div>
+          <div class="f-20">📅</div>
+        </div>
+
+        <div class="px-16">
+          <div class="week-cal">
+            <div class="day-col"><span class="f-10 text-sub">一</span><span class="day-date">16</span></div>
+            <div class="day-col"><span class="f-10 text-sub">二</span><span class="day-date">17</span></div>
+            <div class="day-col"><span class="f-10 text-sub">三</span><span class="day-date">18</span></div>
+            <div class="day-col active"><span class="f-10 text-sub">四</span><span class="day-date">19</span></div>
+            <div class="day-col"><span class="f-10 text-sub">五</span><span class="day-date">20</span></div>
+            <div class="day-col"><span class="f-10 text-sub">六</span><span class="day-date">21</span></div>
+            <div class="day-col"><span class="f-10 text-sub">日</span><span class="day-date">22</span></div>
+          </div>
+
+          <div class="grid-2 mt-16">
+            <div class="health-card">
+              <div class="f-12 text-sub w-600">今日进度</div>
+              <div class="health-num">3/6</div>
+            </div>
+            <div class="health-card">
+              <div class="f-12 text-sub w-600">本周完成率</div>
+              <div class="health-num text-blue">68%</div>
+            </div>
+          </div>
+
+          <div class="flex row gap-8 mt-24 mb-16 overflow-x" style="overflow-x: auto;">
+            <div class="tag tag-wood px-16 py-8">全部</div>
+            <div class="tag tag-gray px-16 py-8">工作</div>
+            <div class="tag tag-gray px-16 py-8">生活</div>
+            <div class="tag tag-gray px-16 py-8">习惯</div>
+          </div>
+
+          <div class="bg-card">
+            <div class="task-item">
+              <div class="task-check" onclick="toggleTask(this)">✓</div>
+              <div class="col gap-8 flex-1 cursor" onclick="navTo('page-todo-detail')">
+                <div class="task-title">个人全能助手 App V1.0</div>
+                <div class="flex row gap-8 ac">
+                  <span class="tag tag-blue">工作</span>
+                  <span class="f-12 text-sub">子任务 2/4</span>
+                </div>
+              </div>
+              <div class="text-gold">★</div>
+            </div>
+            <div class="task-item done">
+              <div class="task-check">✓</div>
+              <div class="col gap-4 flex-1">
+                <div class="task-title">完成 Flutter 备份恢复测试</div>
+              </div>
+            </div>
+            <div class="task-item">
+              <div class="task-check" onclick="toggleTask(this)">✓</div>
+              <div class="col gap-4 flex-1">
+                <div class="task-title">给南疆石狮子头拍照打卡</div>
+                <div class="f-12 text-sub text-orange">已逾期 1 天</div>
+              </div>
+            </div>
+            <div class="task-item">
+              <div class="task-check" onclick="toggleTask(this)">✓</div>
+              <div class="col gap-4 flex-1">
+                <div class="task-title">晚上 20:30 复盘</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="fab" onclick="showToast('新增任务')">＋</div>
+      </div>
+
+      <div class="page bg-bg hide-nav" id="page-todo-detail">
+        <div class="top-bar">
+          <div class="btn btn-ghost p-0 f-16" onclick="goBack()">
+            < 返回</div>
+              <div class="f-16">更多</div>
+          </div>
+          <div class="px-16">
+            <div class="f-24 w-700 text-main mt-8">个人全能助手 App V1.0</div>
+            <div class="flex row gap-12 mt-12 ac">
+              <span class="tag tag-blue">工作</span>
+              <span class="tag tag-orange">高优先级</span>
+              <div class="text-gold f-16">★</div>
+            </div>
+
+            <div class="bg-card p-16 mt-24">
+              <div class="flex row jb mb-12">
+                <span class="f-14 text-sub">状态</span>
+                <span class="f-14 w-600 text-wood">进行中</span>
+              </div>
+              <div class="flex row jb mb-12">
+                <span class="f-14 text-sub">截止日期</span>
+                <span class="f-14 w-600 text-main">本周五 18:00</span>
+              </div>
+              <div class="flex row jb">
+                <span class="f-14 text-sub">实际耗时</span>
+                <span class="f-14 w-600 text-main">4 小时</span>
+              </div>
+            </div>
+
+            <div class="mt-24 f-16 w-600 mb-12">子任务进度 (2/4)</div>
+            <div class="bg-card">
+              <div class="task-item done">
+                <div class="task-check">✓</div>
+                <div class="task-title">UI/UX 设计重构</div>
+              </div>
+              <div class="task-item done">
+                <div class="task-check">✓</div>
+                <div class="task-title">本地数据库表结构设计</div>
+              </div>
+              <div class="task-item">
+                <div class="task-check">✓</div>
+                <div class="task-title">文玩时光对比功能开发</div>
+              </div>
+              <div class="task-item">
+                <div class="task-check">✓</div>
+                <div class="task-title">AI 复盘接入测试</div>
+              </div>
+              <div class="p-12 text-center f-14 text-blue cursor w-600" onclick="showToast('添加子任务')">＋ 添加子任务</div>
+            </div>
+
+            <div class="mt-24 f-16 w-600 mb-12">备注描述</div>
+            <div class="bg-card p-16 f-14 text-main" style="line-height: 1.6;">
+              重点关注本地优先架构，确保不依赖外部网络也能正常记录和盘玩打卡。复盘数据必须 JSON 导出。
+            </div>
+
+            <div class="flex col gap-12 mt-32 mb-24">
+              <div class="btn btn-primary btn-block" onclick="showToast('已标记完成'); goBack()">标记完成</div>
+              <div class="btn btn-outline btn-block text-red" style="color: var(--red); border-color: var(--line);">放弃任务
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page pb-80" id="page-asset">
+          <div class="top-bar trans jb">
+            <div class="f-20 w-600 text-main">文玩资产</div>
+            <div class="f-20 cursor" onclick="navTo('page-asset-calendar')">🗓</div>
+          </div>
+
+          <div class="px-16">
+            <input type="text" class="input-base bg-card mt-8" placeholder="搜索核桃 / 手串 / 特征...">
+
+            <div class="flex row gap-8 mt-16 overflow-x mb-16" style="overflow-x: auto;">
+              <div class="tag tag-wood px-16 py-8">全部</div>
+              <div class="tag tag-gray px-16 py-8">核桃</div>
+              <div class="tag tag-gray px-16 py-8">手串</div>
+              <div class="tag tag-gray px-16 py-8">把件</div>
+            </div>
+
+            <div class="bg-card p-16 mb-24 relative overflow-hidden">
+              <div class="f-14 w-600 text-wood mb-12">✨ 今日翻牌推荐</div>
+              <div class="flex row gap-12 ac cursor mt-4" onclick="navTo('page-asset-detail')">
+                <div class="asset-img-placeholder"
+                  style="width: 50px; height: 50px; background: linear-gradient(135deg, #7A5335, #4A2E1B);"></div>
+                <div class="col flex-1">
+                  <div class="f-15 w-600">小叶紫檀手串</div>
+                  <div class="f-12 text-sub mt-4">已冷落 14 天</div>
+                </div>
+                <div class="btn btn-primary" style="padding: 8px 16px; font-size: 13px;">去盘玩</div>
+              </div>
+            </div>
+
+            <div class="flex row jb ac mb-16">
+              <div class="f-16 w-600">资产库 (4)</div>
+              <div class="f-12 text-sub">按入手时间 ∨</div>
+            </div>
+
+            <div class="grid-2 gap-16">
+              <div class="col gap-8 cursor" onclick="navTo('page-asset-detail')">
+                <div class="asset-img-placeholder relative"
+                  style="height: 160px; background: linear-gradient(135deg, #A67E5D, #8B6343);">
+                </div>
+                <div class="f-15 w-600">南疆石狮子头</div>
+                <div class="f-12 text-sub">累计 1240m · 入手 ¥860</div>
+              </div>
+              <div class="col gap-8">
+                <div class="asset-img-placeholder relative"
+                  style="height: 160px; background: linear-gradient(135deg, #E6E1D8, #C4BDB1);">
+
+                </div>
+                <div class="f-15 w-600">星月菩提 108</div>
+                <div class="f-12 text-sub">累计 800m · 包浆明显</div>
+              </div>
+              <div class="col gap-8">
+                <div class="asset-img-placeholder relative"
+                  style="height: 160px; background: linear-gradient(135deg, #7A5335, #4A2E1B);"></div>
+                <div class="f-15 w-600">小叶紫檀手串</div>
+                <div class="f-12 text-sub">14天未盘</div>
+              </div>
+              <div class="col gap-8">
+                <div class="asset-img-placeholder relative"
+                  style="height: 160px; background: linear-gradient(135deg, #D9C8B4, #A6927C);"></div>
+                <div class="f-15 w-600">凤眼菩提</div>
+                <div class="f-12 text-sub">刚入手</div>
+              </div>
+            </div>
+          </div>
+          <div class="fab" onclick="navTo('page-asset-create')">＋</div>
+        </div>
+
+        <div class="page bg-bg hide-nav" id="page-asset-create">
+          <div class="top-bar trans">
+            <div class="btn btn-ghost p-0 f-16" onclick="goBack()">&lt; 返回</div>
+            <div class="f-16 w-600">新增藏品</div>
+            <div class="f-16 text-blue cursor" onclick="showToast('创建成功'); goBack()">保存</div>
+          </div>
+          <div class="px-16 mt-8 pb-80">
+            <div class="bg-card p-16 mb-24 flex col jc ac"
+              style="height: 120px; border: 1px dashed var(--sub); cursor: pointer;">
+              <div class="f-24 mb-8">📷</div>
+              <div class="f-14 text-sub">上传封面图</div>
+            </div>
+
+            <div class="f-14 w-600 text-sub mt-12 mb-12 ml-8">基础参数</div>
+            <div class="bg-card p-16">
+              <div class="input-group">
+                <label>藏品名称</label>
+                <input type="text" class="input-base" placeholder="例如：小苹果">
+              </div>
+
+              <div class="flex row jb gap-12">
+                <div class="input-group">
+                  <label>分类</label>
+                  <select class="input-base" style="appearance: none;" onchange="switchAssetForm(this.value)">
+                    <option value="hetao">核桃</option>
+                    <option value="shouchuan">手串</option>
+                    <option value="bajian">把件</option>
+                  </select>
+                </div>
+                <div class="input-group mb-0 flex-1">
+                  <label>入手价格 (¥)</label>
+                  <input type="number" class="input-base" placeholder="0.00">
+                </div>
+                <div class="input-group mb-0 flex-1">
+                  <label>入手渠道</label>
+                  <input type="text" class="input-base" placeholder="例如：抖音">
+                </div>
+              </div>
+            </div>
+
+            <div class="f-14 w-600 text-sub mt-12 mb-12 ml-8">特有参数</div>
+            <div class="bg-card p-16">
+              <div id="form-hetao" class="dynamic-form active">
+                <div class="flex row jb gap-12">
+                  <div class="input-group mb-0 flex-1">
+                    <label>二级分类</label>
+                    <select class="input-base" style="appearance: none;">
+                      <option>南疆石</option>
+                      <option>白狮子</option>
+                      <option>蛤蟆头</option>
+                    </select>
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>桩型</label>
+                    <input type="text" class="input-base" placeholder="例如：闷尖/高桩">
+                  </div>
+                </div>
+
+                <div class="flex row jb gap-12">
+                  <div class="input-group mb-0 flex-1">
+                    <label>边宽(mm)</label>
+                    <input type="number" class="input-base" placeholder="左">
+                    <input type="number" class="input-base" placeholder="右">
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>肚宽(mm)</label>
+                    <input type="number" class="input-base" placeholder="左">
+                    <input type="number" class="input-base" placeholder="右">
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>桩高(mm)</label>
+                    <input type="number" class="input-base" placeholder="左">
+                    <input type="number" class="input-base" placeholder="右">
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>重量(g)</label>
+                    <input type="number" class="input-base" placeholder="左">
+                    <input type="number" class="input-base" placeholder="右">
+                  </div>
+                </div>
+              </div>
+
+              <div id="form-shouchuan" class="dynamic-form">
+                <div class="flex row jb gap-12">
+                  <div class="input-group mb-0 flex-1">
+                    <label>二级分类</label>
+                    <select class="input-base" style="appearance: none;">
+                      <option>星月菩提</option>
+                      <option>紫金鼠</option>
+                      <option>驼骨</option>
+                    </select>
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>珠型</label>
+                    <select class="input-base" style="appearance: none;">
+                      <option>老型</option>
+                      <option>直切</option>
+                      <option>无相</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div id="form-bajian" class="dynamic-form">
+                <div class="flex row jb gap-12">
+                  <div class="input-group mb-0 flex-1">
+                    <label>二级分类</label>
+                    <select class="input-base" style="appearance: none;">
+                      <option>葫芦</option>
+                      <option>贝壳</option>
+                      <option>面包圈</option>
+                    </select>
+                  </div>
+                  <div class="input-group mb-0 flex-1">
+                    <label>重量(g)</label>
+                    <input type="number" class="input-base">
+                  </div>
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label>通用备注</label>
+                <textarea class="input-base" rows="3" placeholder="记录来源等细节..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page bg-bg hide-nav relative active" id="page-asset-detail" onscroll="handleDetailScroll(this)">
+          <div id="detail-hero-bg" class="absolute width-100"
+            style="top: 0px; left: 0px; aspect-ratio: 1 / 1; background: url(&quot;https://images.unsplash.com/photo-1611077544831-29eb58fa0f12?auto=format&amp;fit=crop&amp;w=800&amp;q=80&quot;) center center / cover; mask-image: linear-gradient(rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 40%, rgb(0, 0, 0) 100%); z-index: 1; transform: translateY(0.4px);">
+          </div>
+
+          <div class="relative width-100" style="z-index: 10;">
+            <div class="top-bar absolute width-100" style="background: transparent;">
+              <div class="btn btn-ghost text-white p-0 f-16" onclick="goBack()"
+                style="text-shadow: 0 1px 4px rgba(0,0,0,0.5);">&lt; 返回</div>
+              <div class="flex row gap-16 f-16" style="text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
+                <span id="fav-icon" onclick="toggleFavorite(this)" class="cursor">🤍</span>
+                <span onclick="openActionSheet()" class="cursor">...</span>
+              </div>
+            </div>
+
+            <div style="aspect-ratio: 1 / 0.85;"></div>
+
+            <div class="bg-card p-24"
+              style="min-height: 600px; border-radius: 24px 24px 0 0; margin-top: -24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.05);">
+              <div class="flex row jb ac mb-8">
+                <div class="f-24 w-700 mt-4">南疆石狮子头</div>
+                <div class="tag tag-wood">核桃</div>
+              </div>
+              <div class="f-14 text-sub mb-16">入手日期：2023-10-01 · 来源：潘家园</div>
+
+              <div class="grid-3 mt-16 text-center bg-bg radius-md py-12">
+                <div class="col gap-4 border-r">
+                  <div class="f-12 text-sub">陪伴天数</div>
+                  <div class="f-16 w-600">264</div>
+                </div>
+                <div class="col gap-4 border-r">
+                  <div class="f-12 text-sub">总时长</div>
+                  <div class="f-16 w-600 text-wood">1240m</div>
+                </div>
+                <div class="col gap-4">
+                  <div class="f-12 text-sub">入手价</div>
+                  <div class="f-16 w-600">¥860</div>
+                </div>
+              </div>
+
+              <div class="mt-16 mb-16 f-16 w-600 px-8">参数特征</div>
+              <div class="gap-12 px-4 mb-24">
+                <div class="spec-box p-16">
+                  <div class="f-14 w-600 text-wood mb-12 border-b spec-row pb-8"
+                    style="border-bottom: 2px dashed var(--line);"><span></span><span class="w-600">左核</span><span
+                      class="w-600 mr-30">右核</span></div>
+                  <div class="spec-row mt-8"><span>边宽</span><span class="w-600">42.5mm</span><span
+                      class="w-600 mr-20">42.5mm</span></div>
+                  <div class="spec-row"><span>肚宽</span><span class="w-600">42.5mm</span><span
+                      class="w-600 mr-20">42.5mm</span></div>
+                  <div class="spec-row"><span>桩高</span><span class="w-600">42.5mm</span><span
+                      class="w-600 mr-20">42.5mm</span></div>
+                  <div class="spec-row"><span>重量</span><span class="w-600">42.5g</span><span
+                      class="w-600 mr-20">42.5g</span></div>
+                </div>
+              </div>
+
+              <div class="flex row jb ac mt-24 mb-16 px-8">
+                <div class="f-16 w-600">成长时间轴</div>
+                <div class="f-14 text-blue cursor w-600" onclick="navTo('page-asset-compare')">时光对比</div>
+              </div>
+
+              <div class="timeline-container" id="asset-timeline">
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">深度清理</span><span
+                      class="f-12 text-sub">1个月前</span></div>
+                  <div class="f-14 text-main">用纳米刷干刷清理纹路深处灰尘。</div>
+                </div>
+                <div class="timeline-item mb-0">
+                  <div class="timeline-dot" style="background: var(--line)"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">刚入手记录</span><span
+                      class="f-12 text-sub">2023-10-01</span></div>
+                  <div class="f-14 text-main">白茬状态，无底打底。</div>
+                </div>
+              </div>
+
+              <div class="flex row gap-12 mt-24 pb-80 px-8">
+                <input type="file" id="asset-photo-input" accept="image/*" style="display:none;"
+                  onchange="handlePhotoSelect(this)">
+                <div class="btn btn-primary flex-1 py-12"
+                  onclick="document.getElementById('asset-photo-input').click()">📷 拍照/选择图片打卡</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="action-sheet-mask" class="modal-overlay" onclick="closeActionSheet()"></div>
+        <div id="action-sheet" class="action-sheet">
+          <div class="p-16 text-center border-b f-16 w-600 text-main cursor"
+            onclick="showToast('进入编辑模式'); closeActionSheet()">编辑信息</div>
+          <div class="p-16 text-center border-b f-16 w-600 text-blue cursor"
+            onclick="showToast('生成分享长图'); closeActionSheet()">分享与对比</div>
+          <div class="p-16 text-center border-b f-16 w-600 text-red cursor"
+            onclick="showToast('资产已归档'); closeActionSheet()">归档/删除</div>
+          <div class="p-16 text-center f-16 w-600 text-sub cursor mt-8" onclick="closeActionSheet()">取消</div>
+        </div>
+        <!-- <div class="page bg-bg hide-nav relative" id="page-asset-detail" onscroll="handleDetailScroll(this)">
+          <div id="detail-hero-bg" class="absolute w-100" style="top: 0px; left: 0px; aspect-ratio: 1 / 1; background: url(&quot;https://images.unsplash.com/photo-1611077544831-29eb58fa0f12?auto=format&amp;fit=crop&amp;w=800&amp;q=80&quot;) center center / cover; mask-image: linear-gradient(rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 40%, rgb(0, 0, 0) 100%); z-index: 1; transform: translateY(0.4px);"></div>
+          <div class="asset-hero">
+            <div class="top-bar absolute w-100" style="top:0; left:0; right:0; background: transparent;">
+              <div class="btn btn-ghost text-main p-0 f-16" onclick="goBack()">返回</div>
+                <div class="flex row gap-16 f-16">
+                  <span onclick="showToast('收藏成功')">🤍</span>
+                  <span>...</span>
+                </div>
+              </div>
+            </div>
+            <div class="asset-hero-img"></div>
+
+            <div class="px-16" style="margin-top: -20px; position: relative; z-index: 10;">
+              <div class="bg-card-lg p-24">
+                <div class="flex row jb ac mb-8">
+                  <div class="f-24 w-700 ml-15 mt-4">南疆石狮子头</div>
+                  <div class="tag tag-wood">核桃</div>
+                </div>
+                <div class="f-14 text-sub mb-16 ml-15">入手日期：2023-10-01 · 来源：潘家园</div>
+
+                <div class="grid-3 mt-16 text-center bg-bg radius-md py-12">
+                  <div class="col gap-4 border-r">
+                    <div class="f-12 text-sub center">陪伴天数</div>
+                    <div class="f-16 w-600 center">264</div>
+                  </div>
+                  <div class="col gap-4 border-r">
+                    <div class="f-12 text-sub center">总时长</div>
+                    <div class="f-16 w-600 text-wood center">1240m</div>
+                  </div>
+                  <div class="col gap-4">
+                    <div class="f-12 text-sub center">入手价</div>
+                    <div class="f-16 w-600 center">¥860</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-16 mb-16 f-16 w-600 px-8">参数特征</div>
+              <div class="gap-12 px-4 mb-24">
+                <div class="spec-box p-16">
+                  <div class="f-14 w-600 text-wood mb-12 border-b spec-row pb-8"
+                    style="border-bottom: 2px dashed var(--line);">
+                    <span></span>
+                    <span class="w-600">左核</span>
+                    <span class="w-600 mr-30">右核</span>
+                  </div>
+                  <div class="spec-row mt-8">
+                    <span>边宽</span>
+                    <span class="w-600">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                    <span class="w-600 mr-20">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                  </div>
+                  <div class="spec-row">
+                    <span>肚宽</span>
+                    <span class="w-600">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                    <span class="w-600 mr-20">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                  </div>
+                  <div class="spec-row">
+                    <span>桩高</span>
+                    <span class="w-600">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                    <span class="w-600 mr-20">
+                      <div>
+                        <span>42.5</span>
+                        <span>mm</span>
+                      </div>
+                    </span>
+                  </div>
+                  <div class="spec-row">
+                    <span>重量</span>
+                    <span class="w-600">
+                      <div>
+                        <span>42.5</span>
+                        <span>g</span>
+                      </div>
+                    </span>
+                    <span class="w-600 mr-20">
+                      <div>
+                        <span>42.5</span>
+                        <span class="mr-10">g</span>
+                      </div>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex row jb ac mt-16 mb-16 px-8">
+                <div class="f-16 w-600">成长时间轴</div>
+                <div class="f-14 text-blue cursor w-600" onclick="navTo('page-asset-compare')">时光对比</div>
+              </div>
+
+              <div class="timeline-container bg-card p-16">
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">今日打卡</span><span
+                      class="f-12 text-sub">6天前</span></div>
+                  <div class="f-14 text-main mb-8">净手盘 40 分钟，感觉手感更加润滑，略微变色。</div>
+                  <div class="tag tag-gray" style="display:inline-block">净手盘</div>
+                </div>
+                <div class="timeline-item">
+                  <div class="timeline-dot" style="background: var(--line)"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">深度清理</span><span
+                      class="f-12 text-sub">1个月前</span></div>
+                  <div class="f-14 text-main">用纳米刷干刷清理纹路深处灰尘。</div>
+                  <div class="tag tag-gray" style="display:inline-block">工具刷</div>
+                </div>
+                <div class="timeline-item mb-0">
+                  <div class="timeline-dot" style="background: var(--line)"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">刚入手记录</span><span
+                      class="f-12 text-sub">2023-10-01</span></div>
+                  <div class="f-14 text-main">白茬状态，无底打底。</div>
+                </div>
+              </div>
+
+              <div class="flex row gap-12 mt-24 mb-32 px-8">
+                <div class="btn btn-secondary flex-1" onclick="showToast('编辑')">编辑</div>
+                <div class="btn btn-primary flex-1" onclick="showToast('打卡成功')">拍照打卡</div>
+              </div>
+            </div>
+          </div> -->
+
+        <div class="page bg-bg hide-nav" id="page-asset-compare" style="background: #111;">
+          <div class="top-bar text-white trans" style="background: rgba(0,0,0,0.5)">
+            <div class="btn btn-ghost text-white p-0 f-16" onclick="goBack()">
+              < 返回</div>
+                <div class="f-16 w-600">时光对比</div>
+                <div class="f-16" onclick="showToast('已保存')">保存</div>
+            </div>
+
+            <div class="col flex-1 jb h-100" style="height: calc(100vh - 150px);">
+              <div class="px-24 mt-24 text-center">
+                <div class="f-20 w-600 text-white">南疆石狮子头</div>
+                <div class="flex row jc gap-16 mt-8 text-sub f-14">
+                  <span>2023-10-01</span>
+                  <span>间隔 264 天</span>
+                  <span class="text-white">今日</span>
+                </div>
+              </div>
+
+              <div class="px-16 mt-32 mb-32">
+                <div class="compare-slider">
+                  <div class="compare-img compare-before"></div>
+                  <div class="compare-img compare-after"></div>
+                  <div class="compare-handle">↔</div>
+                  <div class="absolute f-12 text-white w-600"
+                    style="bottom:10px; left:10px; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px;">白茬
+                  </div>
+                  <div class="absolute f-12 text-white w-600"
+                    style="bottom:10px; right:10px; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px;">
+                    现貌</div>
+                </div>
+              </div>
+
+              <div class="bg-card mx-16 p-16 radius-lg mb-24">
+                <div class="f-15 w-600 mb-8">变化摘要</div>
+                <div class="f-14 text-main mb-12">累计盘玩 1240 分钟，包浆变化明显，颜色加深变红润，光泽度提升。</div>
+                <div class="flex row gap-8">
+                  <span class="tag tag-wood">包浆变厚</span>
+                  <span class="tag tag-orange">颜色变深</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page bg-bg hide-nav" id="page-asset-calendar" style="padding-bottom: 90px;">
+            <div class="top-bar trans jb" style="padding: 16px 20px;">
+              <div class="btn-ghost p-0 f-16 cursor text-wood" onclick="goBack()" style="background: none;">←</div>
+              <div class="f-16 w-600 text-main flex row ac gap-4">2026年6月 <span
+                  class="f-12 text-sub font-normal">〉</span></div>
+              <div style="width:16px;"></div>
+            </div>
+
+            <div class="px-16">
+              <div class="cal-grid-new">
+                <div class="cal-head-new">一</div>
+                <div class="cal-head-new">二</div>
+                <div class="cal-head-new">三</div>
+                <div class="cal-head-new">四</div>
+                <div class="cal-head-new">五</div>
+                <div class="cal-head-new">六</div>
+                <div class="cal-head-new">日</div>
+
+                <div class="cal-day-new">
+                  <div class="cal-date-new">1</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">2</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot blue"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">3</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">4</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">5</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">6</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot green"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">7</div>
+                </div>
+
+                <div class="cal-day-new">
+                  <div class="cal-date-new">8</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">9</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">10</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">11</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">12</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot blue"></div>
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new active">
+                  <div class="cal-date-new">13</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">14</div>
+                </div>
+
+                <div class="cal-day-new">
+                  <div class="cal-date-new">15</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">16</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">17</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">18</div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">19</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot blue"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">20</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">21</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">22</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">23</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">24</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">25</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">26</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">27</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">28</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">29</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+                <div class="cal-day-new">
+                  <div class="cal-date-new">30</div>
+                  <div class="cal-dots-new">
+                    <div class="cal-dot wood"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #fff; padding: 24px 16px; margin: 0; min-height: 400px;">
+              <div class="flex row ac mb-16">
+                <span class="f-16 w-600 text-main">6月13日</span>
+                <span class="f-12 text-sub ml-8" style="margin-left: 8px;">记录 (3)</span>
+              </div>
+
+              <div class="record-card">
+                <div class="record-thumb" style="background: linear-gradient(135deg, #A88160, #8A6546);"></div>
+                <div class="col flex-1">
+                  <div class="f-14 w-600 text-main mb-4">南疆石狮子头</div>
+                  <div class="f-12 text-sub">净手盘 &nbsp;&nbsp;45 分钟</div>
+                </div>
+                <div class="f-12 text-sub">3天未盘</div>
+              </div>
+
+              <div class="record-card">
+                <div class="record-thumb" style="background: linear-gradient(135deg, #D5CFC5, #BFB9AE);"></div>
+                <div class="col flex-1">
+                  <div class="f-14 w-600 text-main mb-4">星月菩提 108</div>
+                  <div class="f-12 text-sub">手套盘 &nbsp;&nbsp;30 分钟</div>
+                </div>
+                <div class="f-12 text-sub">2天未盘</div>
+              </div>
+
+              <div class="mt-32">
+                <div class="flex row jb ac mb-16 cursor">
+                  <span class="f-15 w-600 text-main">本月统计</span>
+                  <span class="f-12 text-sub">收起 ∨</span>
+                </div>
+                <div class="col">
+                  <div class="podium-wrap">
+                    <div class="podium-col podium-2">
+                      <div class="podium-info gap-4">
+                        <span class="f-12 text-sub">投入最多</span>
+                        <span class="f-12 w-600 text-main">860 分钟</span>
+                        <span class="f-11 text-blue">18 次</span>
+                      </div>
+                      <div class="podium-base"><span class="podium-rank">2</span></div>
+                    </div>
+
+                    <div class="podium-col podium-1">
+                      <div class="podium-info gap-4">
+                        <span class="f-12 text-sub">最常盘玩</span>
+                        <span class="f-13 w-600 text-main">南疆石狮子头</span>
+                        <span class="f-14">👑</span>
+                      </div>
+                      <div class="podium-base"><span class="podium-rank">1</span></div>
+                    </div>
+
+                    <div class="podium-col podium-3">
+                      <div class="podium-info gap-4">
+                        <span class="f-11 text-sub">单次最低</span>
+                        <span class="f-12 w-600 text-main">星月菩提 108</span>
+                        <span class="f-11 text-orange">¥ 0.37/次</span>
+                      </div>
+                      <div class="podium-base"><span class="podium-rank">3</span></div>
+                    </div>
+                  </div>
+
+                  <div class="stat-row bg-bg p-12 mt-16 radius-md"
+                    style="align-items: center; border: 1px dashed var(--line);">
+                    <span class="stat-label">⚠️ 冷落最长</span>
+                    <span class="stat-val text-sub">凤眼菩提 &nbsp; <span class="text-orange w-600">12 天</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bottom-actions-fixed">
+              <button class="btn-brown" onclick="showToast('调起相机')">📷 拍照打卡</button>
+              <button class="btn-brown" onclick="showToast('文字补记')">✏️ 文字补记</button>
+            </div>
+          </div>
+
+          <div class="page pb-80" id="page-review">
+            <div class="top-bar trans">
+              <div class="f-20 w-600 text-main">AI 复盘</div>
+            </div>
+
+            <div class="px-16">
+              <div class="bg-card-lg p-20 mb-24 mt-8" style="background: linear-gradient(135deg, #fff, #F5F7FA);">
+                <div class="flex row jb ac mb-12">
+                  <div class="f-16 w-600 text-main ml-15 mt-8">今日复盘</div>
+                  <div class="tag tag-orange">未完成</div>
+                </div>
+                <div class="f-14 text-sub mb-16 ml-15">完成 3 项任务 · 盘玩 40 分钟</div>
+                <div class="btn btn-primary btn-block text-center" style="background: var(--blue);"
+                  onclick="navTo('page-review-chat')">开始对话式复盘 💬</div>
+              </div>
+
+              <div class="bg-card p-16 flex row jb ac mb-24 cursor mt-8" onclick="navTo('page-report')">
+                <div class="col gap-4">
+                  <div class="f-16 w-600">第 25 周周报</div>
+                  <div class="f-12 text-sub">包含 6 篇日报数据总结</div>
+                </div>
+                <div class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">查看生成</div>
+              </div>
+
+              <div class="f-16 w-600 mb-16 mt-16">本月历史记录</div>
+              <div class="grid-2 mb-24 mt-12">
+                <div class="chart-card-new">
+                  <div class="f-13 w-600 text-main">本月平均情绪</div>
+                  <div class="chart-val text-green" style="color: #4F8F67;">4.1<span> /5</span></div>
+                  <svg class="chart-svg" viewBox="0 0 100 40" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="rgba(79,143,103,0.3)"></stop>
+                        <stop offset="100%" stop-color="rgba(79,143,103,0)"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M0,30 C10,30 15,20 25,20 C35,20 40,5 50,5 C60,5 65,25 75,25 C85,25 90,10 100,15 L100,40 L0,40 Z"
+                      fill="url(#g1)"></path>
+                    <path d="M0,30 C10,30 15,20 25,20 C35,20 40,5 50,5 C60,5 65,25 75,25 C85,25 90,10 100,15"
+                      fill="none" stroke="var(--green)" stroke-width="2"></path>
+                    <circle cx="25" cy="20" r="2.5" fill="var(--green)"></circle>
+                    <circle cx="50" cy="5" r="2.5" fill="var(--green)"></circle>
+                    <circle cx="75" cy="25" r="2.5" fill="var(--green)"></circle>
+                    <circle cx="100" cy="15" r="2.5" fill="var(--green)"></circle>
+                  </svg>
+                </div>
+
+                <div class="chart-card-new">
+                  <div class="f-13 w-600 text-main">本月平均能量</div>
+                  <div class="chart-val text-blue" style="color: #4F7CAC;">3.2<span> /5</span></div>
+                  <svg class="chart-svg" viewBox="0 0 100 40" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="rgba(79,124,172,0.3)"></stop>
+                        <stop offset="100%" stop-color="rgba(79,124,172,0)"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M0,25 C10,25 15,15 25,15 C35,15 40,30 50,30 C60,30 65,10 75,10 C85,10 90,20 100,20 L100,40 L0,40 Z"
+                      fill="url(#g2)"></path>
+                    <path d="M0,25 C10,25 15,15 25,15 C35,15 40,30 50,30 C60,30 65,10 75,10 C85,10 90,20 100,20"
+                      fill="none" stroke="var(--blue)" stroke-width="2"></path>
+                    <circle cx="25" cy="15" r="2.5" fill="var(--blue)"></circle>
+                    <circle cx="50" cy="30" r="2.5" fill="var(--blue)"></circle>
+                    <circle cx="75" cy="10" r="2.5" fill="var(--blue)"></circle>
+                    <circle cx="100" cy="20" r="2.5" fill="var(--blue)"></circle>
+                  </svg>
+                </div>
+              </div>
+              <div class="col mt-12">
+                <div class="bg-card p-16 cursor" onclick="navTo('page-review-history-detail')">
+                  <div class="flex row jb mb-8">
+                    <div class="f-14 w-600">6月20日 星期六</div>
+                    <div class="flex row gap-8"><span class="f-12">😊 4</span><span class="f-12">⚡️ 3</span></div>
+                  </div>
+                  <div class="f-14 text-sub line-clamp-2"
+                    style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                    推进了项目核心模块开发，晚上去散步放松，整体状态不错。AI 建议保持劳逸结合。</div>
+                </div>
+                <div class="bg-card p-16 mt-8">
+                  <div class="flex row jb mb-8">
+                    <div class="f-14 w-600">6月19日 星期五</div>
+                    <div class="flex row gap-8"><span class="f-12">😐 3</span><span class="f-12">⚡️ 2</span></div>
+                  </div>
+                  <div class="f-14 text-sub line-clamp-2"
+                    style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                    工作稍微有些受挫，有部分延期，晚上静心盘了核桃。AI 建议明天优先处理一个最小闭环。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page bg-bg hide-nav" id="page-review-history-detail">
+            <div class="top-bar trans">
+              <div class="btn btn-ghost p-0 f-16" onclick="goBack()">&lt; 返回</div>
+              <div class="f-16 w-600">复盘详情</div>
+              <div class="f-16">分享</div>
+            </div>
+            <div class="px-16 mt-16 pb-80">
+              <div class="f-20 w-700 mb-4">6月20日 星期六</div>
+              <div class="f-14 text-sub mb-16">记录时间: 21:30</div>
+              <div class="bg-card p-16 mb-24">
+                <div class="flex row jb border-b pb-12 mb-12">
+                  <div class="col gap-4">
+                    <div class="f-12 text-sub">情绪状态</div>
+                    <div class="f-18 w-600 text-main">😊 4 分</div>
+                  </div>
+                  <div class="col gap-4" style="text-align: right;">
+                    <div class="f-12 text-sub">能量水平</div>
+                    <div class="f-18 w-600 text-main">⚡️ 3 分</div>
+                  </div>
+                </div>
+                <div class="f-14 w-600 mb-8">日间执行情况</div>
+                <div class="f-14 text-main mb-4">• 任务完成：4 项</div>
+                <div class="f-14 text-main mb-4">• 文玩盘玩：65 分钟</div>
+              </div>
+              <div class="f-16 w-600 mb-12">AI 复盘摘要</div>
+              <div class="bg-card p-16 mb-24">
+                <div class="chat-bubble chat-user mx-auto w-100" style="max-width: 100%;">
+                  推进了项目核心模块开发，把长期功能拆成了更清晰的小步骤。晚上去散步放松，整理了思路，整体状态不错。</div>
+                <div class="chat-bubble chat-ai mx-auto w-100 mt-12" style="max-width: 100%;">
+                  很好的反思！将功能拆解能大幅降低阻力。散步放松也有效地调整了能量状态。<br><br><span class="w-600 text-blue">💡 AI
+                    建议：</span>明天周末，建议优先处理一个能带来成就感的“最小闭环”任务，保持劳逸结合的节奏。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page bg-bg hide-nav flex col h-100" id="page-review-chat" style="height: 100%;">
+            <div class="top-bar trans">
+              <div class="btn btn-ghost p-0 f-16" onclick="goBack()">关闭</div>
+              <div class="f-16 w-600">今日复盘</div>
+              <div class="f-16 text-blue w-600" onclick="showToast('复盘已保存'); goBack()">保存</div>
+            </div>
+
+            <div class="flex-1 px-16 pb-24 overflow-y-auto" style="overflow-y: auto;">
+              <div class="flex row jc gap-8 mt-8 mb-24">
+                <div class="tag tag-blue">今日总结</div>
+                <div class="tag tag-gray">情绪能量</div>
+                <div class="tag tag-gray">AI 建议</div>
+              </div>
+
+              <div class="flex col">
+                <div class="chat-bubble chat-ai">晚上好！今天完成了 3 项任务，还盘玩了 40 分钟核桃。今天有什么收获和不足想记录的吗？</div>
+                <div class="chat-bubble chat-user">推进了待办模块和文玩记录整理。把长期功能拆成了更清晰的小步骤，这是今天最大的收获。不足是晚上开始得有点晚。</div>
+                <div class="chat-bubble chat-ai">很好的反思，拆解任务确实能极大降低执行阻力。评估一下今天的情绪和能量状态吧 (1-5分)？</div>
+
+                <div class="bg-card p-16 mt-8 mb-16 width-100 radius-md mx-auto" style="width: 90%;">
+                  <div class="f-14 w-600 mb-8">情绪 (1-5)</div>
+                  <div class="flex row jb mb-16">
+                    <div class="day-date" style="background:var(--bg)">1</div>
+                    <div class="day-date" style="background:var(--bg)">2</div>
+                    <div class="day-date" style="background:var(--bg)">3</div>
+                    <div class="day-date" style="background:var(--orange);color:#fff;">4</div>
+                    <div class="day-date" style="background:var(--bg)">5</div>
+                  </div>
+                  <div class="f-14 w-600 mb-8">能量 (1-5)</div>
+                  <div class="flex row jb">
+                    <div class="day-date" style="background:var(--bg)">1</div>
+                    <div class="day-date" style="background:var(--bg)">2</div>
+                    <div class="day-date" style="background:var(--green);color:#fff;">3</div>
+                    <div class="day-date" style="background:var(--bg)">4</div>
+                    <div class="day-date" style="background:var(--bg)">5</div>
+                  </div>
+                </div>
+
+                <div class="chat-bubble chat-ai">
+                  <div class="w-600 mb-8">💡 AI 今日评语与建议</div>
+                  保持任务拆解的好习惯！考虑到今晚开始较晚且能量中等(3分)，建议：<br><br>
+                  <span class="w-600 text-blue">明天优先处理一个最小闭环，早晨先完成最简单的任务来启动状态。</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-16 bg-card" style="border-top: 1px solid var(--line); border-radius: 24px 24px 0 0;">
+              <div class="flex row gap-12 ac">
+                <input type="text" class="input-base flex-1" placeholder="输入你想说的..." style="border-radius: 20px;">
+                <div class="btn btn-primary radius-pill" style="width: 40px; height: 40px; padding: 0;">↑</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page bg-bg hide-nav" id="page-report">
+            <div class="top-bar trans">
+              <div class="btn btn-ghost p-0 f-16" onclick="goBack()">
+                < 返回</div>
+                  <div class="f-16 w-600">第 25 周周报</div>
+                  <div class="f-16">分享</div>
+              </div>
+
+              <div class="px-16">
+                <div class="bg-card-lg p-24 mt-8 bg-blue p-16"
+                  style="background: linear-gradient(135deg, #4F7CAC, #365D8B); color: #fff;">
+                  <div class="f-20 w-700 mb-4">稳步前行的一周</div>
+                  <div class="f-14 opacity-80">AI 综合分析评语</div>
+                  <div class="mt-16 f-14" style="line-height: 1.6;">
+                    本周你在工作上完成了重要模块的拆解，执行力有显著提升。情绪整体平稳，文玩养护也起到了很好的放松作用。下周可以尝试优化晚间的作息规律。
+                  </div>
+                </div>
+
+                <div class="grid-2 mt-16 gap-12">
+                  <div class="bg-card p-16 col gap-4">
+                    <div class="f-12 text-sub">完成任务</div>
+                    <div class="f-20 w-700">18 项</div>
+                  </div>
+                  <div class="bg-card p-16 col gap-4">
+                    <div class="f-12 text-sub">总盘玩</div>
+                    <div class="f-20 w-700 text-wood">120m</div>
+                  </div>
+                  <div class="bg-card p-16 col gap-4">
+                    <div class="f-12 text-sub">平均情绪</div>
+                    <div class="f-20 w-700 text-orange">4.2</div>
+                  </div>
+                  <div class="bg-card p-16 col gap-4">
+                    <div class="f-12 text-sub">复盘天数</div>
+                    <div class="f-20 w-700 text-green">6 天</div>
+                  </div>
+                </div>
+
+                <div class="mt-24 mb-12 f-16 w-600">🌟 本周亮点</div>
+                <div class="bg-card p-16 f-14 text-main" style="line-height: 1.6;">
+                  • 个人全能助手 App 核心数据库架构搭建完成。<br>
+                  • 连续 4 天坚持了净手盘核桃，心流体验极佳。<br>
+                  • 任务拆解能力有所提升，减少了拖延。
+                </div>
+
+                <div class="mt-24 mb-12 f-16 w-600">📈 待改进</div>
+                <div class="bg-card p-16 f-14 text-main" style="line-height: 1.6;">
+                  • 晚间容易被碎片信息吸引，导致复盘和休息推迟。<br>
+                  • 运动量偏少，能量值在周四有明显下降。
+                </div>
+
+                <div class="mt-32 mb-24 btn btn-outline btn-block text-center" onclick="showToast('正在重新生成...')">重新生成周报
+                </div>
+              </div>
+            </div>
+
+
+
+            <!-- --------------------------------------简历Start------------------------------------ -->
+            <div class="page pb-80" id="page-resume">
+              <div class="top-bar trans">
+                <div class="f-20 w-600 text-main">动态简历</div>
+                <div class="f-20 cursor" onclick="navTo('page-resume-edit')">编辑</div>
+              </div>
+
+              <div class="px-16">
+                <div class="flex row gap-8 mb-16 overflow-x" style="overflow-x: auto;">
+                  <div class="tag tag-wood px-16 py-8">简洁经典</div>
+                  <div class="tag tag-gray px-16 py-8">现代卡片</div>
+                  <div class="tag tag-gray px-16 py-8">技术极简</div>
+                </div>
+
+                <div class="bg-card p-24 mb-24 p-16"
+                  style="box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 4px;">
+                  <div class="f-24 w-700 mb-4" style="font-family: serif;">张明</div>
+                  <div class="f-14 text-wood w-600 mb-12">Flutter / 移动端开发工程师</div>
+                  <div class="f-12 text-sub mb-16 line-clamp-2">
+                    zhangming@example.com · 138-0000-0000 · 杭州<br>
+                    专注于跨平台移动端开发，热爱构建本地优先(Local-First)应用。
+                  </div>
+
+                  <div style="height:1px; background:var(--line); margin-bottom: 16px;"></div>
+
+                  <div class="f-15 w-600 mb-8" style="color:var(--text)">项目经历</div>
+                  <div class="mb-16">
+                    <div class="flex row jb ac mb-4">
+                      <span class="f-14 w-600">个人全能助手 App</span>
+                      <span class="f-12 w-400">核心开发</span><br>
+                      <span class="f-12 text-sub">2026.01 - 至今</span>
+                    </div>
+                    <div class="f-12 text-main mb-4" style="line-height: 1.5;">
+                      独立设计并开发一款本地优先的个人效率工具。集成待办、文玩养护记录、AI 复盘与动态简历。
+                    </div>
+                    <div class="f-12 text-sub">技术栈：Flutter, Riverpod, SQLite (Drift)</div>
+                  </div>
+
+                  <div class="f-15 w-600 mb-8" style="color:var(--text)">技能清单</div>
+                  <div class="flex row wrap gap-8">
+                    <span class="tag tag-gray" style="border-radius: 4px; font-weight:normal;">Flutter / Dart</span>
+                    <span class="tag tag-gray" style="border-radius: 4px; font-weight:normal;">前端 / UI 设计</span>
+                    <span class="tag tag-gray" style="border-radius: 4px; font-weight:normal;">SQLite</span>
+                  </div>
+                </div>
+
+                <div class="flex row gap-12 mb-24">
+                  <div class="btn btn-outline flex-1 text-center" onclick="showToast('已复制分享链接')">分享链接</div>
+                  <div class="btn btn-primary flex-1 text-center" onclick="showToast('简历已导出为长图')">导出长图</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="page bg-bg hide-nav active" id="page-resume-edit">
+              <div class="top-bar trans" style="z-index: 20;">
+                <div class="btn btn-ghost p-0 f-16" onclick="goBack()">&lt; 返回</div>
+                <div class="f-16 w-600">编辑简历</div>
+                <div class="f-16 text-blue w-600 cursor" onclick="showToast('已保存'); goBack()">保存</div>
+              </div>
+              <div class="resume-nav-wrap flex row gap-12 px-16 py-12 overflow-x">
+                <div class="f-14 resume-nav-item cursor w-600 text-wood" onclick="scrollToSection('resume-edit-info')">
+                  个人信息</div>
+                <div class="f-14 resume-nav-item cursor text-sub" onclick="scrollToSection('resume-edit-edu')">教育/技能
+                </div>
+                <div class="f-14 resume-nav-item cursor text-sub" onclick="scrollToSection('resume-edit-proj')">项目经历
+                </div>
+                <div class="f-14 resume-nav-item cursor text-sub" onclick="scrollToSection('resume-edit-work')">工作经历
+                </div>
+              </div>
+              <div class="px-16 mt-8 pb-80" id="resume-scroll-container">
+                <div id="resume-edit-info">
+                  <div class="f-16 w-600 mb-12 mt-16">个人信息</div>
+                  <div class="bg-card p-16 mb-16">
+                    <div class="input-group"><label>姓名</label><input type="text" class="input-base" value="刘德华"></div>
+                    <div class="input-group"><label>求职意向 / 职位</label><input type="text" class="input-base"
+                        value="Flutter / 移动端开发工程师"></div>
+                    <div class="input-group"><label>邮箱</label><input type="email" class="input-base"
+                        value="liudehua@example.com"></div>
+                    <div class="input-group mb-0"><label>个人简介</label><textarea class="input-base" rows="3"
+                        style="resize:none;">专注于跨平台移动端开发，热爱构建本地优先(Local-First)应用。</textarea></div>
+                  </div>
+                </div>
+                <div id="resume-edit-edu">
+                  <div class="f-16 w-600 mb-12 mt-24">教育与技能</div>
+                  <div class="bg-card p-16 mb-16">
+                    <div class="input-group"><label>学校名称</label><input type="text" class="input-base" value="某某大学">
+                    </div>
+                    <div class="input-group"><label>专业/学历</label><input type="text" class="input-base"
+                        value="计算机科学与技术 / 本科"></div>
+                    <div class="input-group mb-0"><label>技能专长 (逗号分隔)</label><input type="text" class="input-base"
+                        value="Flutter, Dart, Frontend, SQLite"></div>
+                  </div>
+                </div>
+                <div id="resume-edit-proj">
+                  <div class="f-16 w-600 mb-12 mt-24">项目经历</div>
+                  <div class="bg-card p-16 mb-16 relative">
+                    <div class="flex row jb ac mb-12 border-b" style="padding-bottom: 8px;">
+                      <div class="drag-handle">≡</div><label class="switch"><input type="checkbox" checked=""><span
+                          class="slider"></span></label>
+                    </div>
+                    <div class="input-group"><label>项目名称</label><input type="text" class="input-base"
+                        value="个人全能助手 App"></div>
+                    <div class="input-group"><label>关键交付 / 描述</label><textarea class="input-base"
+                        rows="4">独立设计并开发一款本地优先的个人效率工具。集成待办、文玩养护记录、AI 复盘与动态简历。</textarea></div>
+                    <div class="input-group mb-0"><label>技术栈 (逗号分隔)</label><input type="text" class="input-base"
+                        value="Flutter, Riverpod, Drift, SQLite"></div>
+                  </div>
+                </div>
+                <div id="resume-edit-work">
+                  <div class="f-16 w-600 mb-12 mt-24">工作经历</div>
+                  <div class="bg-card p-16 mb-16 relative">
+                    <div class="flex row jb ac mb-12 border-b" style="padding-bottom: 8px;">
+                      <div class="drag-handle">≡</div><label class="switch"><input type="checkbox" checked=""><span
+                          class="slider"></span></label>
+                    </div>
+                    <div class="input-group"><label>公司名称</label><input type="text" class="input-base" value="某科技公司">
+                    </div>
+                    <div class="input-group"><label>职位</label><input type="text" class="input-base" value="移动端开发工程师">
+                    </div>
+                    <div class="input-group mb-0"><label>工作内容</label><textarea class="input-base"
+                        rows="4">负责跨平台移动应用的架构设计与开发迭代...</textarea></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- <div class="page bg-bg hide-nav" id="page-resume-edit">
+              <div class="top-bar trans">
+                <div class="btn btn-ghost p-0 f-16" onclick="goBack()">
+                  < 返回</div>
+                    <div class="f-16 w-600">编辑简历</div>
+                    <div class="f-16 text-blue w-600" onclick="showToast('已保存'); goBack()">保存</div>
+                </div>
+
+                <div class="flex row gap-12 px-16 py-12 overflow-x"
+                  style="overflow-x: auto; border-bottom: 1px solid var(--line);">
+                  <div class="f-14 w-600 text-wood">个人信息</div>
+                  <div class="f-14 text-sub">教育/技能</div>
+                  <div class="f-14 text-sub">项目经历</div>
+                  <div class="f-14 text-sub">工作经历</div>
+
+                </div>
+
+                <div class="px-16 mt-16 pb-80">
+
+                  <div class="f-16 w-600 mb-12 mt-24">个人信息</div>
+
+                  <div class="bg-card p-16 mb-16">
+                    <div class="input-group">
+                      <label>姓名</label>
+                      <input type="text" class="input-base" value="张明">
+                    </div>
+                    <div class="input-group">
+                      <label>求职意向 / 职位</label>
+                      <input type="text" class="input-base" value="Flutter / 移动端开发工程师">
+                    </div>
+                    <div class="input-group">
+                      <label>邮箱</label>
+                      <input type="email" class="input-base" value="zhangming@example.com">
+                    </div>
+                    <div class="input-group">
+                      <label>个人简介</label>
+                      <textarea class="input-base" rows="3"
+                        style="resize:none; font-family:inherit;">专注于跨平台移动端开发，热爱构建本地优先(Local-First)应用。</textarea>
+                    </div>
+                  </div>
+
+                  <div class="f-16 w-600 mb-12 mt-24">个人信息</div>
+
+                  <div class="f-16 w-600 mb-12 mt-24">项目经历</div>
+
+                  <div class="bg-card p-16 mb-16 relative">
+                    <div class="flex row jb ac mb-12 border-b"
+                      style="padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                      <div class="drag-handle">≡</div><label class="switch"><input type="checkbox" checked=""><span
+                          class="slider"></span></label>
+                    </div>
+                    <div class="input-group"><label>项目名称</label><input type="text" class="input-base"
+                        value="个人全能助手 App"></div>
+                    <div class="input-group">
+                      <label>关键交付 / 描述</label>
+                      <textarea class="input-base" rows="4">独立设计并开发一款本地优先的个人效率工具。集成待办、文玩养护记录、AI 复盘与动态简历。</textarea>
+                    </div>
+                    <div class="input-group">
+                      <label>技术栈 (逗号分隔)</label>
+                      <input type="text" class="input-base" value="Flutter, Riverpod, Drift, SQLite">
+                    </div>
+                  </div>
+                  <div class="btn btn-outline btn-block text-center mt-12 mb-24">＋ 添加项目经历</div>
+                </div>
+              </div>
+            </div> -->
+            <!-- -------------------------------------简历End------------------------------------- -->
+
+
+            <!-- ------------------------------------设置Start------------------------------------ -->
+            <div class="page pb-80" id="page-settings">
+              <div class="top-bar trans">
+                <div class="f-20 w-600 text-main">设置</div>
+              </div>
+
+              <div class="px-16 mt-8">
+                <div class="bg-card p-16 flex row gap-16 ac mb-24">
+                  <div class="avatar" style="width: 56px; height: 56px; font-size: 24px;">☕️</div>
+                  <div class="col flex-1">
+                    <div class="f-16 w-600">个人助手用户</div>
+                    <div class="f-12 text-sub mt-4 flex row gap-4 ac">
+                      <span style="width:6px;height:6px;background:var(--green);border-radius:50%"></span> 本地优先存储
+                    </div>
+                  </div>
+                </div>
+
+                <div class="f-14 w-600 text-sub mb-8 ml-8 mt-12">AI 配置</div>
+                <div class="bg-card p-16 mb-24">
+                  <div class="input-group mb-12">
+                    <label>Model</label>
+                    <input type="text" class="input-base" value="gpt-4o-mini">
+                  </div>
+                  <div class="input-group mb-0">
+                    <label>API Key (仅保存在本地)</label>
+                    <input type="password" class="input-base" value="sk-xxxxxxxxxxxxxxxxxxx">
+                  </div>
+                </div>
+
+                <div class="f-14 w-600 text-sub mb-8 ml-8 mt-12">数据与安全</div>
+                <div class="bg-card mb-24">
+                  <div class="flex row jb ac p-16 border-b cursor" style="border-bottom: 1px solid var(--line);"
+                    onclick="showToast('备份已导出至下载目录')">
+                    <div class="f-15 text-main">JSON 备份导出</div>
+                    <div class="f-14 text-sub">〉</div>
+                  </div>
+                  <div class="flex row jb ac p-16 border-b cursor" style="border-bottom: 1px solid var(--line);">
+                    <div class="f-15 text-main">从备份导入</div>
+                    <div class="f-14 text-sub">〉</div>
+                  </div>
+                  <div class="flex row jb ac p-16 cursor" onclick="showToast('缓存已清除')">
+                    <div class="f-15 text-red">清除缓存</div>
+                    <div class="f-14 text-sub">〉</div>
+                  </div>
+                </div>
+
+                <div class="f-14 w-600 text-sub mb-8 ml-8 mt-12">偏好与分类</div>
+                <div class="bg-card mb-24">
+                  <div class="flex row jb ac p-16 border-b cursor" onclick="navTo('page-category-asset')">
+                    <div class="f-15 text-main">文玩分类管理</div>
+                    <div class="f-14 text-sub">〉</div>
+                  </div>
+
+                  <div class="flex row jb ac p-16 cursor" onclick="navTo('page-category-todo')">
+                    <div class="f-15 text-main">待办清单管理</div>
+                    <div class="f-14 text-sub">〉</div>
+                  </div>
+                </div>
+                <div class="text-center f-12 text-sub mb-24">版本 1.0.0 · Local-First</div>
+              </div>
+            </div>
+
+            <div class="page bg-bg hide-nav" id="page-category-asset">
+              <div class="top-bar trans">
+                <div class="btn btn-ghost p-0 f-16" onclick="goBack()">返回</div>
+                <div class="f-16 w-600">文玩分类管理</div>
+                <div class="f-16 text-blue cursor" onclick="showToast('已保存'); goBack()">保存</div>
+              </div>
+              <div class="px-16 mt-16">
+                <div class="bg-card p-16 mb-16">
+                  <div class="flex row jb ac pb-12 mb-12 border-b">
+                    <span class="f-15 w-600 text-wood">🌰 核桃</span>
+                    <div class="flex row gap-16">
+                      <span class="text-blue cursor f-24 w-600" onclick="showToast('新建子类')">+</span>
+                    </div>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">麻核桃</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">南疆石</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8">
+                    <span class="f-14 text-main">秋子</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                </div>
+
+                <div class="bg-card p-16 mb-16">
+                  <div class="flex row jb ac pb-12 mb-12 border-b">
+                    <span class="f-15 w-600 text-wood">📿 手串</span>
+                    <div class="flex row gap-16">
+                      <span class="text-blue cursor f-24 w-600" onclick="showToast('新建子类')">+</span>
+                    </div>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">驼骨</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">百香籽</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8">
+                    <span class="f-14 text-main">星月菩提</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                </div>
+
+                <div class="bg-card p-16 mb-16">
+                  <div class="flex row jb ac pb-12 mb-12 border-b">
+                    <span class="f-15 w-600 text-wood">🪨 把件</span>
+                    <div class="flex row gap-16">
+                      <span class="text-blue cursor f-24 w-600" onclick="showToast('新建子类')">+</span>
+                    </div>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">葫芦</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8 mb-8">
+                    <span class="f-14 text-main">面包圈</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="sub-cat-row flex row jb ac pb-8">
+                    <span class="f-14 text-main">贝壳</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                </div>
+                <div class="btn btn-outline btn-block mt-16 cursor" onclick="showToast('弹窗输入新主分类名')">＋ 添加主分类</div>
+              </div>
+            </div>
+
+
+            <div class="page bg-bg hide-nav" id="page-category-todo">
+              <div class="top-bar trans">
+                <div class="btn btn-ghost p-0 f-16" onclick="goBack()">返回</div>
+                <div class="f-16 w-600">待办清单管理</div>
+                <div class="f-16 text-blue cursor" onclick="showToast('已保存'); goBack()">保存</div>
+              </div>
+              <div class="px-16 mt-16">
+                <div class="bg-card p-16">
+                  <div class="flex row jb ac pb-12 mb-12">
+                    <span class="f-15">工作</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="flex row jb ac pb-12 mb-12">
+                    <span class="f-15">生活</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                  <div class="flex row jb ac">
+                    <span class="f-15">习惯</span>
+                    <span class="text-red f-18 cursor">×</span>
+                  </div>
+                </div>
+                <div class="btn btn-outline btn-block mt-16 cursor" onclick="showToast('弹窗输入新清单名')">＋ 添加新清单</div>
+              </div>
+            </div>
+            <!-- ---------------------------------------设置End------------------------------------- -->
+
+            <div class="nav-bar" id="nav-bar">
+              <div class="nav-item" onclick="navTo('page-asset', this)">
+                <div class="icon">📿</div><span>文玩</span>
+              </div>
+              <div class="nav-item" onclick="navTo('page-todo', this)">
+                <div class="icon">☑️</div><span>待办</span>
+              </div>
+              <div class="nav-item active" onclick="navTo('page-home', this)">
+                <div class="icon">🏠</div><span>首页</span>
+              </div>
+              <div class="nav-item" onclick="navTo('page-review', this)">
+                <div class="icon">💡</div><span>复盘</span>
+              </div>
+              <div class="nav-item" onclick="navTo('page-resume', this)">
+                <div class="icon">📝</div><span>简历</span>
+              </div>
+            </div>
+
+
+            <div class="toast" id="toast">操作成功</div>
+
+            <script>
+              // Navigation Logic
+              const pages = document.querySelectorAll('.page');
+              const navItems = document.querySelectorAll('.nav-item');
+              const navBar = document.getElementById('nav-bar');
+              const appContent = document.getElementById('app-content');
+              let historyStack = ['page-home'];
+
+              function navTo(pageId, navElement = null) {
+                pages.forEach(p => p.classList.remove('active'));  // Hide all pages
+                const target = document.getElementById(pageId);  // Show target page
+                if (target) {
+                  target.classList.add('active');
+                  if (pageId !== 'page-resume-edit') target.scrollTop = 0;
+                }
+
+                if (target && target.classList.contains('hide-nav')) {
+                  navBar.style.display = 'none';
+                } else {
+                  navBar.style.display = 'flex';
+                }
+
+                if (navElement) {
+                  navItems.forEach(n => n.classList.remove('active'));
+                  navElement.classList.add('active');
+                  historyStack = [pageId]; // Reset history on tab switch
+                } else {
+                  // If not a main tab, push to history
+                  if (historyStack[historyStack.length - 1] !== pageId) {
+                    historyStack.push(pageId);
+                  }
+                }
+              }
+
+              function goBack() {
+                if (historyStack.length > 1) {
+                  historyStack.pop(); // Remove current
+                  const prevPage = historyStack[historyStack.length - 1];
+
+                  // Attempt to map back to nav element if it's a root page
+                  let navEl = null;
+                  if (prevPage === 'page-home') navEl = navItems[2];
+                  else if (prevPage === 'page-todo') navEl = navItems[1];
+                  else if (prevPage === 'page-asset') navEl = navItems[0];
+                  else if (prevPage === 'page-review') navEl = navItems[3];
+                  else if (prevPage === 'page-resume') navEl = navItems[4];
+
+                  navTo(prevPage, navEl);
+                  // Because navTo pushes to stack if navEl is null, we need to clean up
+                  if (!navEl) historyStack.pop();
+                } else {
+                  navTo('page-home', navItems[2]);
+                }
+              }
+
+              // Toast Logic
+              let toastTimeout;
+              function showToast(msg) {
+                const toast = document.getElementById('toast');
+                toast.innerText = msg; toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 2000);
+              }
+
+              // Task Check Logic
+              function toggleTask(el) {
+                const item = el.closest('.task-item');
+                item.classList.toggle('done');
+                if (item.classList.contains('done')) showToast('任务已完成');
+                else showToast('任务已重新打开');
+              }
+
+              // Check-in Photo Logic
+              let tempCheckInImage = '';
+              function handlePhotoSelect(input) {
+                if (input.files && input.files[0]) {
+                  const reader = new FileReader();
+                  reader.onload = function (e) {
+                    tempCheckInImage = e.target.result;
+                    document.getElementById('checkin-preview-img').src = tempCheckInImage;
+                    document.getElementById('checkin-modal').classList.add('show');
+                    input.value = '';
+                  }
+                  reader.readAsDataURL(input.files[0]);
+                }
+              }
+              function closeCheckIn() {
+                document.getElementById('checkin-modal').classList.remove('show');
+                document.getElementById('checkin-text').value = '';
+              }
+              function submitCheckIn() {
+                const text = document.getElementById('checkin-text').value || '留下了美好的盘玩瞬间。';
+                const timeline = document.getElementById('asset-timeline');
+                const newItem = document.createElement('div');
+                newItem.className = 'timeline-item';
+                newItem.innerHTML = `
+                  <div class="timeline-dot"></div>
+                  <div class="flex row jb ac mb-4"><span class="f-14 w-600">最新盘玩打卡</span><span class="f-12 text-sub">刚刚</span></div>
+                  <div class="f-14 text-main mb-8">${text}</div>
+                  <img src="${tempCheckInImage}" style="width:100%; border-radius:8px; margin-bottom:8px; height:180px; object-fit:cover;">
+                `;
+                timeline.insertBefore(newItem, timeline.firstChild);
+                const dots = timeline.querySelectorAll('.timeline-dot');
+                if (dots.length > 1) {
+                  dots[1].style.background = 'var(--line)'; dots[1].style.border = 'none'; dots[1].style.boxShadow = 'none';
+                }
+                closeCheckIn();
+                showToast('发布成功！已沉淀至时间轴');
+              }
+
+              // Parallax Scroll for Asset Detail
+              function handleDetailScroll(el) {
+                const hero = document.getElementById('detail-hero-bg');
+                if (hero) {
+                  let y = el.scrollTop;
+                  if (y > 0) hero.style.transform = `translateY(${y * 0.4}px)`;
+                }
+              }
+
+              // Action Sheet & Favorite
+              function toggleFavorite(el) {
+                if (el.innerText === '🤍') { el.innerText = '❤️'; showToast('已添加至特别关注'); }
+                else { el.innerText = '🤍'; showToast('已取消关注'); }
+              }
+              function openActionSheet() {
+                document.getElementById('action-sheet-mask').classList.add('show');
+                document.getElementById('action-sheet').classList.add('show');
+              }
+              function closeActionSheet() {
+                document.getElementById('action-sheet-mask').classList.remove('show');
+                document.getElementById('action-sheet').classList.remove('show');
+              }
+
+              // Dynamic Category Form Switch
+              function switchAssetForm(val) {
+                document.querySelectorAll('.dynamic-form').forEach(el => el.classList.remove('active'));
+                const target = document.getElementById('form-' + val);
+                if (target) target.classList.add('active');
+              }
+
+              // Resume Scrollspy
+              function scrollToSection(id) {
+                const container = document.getElementById('page-resume-edit');
+                const section = document.getElementById(id);
+                if (section && container) {
+                  container.scrollTo({ top: section.offsetTop - 120, behavior: 'smooth' });
+                }
+              }
+              document.getElementById('page-resume-edit').addEventListener('scroll', function () {
+                const sections = ['resume-edit-info', 'resume-edit-edu', 'resume-edit-proj', 'resume-edit-work'];
+                const navItems = document.querySelectorAll('.resume-nav-item');
+                let current = '';
+                sections.forEach(id => {
+                  const section = document.getElementById(id);
+                  if (section && this.scrollTop >= (section.offsetTop - 130)) current = id;
+                });
+                if (!current && this.scrollTop < 50) current = sections[0];
+                navItems.forEach((item, index) => {
+                  item.className = 'f-14 resume-nav-item cursor';
+                  item.classList.add('text-sub');
+                  if (sections[index] === current) {
+                    item.classList.remove('text-sub'); item.classList.add('w-600', 'text-wood');
+                  }
+                });
+              });
+
+            </script>
+</body>
+
+</html>

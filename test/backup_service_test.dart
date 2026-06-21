@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_assistant/core/ai/llm_strategy_config.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/backup_service.dart';
+import 'package:personal_assistant/core/database/user_preferences_dao.dart';
 import 'package:personal_assistant/core/security/api_key_store.dart';
 
 void main() {
@@ -41,9 +43,14 @@ void main() {
     test('exports and restores schema v6 fields without data loss', () async {
       final now = DateTime(2026, 6, 20, 10, 30);
       final deletedAt = DateTime(2026, 6, 21, 9);
-      await apiKeyStore.write('existing-secret-key');
 
       await _seedSourceDatabase(sourceDb, now, deletedAt);
+      await UserPreferencesDao(sourceDb, apiKeyStore: apiKeyStore).setAIConfig(
+        provider: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        apiKey: 'existing-secret-key',
+      );
 
       final backupPath = await BackupService(
         sourceDb,
@@ -59,6 +66,13 @@ void main() {
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
       );
+      final exportedPrefs =
+          (backupJson['user_preferences'] as List<dynamic>).single
+              as Map<String, dynamic>;
+      expect(exportedPrefs['aiConfig'], contains('"provider":"OpenAI"'));
+      expect(exportedPrefs['aiConfig'], contains('"chatMaxTokens":1000'));
+      expect(exportedPrefs['aiConfig'], isNot(contains('existing-secret-key')));
+      expect(exportedPrefs['aiConfig'], isNot(contains('apiKey')));
 
       await sourceDb.close();
       sourceClosed = true;
@@ -73,6 +87,12 @@ void main() {
           .select(restoredDb.userPreferences)
           .getSingle();
       expect(prefs.todoCategories, '["life","work","ai"]');
+      final restoredStrategy = await UserPreferencesDao(
+        restoredDb,
+        apiKeyStore: apiKeyStore,
+      ).getLLMStrategyConfig();
+      expect(restoredStrategy.provider, 'OpenAI');
+      expect(restoredStrategy.chatMaxTokens, 1000);
 
       final lists = await restoredDb.select(restoredDb.todoLists).get();
       expect(lists, hasLength(1));
@@ -122,6 +142,32 @@ void main() {
       expect(await apiKeyStore.read(), null);
     });
 
+    test('exports LLM strategy config without API key material', () async {
+      await UserPreferencesDao(sourceDb, apiKeyStore: apiKeyStore).setAIConfig(
+        provider: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com',
+        model: 'deepseek-chat',
+        apiKey: 'do-not-export',
+      );
+
+      final backupPath = await BackupService(
+        sourceDb,
+        apiKeyStore: apiKeyStore,
+      ).exportBackupTo(tempDir.path);
+      final backupJson =
+          jsonDecode(await File(backupPath).readAsString())
+              as Map<String, dynamic>;
+      final prefs =
+          (backupJson['user_preferences'] as List<dynamic>).single
+              as Map<String, dynamic>;
+
+      expect(prefs['aiApiKey'], null);
+      expect(prefs['aiConfig'], contains('"provider":"DeepSeek"'));
+      expect(prefs['aiConfig'], contains('"model":"deepseek-chat"'));
+      expect(prefs['aiConfig'], isNot(contains('do-not-export')));
+      expect(prefs['aiConfig'], isNot(contains('apiKey')));
+    });
+
     test('imports legacy plaintext API key into secure store only', () async {
       final now = DateTime(2026, 6, 20, 10, 30);
       final backup = {
@@ -137,6 +183,11 @@ void main() {
             'aiApiKey': 'legacy-secret-key',
             'aiBaseUrl': 'https://api.openai.com/v1',
             'aiModel': 'gpt-4o-mini',
+            'aiConfig': const LLMStrategyConfig(
+              provider: 'OpenAI',
+              baseUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o-mini',
+            ).toJsonString(),
             'dailyReviewTime': '21:00',
             'weeklyReportDay': 'sunday',
             'resumeTemplateId': 0,
@@ -156,6 +207,8 @@ void main() {
 
       final prefs = await sourceDb.select(sourceDb.userPreferences).getSingle();
       expect(prefs.aiApiKey, null);
+      expect(prefs.aiConfig, isNot(contains('legacy-secret-key')));
+      expect(prefs.aiConfig, isNot(contains('apiKey')));
       expect(await apiKeyStore.read(), 'legacy-secret-key');
     });
 

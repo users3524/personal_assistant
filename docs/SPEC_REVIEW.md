@@ -57,7 +57,7 @@
 | `AIService` | 定义 `generateDailyReview`、`generateWeeklyReport`、`chat`、`isAvailable`。 |
 | `OfflineReviewGenerator` | 本地模板生成聊天回复、日报、周报；无需网络和 Key。 |
 | `OpenAIService` | 调用 `/v1/chat/completions` 和 `/v1/models`。 |
-| `AIConfigProvider` | 从 `user_preferences` 加载 provider/baseUrl/model/apiKey。 |
+| `AIConfigProvider` | 从 `user_preferences.ai_config` 加载 provider/baseUrl/model/预算等非敏感策略，并从安全存储读取 API Key。 |
 | `AIPrompts` | 日报和周报纯文本 Prompt。 |
 | `AIOutputParser` | 解析日报/周报纯文本输出；格式缺失时保留原始内容并写入用户可见的降级提示。 |
 

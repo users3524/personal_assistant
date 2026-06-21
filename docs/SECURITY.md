@@ -54,7 +54,7 @@
 
 图片处理：导出时会尝试读取 `imagePaths` / `photoPaths` 对应文件，存在则编码为 `base64:<content>`；失败则保留原路径。
 
-密钥处理：`user_preferences.aiApiKey` 在导出 JSON 中强制写为 `null`，避免明文备份泄漏。
+密钥处理：`user_preferences.aiApiKey` 在导出 JSON 中强制写为 `null`，避免明文备份泄漏。`user_preferences.aiConfig` 可导出供应商、模型、baseUrl 和预算等非敏感策略，但不得包含 API Key。
 
 ## 4. 备份导入
 
@@ -107,5 +107,5 @@
 | 规划 | 说明 |
 | --- | --- |
 | 安全存储平台验证 | 已接入 `flutter_secure_storage`；后续仍需在 Android、Windows、Web 真机/真环境逐项验证插件行为和降级提示。 |
-| 配置与密钥分离 | 后续 `LLMStrategyConfig` 只保存供应商、模型名、baseUrl、预算等非敏感字段；密钥继续只通过安全存储读取。 |
+| 配置与密钥分离 | `LLMStrategyConfig` 只保存供应商、模型名、baseUrl、预算等非敏感字段；密钥继续只通过安全存储读取。 |
 | 加密备份格式 | 明文 JSON 备份不导出 API Key；若未来需要导出密钥，应提供用户确认和加密备份格式。 |

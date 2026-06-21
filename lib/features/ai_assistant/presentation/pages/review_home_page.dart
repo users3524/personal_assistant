@@ -374,10 +374,17 @@ class ReviewHomePage extends ConsumerWidget {
   }
 
   void _showMonthlyCalendar(BuildContext context) {
-    // TODO: 月度日历视图
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('月度视图即将上线')));
+    final now = DateTime.now();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _MonthlyCalendarSheet(
+        year: now.year,
+        month: now.month,
+        moodColor: _moodColor,
+        moodEmoji: _moodEmoji,
+      ),
+    );
   }
 
   Color _moodColor(int level) {
@@ -416,6 +423,202 @@ class ReviewHomePage extends ConsumerWidget {
 }
 
 // ===== 统计面板 =====
+
+class _MonthlyCalendarSheet extends ConsumerWidget {
+  final int year;
+  final int month;
+  final Color Function(int level) moodColor;
+  final String Function(int level) moodEmoji;
+
+  const _MonthlyCalendarSheet({
+    required this.year,
+    required this.month,
+    required this.moodColor,
+    required this.moodEmoji,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final key = year * 100 + month;
+    final reviewsAsync = ref.watch(dailyListByYearMonthProvider(key));
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_month,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$year年$month月复盘日历',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  tooltip: '关闭',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildWeekHeader(context),
+            const SizedBox(height: 8),
+            reviewsAsync.when(
+              data: (reviews) => _buildCalendarGrid(context, reviews),
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, _) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('加载失败: $err'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekHeader(BuildContext context) {
+    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    return Row(
+      children: labels
+          .map(
+            (label) => Expanded(
+              child: Center(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildCalendarGrid(
+    BuildContext context,
+    List<DailyReviewEntity> reviews,
+  ) {
+    final reviewsByDay = {
+      for (final review in reviews) review.date.day: review,
+    };
+    final firstDay = DateTime(year, month, 1);
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final leadingBlanks = firstDay.weekday - 1;
+    final totalCells = leadingBlanks + daysInMonth;
+    final rowCount = (totalCells / 7).ceil();
+
+    return Column(
+      children: List.generate(rowCount, (rowIndex) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: List.generate(7, (columnIndex) {
+              final cellIndex = rowIndex * 7 + columnIndex;
+              final day = cellIndex - leadingBlanks + 1;
+              if (day < 1 || day > daysInMonth) {
+                return const Expanded(child: SizedBox(height: 54));
+              }
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: _CalendarDayTile(
+                    day: day,
+                    review: reviewsByDay[day],
+                    moodColor: moodColor,
+                    moodEmoji: moodEmoji,
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _CalendarDayTile extends StatelessWidget {
+  final int day;
+  final DailyReviewEntity? review;
+  final Color Function(int level) moodColor;
+  final String Function(int level) moodEmoji;
+
+  const _CalendarDayTile({
+    required this.day,
+    required this.review,
+    required this.moodColor,
+    required this.moodEmoji,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final review = this.review;
+    final hasReview = review != null;
+    final color = hasReview ? moodColor(review.moodLevel) : Colors.grey;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: hasReview
+          ? () {
+              Navigator.pop(context);
+              context.push(
+                '/review/daily/${review.date.toIso8601String().split('T')[0]}',
+              );
+            }
+          : null,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: hasReview
+              ? color.withValues(alpha: 0.12)
+              : Colors.grey.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: hasReview
+                ? color.withValues(alpha: 0.35)
+                : Colors.grey.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$day',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: hasReview ? FontWeight.w700 : FontWeight.w500,
+                color: hasReview ? color : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              hasReview ? moodEmoji(review.moodLevel) : '·',
+              style: TextStyle(
+                fontSize: hasReview ? 15 : 12,
+                color: Colors.grey.shade400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _StatsSheet extends ConsumerWidget {
   const _StatsSheet();

@@ -88,7 +88,7 @@ work_experiences.responsibilities/tech_stack -> List<String>
 4. `AntiqueEntity` 不再暴露 `currentValuation`。
 5. `BackupService` 新导出的 `valuation_records` 为空；旧备份导入时将 `valuation_records.date/amount/remark` 和旧 `current_valuation` 归档到 `antique_items.notes`。
 
-暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v8 中，避免本阶段引入破坏性迁移。后续可在旧备份兼容路径稳定后，单独评估 schema 物理移除。
+暂留兼容：`valuation_records` 表和 `antique_items.current_valuation` 列仍在 schema v8 中，避免本阶段引入破坏性迁移。已评估结论是下一版 schema 不主动物理移除；若未来确需移除，应作为独立 schema 版本发布，并配套旧库升级、旧备份导入和估值归档测试。
 
 ## 6. 已吸收的未来设计原则
 

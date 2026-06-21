@@ -63,7 +63,9 @@ schema v8 为榜单和日期区间统计补充了两个索引：`idx_patting_log
 | `remark` | 备注。 |
 | `created_at` | 创建时间。 |
 
-当前口径：不保留估值功能。已移除 `ValuationChart`、`ValuationRecordEntity`、`AntiqueRepository.getValuations()` / `addValuation()`、`totalValuationProvider`、`fl_chart`、财富榜和潜力榜。`BackupService` 新导出的 `valuation_records` 为空；导入旧备份时，`valuation_records.date` / `amount` / `remark` 会按 `item_id` 分组、日期升序追加归档到 `antique_items.notes`，旧 `current_valuation` 也会以“当前估值”文本归档后写空。物理删除表/列留到后续 schema 迁移阶段评估。
+当前口径：不保留估值功能。已移除 `ValuationChart`、`ValuationRecordEntity`、`AntiqueRepository.getValuations()` / `addValuation()`、`totalValuationProvider`、`fl_chart`、财富榜和潜力榜。`BackupService` 新导出的 `valuation_records` 为空；导入旧备份时，`valuation_records.date` / `amount` / `remark` 会按 `item_id` 分组、日期升序追加归档到 `antique_items.notes`，旧 `current_valuation` 也会以“当前估值”文本归档后写空。
+
+物理移除评估结论：下一版 schema 不主动删除 `valuation_records` 表和 `antique_items.current_valuation` 列。理由是应用层已完全下线估值，兼容壳不影响当前功能；而 Drift/SQLite 的删列/删表属于破坏性迁移，需要表重建、旧库升级测试和旧备份导入测试一起释放。若未来确实要物理移除，应作为独立 schema 版本处理，不能和 AI 新表、深夜引擎或向量表迁移混在同一版本中。
 
 ## 3. 当前实体与仓库
 

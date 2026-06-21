@@ -43,11 +43,53 @@ void main() {
       expect(result.prompt, contains('已按预算截断'));
     });
 
+    test('clips without suffix when the budget is too small', () {
+      const builder = PromptBuilder(
+        strategy: LLMStrategyConfig(promptBudgetChars: 4),
+      );
+
+      final result = builder.buildChatPrompt('abcdefghi');
+
+      expect(result.wasClipped, true);
+      expect(result.prompt, 'abcd');
+      expect(result.estimatedChars, 4);
+    });
+
     test('estimates ascii and CJK token costs differently', () {
       const builder = PromptBuilder();
 
       expect(builder.estimateTokens('abcdefgh'), 2);
       expect(builder.estimateTokens('复盘完成'), 4);
+      expect(builder.estimateTokens('abcd efgh'), 2);
+      expect(builder.estimateTokens('abc复盘def'), 4);
+    });
+
+    test('uses configured budget for weekly reports', () {
+      const builder = PromptBuilder(
+        strategy: LLMStrategyConfig(
+          weeklyReportMaxTokens: 360,
+          promptBudgetChars: 80,
+        ),
+      );
+
+      final result = builder.buildWeeklyReportPrompt(
+        weekReviewsText: List.filled(20, '今天完成任务并记录复盘').join('\n'),
+      );
+
+      expect(result.maxOutputTokens, 360);
+      expect(result.estimatedChars, lessThanOrEqualTo(80));
+      expect(result.wasClipped, true);
+    });
+
+    test('chat prompt keeps only the current message', () {
+      const builder = PromptBuilder();
+
+      final result = builder.buildChatPrompt('只记录当前这句话');
+
+      expect(result.prompt, '只记录当前这句话');
+      expect(result.prompt, isNot(contains('历史日报')));
+      expect(result.prompt, isNot(contains('周报')));
+      expect(result.prompt, isNot(contains('RAG')));
     });
 
     test('routes to offline note when turn limit or config blocks cloud', () {

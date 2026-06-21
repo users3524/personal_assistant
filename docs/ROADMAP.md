@@ -51,7 +51,7 @@
 | 备份导入/导出补齐 | `todo_lists` 未覆盖；`user_preferences` 缺 `todo_categories`；`todos` 缺 `list_id/parent_id/recurrence_rule/deleted_at`；简历表缺新增 List 字段。 |
 | 文玩图片路径统一 | UI 展示、分享、保存到相册和备份导出已复用 `resolveImageFile()` / `ResolvedImage`；后续继续处理备份恢复写入应用文档目录。 |
 | 估值兼容收尾 | 应用层已下线估值；后续仅需在旧备份兼容稳定后评估 schema 物理移除。 |
-| 复盘页限制补齐 | 已补文本 500 字、语音 60 秒、每日 15 轮云端 turn 计数和离线便签模式；后续仍需继续完善 PromptBuilder 预算在页面层的统一接管。 |
+| 复盘页限制补齐 | 已补文本 500 字、语音 60 秒、PromptBuilder 字符/token 预算、每日 15 轮云端 turn 计数和离线便签模式；后续仍需继续完善深夜素材包裁剪。 |
 | 测试补齐 | 当前测试是占位，需要 DAO、Provider、迁移、备份恢复测试。 |
 | API Key 安全边界 | 已接入平台安全存储并从 JSON 备份中剔除；后续需要做真机平台验证和加密备份格式评估。 |
 
@@ -107,7 +107,7 @@
 | 工作 | 说明 |
 | --- | --- |
 | 策略配置 | 首版 `LLMStrategyConfig` JSON 复用 `user_preferences`，不引入 Hive/SharedPreferences，也暂不新增 `system_configs`。 |
-| PromptBuilder 深化 | 服务层已新增；后续继续把页面层 prompt 预算和更完整的裁剪策略统一接管。 |
+| PromptBuilder 深化 | 服务层已新增并接入 OpenAI 调用；后续继续补深夜 raw context pack 的优先级裁剪策略。 |
 | 成本闸门剩余项 | 文本 500 字、STT 60 秒、每日云端 turn 计数和离线便签模式已落地；后续补素材预算裁剪和深夜生成限制。 |
 | 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行、素材打包。 |
 | 调度接口 | 设计纯 Dart `AILogScheduler` 接口，平台实现放到 infrastructure 层；Android WorkManager 约束不使用 `RequiresDeviceIdle`。 |

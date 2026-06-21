@@ -12,11 +12,11 @@
 | 待办 | `/todos` | 待办树、子任务、状态流转、软删除、归档、周/月视图、今日复盘入口。 |
 | 简历 | `/resume` | 三模板预览、编辑资料/经历/技能/项目、拖拽排序、可见性开关、图片导出分享。 |
 | 设置 | `/settings` | AI 配置、通知、分类管理、文玩设置、JSON 备份导入导出、许可页。 |
-| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 独立复盘历史入口、对话式日报、日报详情、ISO 周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界。 |
+| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 独立复盘历史入口、对话式日报、日报详情、ISO 周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界、PromptBuilder 预算、每日 15 轮云端请求限制。 |
 
 ## 2. 当前数据库表
 
-当前 `schemaVersion = 8`，表结构来自 Drift 手写表定义。
+当前 `schemaVersion = 10`，表结构来自 Drift 手写表定义。
 
 | 表 | 所属模块 | 当前状态 |
 | --- | --- | --- |
@@ -29,13 +29,14 @@
 | `valuation_records` | 文玩估值遗留兼容 | 应用层已下线；新备份不导出估值历史，旧备份导入时归档到藏品备注。 |
 | `daily_reviews` | AI 复盘 | 使用中。 |
 | `weekly_reports` | AI 复盘 | 使用中。 |
+| `chat_turns` | AI 复盘 | 使用中；保存复盘对话、离线便签和每日云端 turn 计数。 |
 | `resume_profile` | 简历 | 使用中。 |
 | `work_experiences` | 简历 | 使用中。 |
 | `educations` | 简历 | 使用中。 |
 | `skill_items` | 简历 | 使用中。 |
 | `project_experiences` | 简历 | 使用中。 |
 
-schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引。
+schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引；schema v9 增加非敏感 AI 策略 JSON；schema v10 增加 `chat_turns`。
 
 ## 3. 当前已实现的数据关系
 
@@ -61,16 +62,17 @@ work_experiences.responsibilities/tech_stack -> List<String>
 | 多供应商配置 | `settings_page.dart` |
 | 日报 Prompt | `AIPrompts.dailyReviewSystemPrompt` |
 | 周报 Prompt | `AIPrompts.weeklyReportSystemPrompt` |
+| PromptBuilder 预算 | `PromptBuilder` 按字符预算裁剪 prompt，以 ASCII 每 4 字符约 1 token、非 ASCII 每字符约 1 token 的启发式估算成本。 |
 | 纯文本解析降级 | `AIOutputParser` 保留未按格式返回的原始输出，并生成用户可见提示。 |
 | 日报文玩分钟输入 | `DailyReviewChatPage` 通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取当日盘玩分钟。 |
 | 单次文本 500 字限制 | `DailyReviewChatPage` 输入框和发送入口共同限制。 |
 | STT 60 秒截断 | `DailyReviewChatPage` 本地计时器自动停止识别并发送已识别文本。 |
+| 每日 15 轮熔断 | `DailyReviewChatPage` + `chat_turns` 只统计真实云端 user turn，达到上限后转离线便签。 |
 
 未实现：
 
 | 能力 | 当前状态 |
 | --- | --- |
-| 每日 15 轮熔断 | 无持久化 turn 计数和熔断 UI。 |
 | 深夜 2:00-5:00 后台引擎 | 当前无后台调度实现。 |
 | 结构化 JSON 输出/重试 | 当前 OpenAI 输出仍按纯文本解析，未接入 JSON schema 和重试。 |
 | RAG / 向量存储 / 人生罗盘 | 当前无表、无检索实现。 |

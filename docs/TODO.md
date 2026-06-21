@@ -99,7 +99,7 @@
 - [x] 设计 `vector_embeddings`：sourceType/sourceId、embeddingModel、dimension、vectorData；sourceType 首版使用当前业务源名，避免写入尚无表支撑的 `habit_log`。
 - [x] 明确 `vector_data` 编码格式：Float32/Float64、端序、归一化策略和版本字段。
 - [x] 检索前校验 embedding 模型和维度，不兼容时拒绝相似度计算并触发重建。
-- [ ] 向量检索先实现 SQLite BLOB + Dart O(N) 余弦相似度，并记录性能基准。
+- [x] 向量检索先实现 SQLite BLOB + Dart O(N) 余弦相似度，并记录性能基准。
 - [ ] 超过万级向量后按年份/人生罗盘维度过滤，并迁移计算到 Isolate。
 - [ ] 人生罗盘：固定维度、30 天修改冷却、存量根任务迁移策略。
 - [ ] RAG 周报限窗：Top-K <= 5、单片 <= 400 字、总 prompt 预算约 12k tokens。

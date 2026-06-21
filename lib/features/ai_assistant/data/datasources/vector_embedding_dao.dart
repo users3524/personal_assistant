@@ -4,16 +4,21 @@ import '../../../../core/ai/vector_memory_strategy.dart';
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/milestone_entity.dart';
 import '../../domain/entities/vector_embedding_entity.dart';
+import '../../domain/services/linear_vector_search_service.dart';
 import '../../domain/services/vector_data_codec.dart';
+import '../../domain/services/vector_search_guard.dart';
 
 class VectorEmbeddingDao {
   final AppDatabase _db;
   final VectorDataCodec _codec;
+  final LinearVectorSearchService _searchService;
 
   VectorEmbeddingDao(
     this._db, {
     VectorDataCodec codec = const VectorDataCodec(),
-  }) : _codec = codec;
+    LinearVectorSearchService searchService = const LinearVectorSearchService(),
+  }) : _codec = codec,
+       _searchService = searchService;
 
   VectorEmbeddingEntity _toEntity(VectorEmbedding row) {
     return VectorEmbeddingEntity(
@@ -104,6 +109,27 @@ class VectorEmbeddingDao {
         model: row.embeddingModel,
         dimension: row.dimension,
       ),
+    );
+  }
+
+  Future<VectorSearchResult> searchLinear({
+    required Uint8List queryVectorData,
+    required VectorMemoryStrategy strategy,
+    int topK = 5,
+  }) async {
+    final metadata = await getIndexMetadata();
+    VectorSearchGuard(strategy: strategy).assertCanSearch(metadata);
+
+    final profile = strategy.embeddingProfile;
+    final candidates = await getByModel(
+      embeddingModel: profile.model,
+      dimension: profile.dimension,
+    );
+    return _searchService.search(
+      queryVectorData: queryVectorData,
+      candidates: candidates,
+      dimension: profile.dimension,
+      topK: topK,
     );
   }
 

@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_assistant/core/ai/vector_memory_strategy.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/vector_embedding_dao.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/milestone_entity.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/vector_embedding_entity.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/services/vector_data_codec.dart';
+import 'package:personal_assistant/features/ai_assistant/domain/services/vector_search_guard.dart';
 
 void main() {
   group('VectorEmbeddingDao', () {
@@ -104,6 +106,67 @@ void main() {
       expect(metadata?.embeddingProfile.model, 'text-embedding-3-small');
       expect(metadata?.embeddingProfile.dimension, 4);
     });
+
+    test('searches matching vectors with guard and benchmark', () async {
+      final now = DateTime(2026, 6, 21, 9);
+      await dao.upsert(
+        _embedding(
+          now: now,
+          sourceType: MilestoneSourceType.todo,
+          sourceId: 1,
+          vectorData: _vector([1, 0, 0, 0]),
+        ),
+      );
+      await dao.upsert(
+        _embedding(
+          now: now,
+          sourceType: MilestoneSourceType.todo,
+          sourceId: 2,
+          vectorData: _vector([0, 1, 0, 0]),
+        ),
+      );
+
+      final result = await dao.searchLinear(
+        queryVectorData: _vector([1, 0, 0, 0]),
+        topK: 1,
+        strategy: _strategy(model: 'text-embedding-3-small', dimension: 4),
+      );
+
+      expect(result.matches.single.embedding.sourceId, 1);
+      expect(result.matches.single.score, closeTo(1, 0.000001));
+      expect(result.benchmark.mode, 'dart_linear_cosine');
+      expect(result.benchmark.candidateCount, 2);
+      expect(result.benchmark.dimension, 4);
+    });
+
+    test(
+      'rejects linear search when model or dimension does not match',
+      () async {
+        final now = DateTime(2026, 6, 21, 9);
+        await dao.upsert(
+          _embedding(
+            now: now,
+            sourceType: MilestoneSourceType.todo,
+            sourceId: 1,
+          ),
+        );
+
+        await expectLater(
+          dao.searchLinear(
+            queryVectorData: _vector([1, 0, 0, 0]),
+            strategy: _strategy(model: 'other-embedding-model', dimension: 4),
+          ),
+          throwsA(isA<VectorSearchRejectedException>()),
+        );
+        await expectLater(
+          dao.searchLinear(
+            queryVectorData: _vector([1, 0, 0]),
+            strategy: _strategy(model: 'text-embedding-3-small', dimension: 3),
+          ),
+          throwsA(isA<VectorSearchRejectedException>()),
+        );
+      },
+    );
 
     test('enforces source id and vector metadata rules', () async {
       final now = DateTime(2026, 6, 21, 9);
@@ -225,4 +288,18 @@ Uint8List _vector(List<double> values) {
 
 List<double> _decode(Uint8List bytes) {
   return const VectorDataCodec().decode(bytes, dimension: 4);
+}
+
+VectorMemoryStrategy _strategy({
+  required String model,
+  required int dimension,
+}) {
+  return VectorMemoryStrategy(
+    enabled: true,
+    embeddingProfile: EmbeddingProfile(
+      provider: 'OpenAI',
+      model: model,
+      dimension: dimension,
+    ),
+  );
 }

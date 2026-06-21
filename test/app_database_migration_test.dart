@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/chat_turns_table.dart';
+import 'package:personal_assistant/features/ai_assistant/data/datasources/milestone_relations_table.dart';
+import 'package:personal_assistant/features/ai_assistant/data/datasources/milestones_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/review_generation_jobs_table.dart';
 import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
@@ -18,6 +20,11 @@ void main() {
       expect(
         await _reviewGenerationJobIndexNames(db),
         _expectedReviewGenerationJobIndexNames,
+      );
+      expect(await _milestoneIndexNames(db), _expectedMilestoneIndexNames);
+      expect(
+        await _milestoneRelationIndexNames(db),
+        _expectedMilestoneRelationIndexNames,
       );
     });
 
@@ -154,6 +161,78 @@ INSERT INTO daily_reviews (
       expect(daily.summary, 'Needs review');
       expect(daily.calibrationRequired, false);
     });
+
+    test(
+      'upgrades v12 databases with milestones and source relations',
+      () async {
+        final db = AppDatabase(
+          NativeDatabase.memory(
+            setup: (rawDb) {
+              rawDb.execute(_createV12DailyReviewsTableSql);
+              rawDb.execute('PRAGMA user_version = 12');
+            },
+          ),
+        );
+        addTearDown(db.close);
+
+        final milestoneColumns = await _columnNames(db, 'milestones');
+        final relationColumns = await _columnNames(db, 'milestone_relations');
+
+        expect(
+          milestoneColumns,
+          containsAll([
+            'title',
+            'description',
+            'occurred_at',
+            'importance_score',
+            'is_ai_generated',
+            'is_confirmed_by_user',
+            'created_at',
+            'updated_at',
+          ]),
+        );
+        expect(
+          relationColumns,
+          containsAll([
+            'milestone_id',
+            'source_type',
+            'source_id',
+            'note',
+            'created_at',
+          ]),
+        );
+        expect(await _milestoneIndexNames(db), _expectedMilestoneIndexNames);
+        expect(
+          await _milestoneRelationIndexNames(db),
+          _expectedMilestoneRelationIndexNames,
+        );
+
+        await db.customStatement('''
+INSERT INTO milestones (
+  title, occurred_at, importance_score, is_ai_generated,
+  is_confirmed_by_user, created_at, updated_at
+) VALUES (
+  'Delivered schema', strftime('%s', '2026-06-20'), 4, 1, 0,
+  strftime('%s', '2026-06-21'), strftime('%s', '2026-06-21')
+)
+''');
+        await db.customStatement('''
+INSERT INTO milestone_relations (
+  milestone_id, source_type, source_id, note, created_at
+) VALUES (
+  1, 'daily_review', 1, 'from review', strftime('%s', '2026-06-21')
+)
+''');
+
+        final milestone = await db.select(db.milestones).getSingle();
+        final relation = await db.select(db.milestoneRelations).getSingle();
+        expect(milestone.title, 'Delivered schema');
+        expect(milestone.isAiGenerated, true);
+        expect(milestone.isConfirmedByUser, false);
+        expect(relation.sourceType, 'daily_review');
+        expect(relation.sourceId, 1);
+      },
+    );
   });
 }
 
@@ -166,6 +245,12 @@ final _expectedChatTurnIndexNames = chatTurnIndexStatements
     .toSet();
 final _expectedReviewGenerationJobIndexNames =
     reviewGenerationJobIndexStatements.map(_indexNameOf).toSet();
+final _expectedMilestoneIndexNames = milestoneIndexStatements
+    .map(_indexNameOf)
+    .toSet();
+final _expectedMilestoneRelationIndexNames = milestoneRelationIndexStatements
+    .map(_indexNameOf)
+    .toSet();
 
 String _indexNameOf(String createIndexStatement) {
   final match = RegExp(
@@ -209,6 +294,24 @@ Future<Set<String>> _reviewGenerationJobIndexNames(AppDatabase db) async {
 SELECT name FROM sqlite_master
 WHERE type = 'index' AND tbl_name = 'review_generation_jobs'
 AND name LIKE 'idx_review_generation_jobs_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _milestoneIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'milestones'
+AND name LIKE 'idx_milestones_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _milestoneRelationIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'milestone_relations'
+AND name LIKE 'idx_milestone_relations_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
 }
@@ -351,6 +454,28 @@ CREATE TABLE daily_reviews (
   ai_suggestion TEXT NULL,
   is_ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (is_ai_generated IN (0, 1)),
   is_manually_edited INTEGER NOT NULL DEFAULT 0 CHECK (is_manually_edited IN (0, 1)),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  UNIQUE(date)
+);
+''';
+
+const _createV12DailyReviewsTableSql = '''
+CREATE TABLE daily_reviews (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  date INTEGER NOT NULL,
+  summary TEXT NOT NULL,
+  highlights TEXT NULL,
+  improvements TEXT NULL,
+  energy_level INTEGER NOT NULL,
+  mood_level INTEGER NOT NULL,
+  completed_todo_ids TEXT NOT NULL DEFAULT '[]',
+  patting_minutes INTEGER NOT NULL DEFAULT 0,
+  ai_comment TEXT NULL,
+  ai_suggestion TEXT NULL,
+  is_ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (is_ai_generated IN (0, 1)),
+  is_manually_edited INTEGER NOT NULL DEFAULT 0 CHECK (is_manually_edited IN (0, 1)),
+  calibration_required INTEGER NOT NULL DEFAULT 0 CHECK (calibration_required IN (0, 1)),
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   UNIQUE(date)

@@ -89,9 +89,9 @@
 - [x] `raw_assets_dump` 留存策略：success 保留 7 天，failed/pending 保留到用户手动清理。
 - [x] 为 `daily_reviews` 设计 `calibration_required` 等热字段，避免把原始素材塞入日报表。
 - [x] 深夜结构化输出总调用上限 3 次：初次 JSON、一次格式修复、一次纯文本降级；失败后标记待校准，禁止无限重试。
-- [ ] 设计 `milestones` 主表和 `milestone_relations` 多源关联表。
-- [ ] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。
-- [ ] 为 `milestone_relations.source_type = manual` 明确 `source_id` 可空策略或设计 `manual_milestone_sources`。
+- [x] 设计 `milestones` 主表和 `milestone_relations` 多源关联表。
+- [x] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。
+- [x] 为 `milestone_relations.source_type = manual` 明确 `source_id` 可空策略或设计 `manual_milestone_sources`。
 - [ ] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
 - [ ] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
 - [ ] 高光判定：高门槛、单日最多 2 条、允许 0 条。

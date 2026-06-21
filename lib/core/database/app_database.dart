@@ -16,6 +16,8 @@ import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
 import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
 import '../../features/ai_assistant/data/datasources/chat_turns_table.dart';
 import '../../features/ai_assistant/data/datasources/review_generation_jobs_table.dart';
+import '../../features/ai_assistant/data/datasources/milestones_table.dart';
+import '../../features/ai_assistant/data/datasources/milestone_relations_table.dart';
 import '../../features/collection/data/datasources/antique_items_table.dart';
 import '../../features/collection/data/datasources/valuation_records_table.dart';
 import '../../features/collection/data/datasources/patting_logs_table.dart';
@@ -43,6 +45,8 @@ part 'app_database.g.dart';
     WeeklyReports,
     ChatTurns,
     ReviewGenerationJobs,
+    Milestones,
+    MilestoneRelations,
     ResumeProfile,
     WorkExperiences,
     Educations,
@@ -54,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -97,6 +101,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 12) {
         await m.addColumn(dailyReviews, dailyReviews.calibrationRequired);
       }
+      if (from < 13) {
+        await m.createTable(milestones);
+        await m.createTable(milestoneRelations);
+        await _createMilestoneIndexes();
+        await _createMilestoneRelationIndexes();
+      }
     },
   );
 
@@ -120,6 +130,18 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _createReviewGenerationJobIndexes() async {
     for (final statement in reviewGenerationJobIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createMilestoneIndexes() async {
+    for (final statement in milestoneIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createMilestoneRelationIndexes() async {
+    for (final statement in milestoneRelationIndexStatements) {
       await customStatement(statement);
     }
   }

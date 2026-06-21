@@ -151,6 +151,13 @@ class BackupService {
         (await _db.select(_db.reviewGenerationJobs).get())
             .map((r) => _rowToMap(r))
             .toList();
+    data['milestones'] = (await _db.select(_db.milestones).get())
+        .map((r) => _rowToMap(r))
+        .toList();
+    data['milestone_relations'] =
+        (await _db.select(_db.milestoneRelations).get())
+            .map((r) => _rowToMap(r))
+            .toList();
     data['resume_profile'] = (await _db.select(_db.resumeProfile).get())
         .map((r) => _rowToMap(r))
         .toList();
@@ -183,6 +190,8 @@ class BackupService {
     await _db.delete(_db.educations).go();
     await _db.delete(_db.workExperiences).go();
     await _db.delete(_db.resumeProfile).go();
+    await _db.delete(_db.milestoneRelations).go();
+    await _db.delete(_db.milestones).go();
     await _db.delete(_db.reviewGenerationJobs).go();
     await _db.delete(_db.chatTurns).go();
     await _db.delete(_db.weeklyReports).go();
@@ -208,6 +217,8 @@ class BackupService {
       'weekly_reports',
       'chat_turns',
       'review_generation_jobs',
+      'milestones',
+      'milestone_relations',
       'resume_profile',
       'work_experiences',
       'educations',
@@ -351,6 +362,25 @@ class BackupService {
         'attempt_count',
         'failure_reason',
         'processed_at',
+        'created_at',
+      ],
+      'milestones': [
+        'id',
+        'title',
+        'description',
+        'occurred_at',
+        'importance_score',
+        'is_ai_generated',
+        'is_confirmed_by_user',
+        'created_at',
+        'updated_at',
+      ],
+      'milestone_relations': [
+        'id',
+        'milestone_id',
+        'source_type',
+        'source_id',
+        'note',
         'created_at',
       ],
       'resume_profile': [
@@ -723,6 +753,18 @@ class BackupService {
     if (tableName == 'review_generation_jobs' &&
         columnName == 'attempt_count') {
       return 0;
+    }
+    if (tableName == 'milestones' && columnName == 'importance_score') {
+      return 0;
+    }
+    if (tableName == 'milestones' && columnName == 'is_ai_generated') {
+      return false;
+    }
+    if (tableName == 'milestones' && columnName == 'is_confirmed_by_user') {
+      return false;
+    }
+    if (tableName == 'milestone_relations' && columnName == 'source_type') {
+      return 'manual';
     }
     if (columnName == 'is_visible') {
       return true;

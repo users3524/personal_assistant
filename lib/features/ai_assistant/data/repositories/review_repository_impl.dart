@@ -9,6 +9,7 @@ import '../../domain/repositories/review_repository.dart';
 import '../../domain/services/ai_log_scheduler.dart';
 import '../../infrastructure/schedulers/ai_log_scheduler_factory.dart';
 import '../datasources/chat_turn_dao.dart';
+import '../datasources/milestone_dao.dart';
 import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
 
@@ -89,6 +90,11 @@ final reviewGenerationJobDaoProvider = FutureProvider<ReviewGenerationJobDao>((
 ) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return ReviewGenerationJobDao(db);
+});
+
+final milestoneDaoProvider = FutureProvider<MilestoneDao>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return MilestoneDao(db);
 });
 
 final aiLogSchedulerProvider = Provider<AILogScheduler>((ref) {

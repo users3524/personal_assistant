@@ -73,6 +73,17 @@ void main() {
             .single['targetDate'],
         '2026-06-20',
       );
+      expect(backupJson['milestones'], hasLength(1));
+      expect(
+        (backupJson['milestones'] as List<dynamic>).single['title'],
+        'Delivered backup mirror',
+      );
+      expect(backupJson['milestone_relations'], hasLength(1));
+      expect(
+        (backupJson['milestone_relations'] as List<dynamic>)
+            .single['sourceType'],
+        'daily_review',
+      );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -169,6 +180,23 @@ void main() {
       expect(job.attemptCount, 2);
       expect(job.failureReason, 'json parse failed');
       expect(job.processedAt, DateTime(2026, 6, 21, 2));
+
+      final milestone = await restoredDb
+          .select(restoredDb.milestones)
+          .getSingle();
+      expect(milestone.title, 'Delivered backup mirror');
+      expect(milestone.description, 'Backup and restore kept every field');
+      expect(milestone.occurredAt, DateTime(2026, 6, 20));
+      expect(milestone.importanceScore, 5);
+      expect(milestone.isAiGenerated, true);
+      expect(milestone.isConfirmedByUser, false);
+      final relation = await restoredDb
+          .select(restoredDb.milestoneRelations)
+          .getSingle();
+      expect(relation.milestoneId, milestone.id);
+      expect(relation.sourceType, 'daily_review');
+      expect(relation.sourceId, daily.id);
+      expect(relation.note, '日报高光');
       expect(await apiKeyStore.read(), null);
     });
 
@@ -718,7 +746,7 @@ Future<void> _seedSourceDatabase(
         ),
       );
 
-  await db
+  final dailyId = await db
       .into(db.dailyReviews)
       .insert(
         DailyReviewsCompanion.insert(
@@ -736,6 +764,33 @@ Future<void> _seedSourceDatabase(
           calibrationRequired: const Value(true),
           createdAt: Value(now),
           updatedAt: Value(now),
+        ),
+      );
+
+  final milestoneId = await db
+      .into(db.milestones)
+      .insert(
+        MilestonesCompanion.insert(
+          title: 'Delivered backup mirror',
+          description: const Value('Backup and restore kept every field'),
+          occurredAt: DateTime(2026, 6, 20),
+          importanceScore: const Value(5),
+          isAiGenerated: const Value(true),
+          isConfirmedByUser: const Value(false),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+  await db
+      .into(db.milestoneRelations)
+      .insert(
+        MilestoneRelationsCompanion.insert(
+          milestoneId: milestoneId,
+          sourceType: 'daily_review',
+          sourceId: Value(dailyId),
+          note: const Value('日报高光'),
+          createdAt: Value(now),
         ),
       );
 

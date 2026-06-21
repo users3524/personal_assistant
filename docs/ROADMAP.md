@@ -109,12 +109,12 @@
 | 策略配置 | 首版 `LLMStrategyConfig` JSON 复用 `user_preferences`，不引入 Hive/SharedPreferences，也暂不新增 `system_configs`。 |
 | PromptBuilder 深化 | 服务层已新增并接入 OpenAI 调用；后续继续补深夜 raw context pack 的优先级裁剪策略。 |
 | 成本闸门剩余项 | 文本 500 字、STT 60 秒、每日云端 turn 计数和离线便签模式已落地；后续补素材预算裁剪和深夜生成限制。 |
-| 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行、素材打包。 |
+| 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行；raw context pack 字段契约已定稿。 |
 | 调度接口 | 设计纯 Dart `AILogScheduler` 接口，平台实现放到 infrastructure 层；Android WorkManager 约束不使用 `RequiresDeviceIdle`。 |
 | 生成任务表 | 设计 `review_generation_jobs` 保存 `target_date` 字符串、状态、`raw_assets_dump`、失败原因和清理状态。 |
 | 状态驱动补偿 | Catch-Up Guard 查询昨日 `review_generation_jobs` 状态，而不是只看 `daily_reviews` 是否存在。 |
 | 原始素材留存 | 成功任务的 `raw_assets_dump` 默认保留 7 天；失败任务保留到用户手动清理。 |
-| 素材裁剪器 | 8000 字左右的 raw context pack 预算，按优先级保留关键素材。 |
+| 素材裁剪器 | 基于已定稿 raw context pack，按 8000 字左右预算和优先级保留关键素材。 |
 | 结构化输出 | JSON schema、解析失败重试、纯文本降级、`calibration_required` 标记。 |
 | 高光抽取 | 高光判定门槛、单日数量上限、事实来源追踪。 |
 

@@ -48,7 +48,7 @@
 - [x] 旧估值兼容路径稳定后，再评估是否在下一版 schema 物理移除 `valuation_records` 和 `current_valuation`。
 - [x] 图片备份恢复改为应用文档目录，而不是系统临时目录。
 - [x] 评估文玩榜单从 Provider 循环计算迁移到 DAO 聚合查询，并按查询计划补 `patting_logs(item_id, date DESC)`、`patting_logs(date, item_id)` 索引。
-- [ ] 未来高光关联接入后，删除 `patting_logs`/`antique_items` 时同步事务清理 `milestone_relations`。
+- [x] 未来高光关联接入后，删除 `patting_logs`/`antique_items` 时同步事务清理 `milestone_relations`。
 
 ## P1：AI 复盘
 
@@ -93,7 +93,7 @@
 - [x] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。
 - [x] 为 `milestone_relations.source_type = manual` 明确 `source_id` 可空策略或设计 `manual_milestone_sources`。
 - [x] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
-- [ ] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
+- [x] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
 - [ ] 高光判定：高门槛、单日最多 2 条、允许 0 条。
 - [ ] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。
 - [ ] 设计 `vector_embeddings`：sourceType/sourceId、embeddingModel、dimension、vectorData；sourceType 首版使用当前业务源名，避免写入尚无表支撑的 `habit_log`。

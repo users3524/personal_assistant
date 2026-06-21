@@ -387,7 +387,18 @@ class TodoDao {
   }
 
   Future<void> hardDelete(int id) async {
-    await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      final todoIds = await _todoAndDirectChildIds(id);
+      if (todoIds.isNotEmpty) {
+        await (_db.delete(_db.milestoneRelations)..where(
+              (t) => t.sourceType.equals('todo') & t.sourceId.isIn(todoIds),
+            ))
+            .go();
+      }
+      await (_db.delete(
+        _db.todos,
+      )..where((t) => t.id.equals(id) | t.parentId.equals(id))).go();
+    });
   }
 
   // ===== 智能排序 =====
@@ -540,7 +551,16 @@ class TodoDao {
   }
 
   Future<void> emptyTrash() async {
-    await (_db.delete(_db.todos)..where((t) => t.deletedAt.isNotNull())).go();
+    await _db.transaction(() async {
+      final trashedIds = await _trashedTodoIds();
+      if (trashedIds.isNotEmpty) {
+        await (_db.delete(_db.milestoneRelations)..where(
+              (t) => t.sourceType.equals('todo') & t.sourceId.isIn(trashedIds),
+            ))
+            .go();
+      }
+      await (_db.delete(_db.todos)..where((t) => t.deletedAt.isNotNull())).go();
+    });
   }
 
   // ===== 统计（仅父任务） =====
@@ -627,5 +647,19 @@ class TodoDao {
     DateTime end,
   ) {
     return column.isBiggerOrEqualValue(start) & column.isSmallerThanValue(end);
+  }
+
+  Future<List<int>> _todoAndDirectChildIds(int id) async {
+    final rows = await (_db.select(
+      _db.todos,
+    )..where((t) => t.id.equals(id) | t.parentId.equals(id))).get();
+    return rows.map((row) => row.id).toList();
+  }
+
+  Future<List<int>> _trashedTodoIds() async {
+    final rows = await (_db.select(
+      _db.todos,
+    )..where((t) => t.deletedAt.isNotNull())).get();
+    return rows.map((row) => row.id).toList();
   }
 }

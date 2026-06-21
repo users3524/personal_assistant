@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/collection/data/datasources/antique_dao.dart';
@@ -125,7 +126,99 @@ void main() {
         expect(counts, {itemId: 2});
       },
     );
+
+    test('deleting patting log cleans milestone source relation', () async {
+      final now = DateTime(2026, 6, 20, 9);
+      final item = await dao.insert(_antique());
+      final deletedLog = await dao.addPattingLog(_log(item.id!, now, 10));
+      final keptLog = await dao.addPattingLog(
+        _log(item.id!, now.add(const Duration(hours: 1)), 20),
+      );
+      final milestoneId = await _insertMilestone(db, now);
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceId: deletedLog.id!,
+        now: now,
+      );
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceId: keptLog.id!,
+        now: now,
+      );
+
+      await dao.deletePattingLog(deletedLog.id!);
+
+      final relations = await db.select(db.milestoneRelations).get();
+      expect(relations.map((relation) => relation.sourceId), [keptLog.id]);
+      expect(await dao.getPattingLogs(item.id!), hasLength(1));
+    });
+
+    test(
+      'deleting antique item cleans milestone relations for its logs',
+      () async {
+        final now = DateTime(2026, 6, 20, 9);
+        final deletedItem = await dao.insert(_antique(name: 'Deleted item'));
+        final keptItem = await dao.insert(_antique(name: 'Kept item'));
+        final deletedLog = await dao.addPattingLog(
+          _log(deletedItem.id!, now, 10),
+        );
+        final keptLog = await dao.addPattingLog(_log(keptItem.id!, now, 20));
+        final milestoneId = await _insertMilestone(db, now);
+        await _insertMilestoneRelation(
+          db,
+          milestoneId: milestoneId,
+          sourceId: deletedLog.id!,
+          now: now,
+        );
+        await _insertMilestoneRelation(
+          db,
+          milestoneId: milestoneId,
+          sourceId: keptLog.id!,
+          now: now,
+        );
+
+        await dao.delete(deletedItem.id!);
+
+        final relations = await db.select(db.milestoneRelations).get();
+        expect(relations.map((relation) => relation.sourceId), [keptLog.id]);
+        expect(await dao.getById(deletedItem.id!), null);
+        expect(await dao.getById(keptItem.id!), isNotNull);
+      },
+    );
   });
+}
+
+Future<int> _insertMilestone(AppDatabase db, DateTime now) {
+  return db
+      .into(db.milestones)
+      .insert(
+        MilestonesCompanion.insert(
+          title: 'Linked patting milestone',
+          occurredAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+}
+
+Future<int> _insertMilestoneRelation(
+  AppDatabase db, {
+  required int milestoneId,
+  required int sourceId,
+  required DateTime now,
+}) {
+  return db
+      .into(db.milestoneRelations)
+      .insert(
+        MilestoneRelationsCompanion.insert(
+          milestoneId: milestoneId,
+          sourceType: 'patting_log',
+          sourceId: Value(sourceId),
+          createdAt: Value(now),
+        ),
+      );
 }
 
 AntiqueEntity _antique({String name = 'Walnut'}) {

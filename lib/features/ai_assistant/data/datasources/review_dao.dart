@@ -186,10 +186,25 @@ class ReviewDao {
   }
 
   Future<void> deleteDaily(DateTime date) async {
-    final normalized = DateTime(date.year, date.month, date.day);
-    await (_db.delete(
-      _db.dailyReviews,
-    )..where((t) => t.date.equals(normalized))).go();
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    await _db.transaction(() async {
+      final rows = await (_db.select(
+        _db.dailyReviews,
+      )..where((t) => _dateInHalfOpenRange(t.date, dayStart, dayEnd))).get();
+      final reviewIds = rows.map((row) => row.id).toList();
+      if (reviewIds.isNotEmpty) {
+        await (_db.delete(_db.milestoneRelations)..where(
+              (t) =>
+                  t.sourceType.equals('daily_review') &
+                  t.sourceId.isIn(reviewIds),
+            ))
+            .go();
+      }
+      await (_db.delete(
+        _db.dailyReviews,
+      )..where((t) => _dateInHalfOpenRange(t.date, dayStart, dayEnd))).go();
+    });
   }
 
   // ===== 周报 CRUD =====

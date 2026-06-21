@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todo_dao.dart';
@@ -256,6 +257,78 @@ void main() {
 
       expect(await dao.delayRate(), 1 / 3);
     });
+
+    test(
+      'hard delete cleans milestone relations for parent and child todos',
+      () async {
+        final now = DateTime(2026, 6, 20, 9);
+        final parent = await dao.insert(_todo('Parent milestone source', now));
+        final child = await dao.addSubtask(
+          parent.id!,
+          _todo('Child milestone source', now),
+        );
+        final other = await dao.insert(_todo('Other milestone source', now));
+        final milestoneId = await _insertMilestone(db, now);
+        await _insertMilestoneRelation(
+          db,
+          milestoneId: milestoneId,
+          sourceType: 'todo',
+          sourceId: parent.id!,
+          now: now,
+        );
+        await _insertMilestoneRelation(
+          db,
+          milestoneId: milestoneId,
+          sourceType: 'todo',
+          sourceId: child.id!,
+          now: now,
+        );
+        await _insertMilestoneRelation(
+          db,
+          milestoneId: milestoneId,
+          sourceType: 'todo',
+          sourceId: other.id!,
+          now: now,
+        );
+
+        await dao.hardDelete(parent.id!);
+
+        final relations = await db.select(db.milestoneRelations).get();
+        expect(relations.map((relation) => relation.sourceId), [other.id]);
+        expect(await dao.getById(parent.id!), null);
+        expect(await dao.getById(child.id!), null);
+      },
+    );
+
+    test('empty trash cleans milestone relations for trashed todos', () async {
+      final now = DateTime(2026, 6, 20, 9);
+      final trashed = await dao.insert(
+        _todo('Trashed milestone source', now, deletedAt: now),
+      );
+      final active = await dao.insert(_todo('Active milestone source', now));
+      final milestoneId = await _insertMilestone(db, now);
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceType: 'todo',
+        sourceId: trashed.id!,
+        now: now,
+      );
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceType: 'todo',
+        sourceId: active.id!,
+        now: now,
+      );
+
+      await dao.emptyTrash();
+
+      final relations = await db.select(db.milestoneRelations).get();
+      expect(relations.map((relation) => relation.sourceId), [active.id]);
+      expect(await dao.getById(trashed.id!), null);
+      expect(await dao.getById(active.id!), isNotNull);
+    });
   });
 
   group('TodoRepositoryImpl', () {
@@ -325,6 +398,38 @@ void main() {
       },
     );
   });
+}
+
+Future<int> _insertMilestone(AppDatabase db, DateTime now) {
+  return db
+      .into(db.milestones)
+      .insert(
+        MilestonesCompanion.insert(
+          title: 'Linked milestone',
+          occurredAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+}
+
+Future<int> _insertMilestoneRelation(
+  AppDatabase db, {
+  required int milestoneId,
+  required String sourceType,
+  required int sourceId,
+  required DateTime now,
+}) {
+  return db
+      .into(db.milestoneRelations)
+      .insert(
+        MilestoneRelationsCompanion.insert(
+          milestoneId: milestoneId,
+          sourceType: sourceType,
+          sourceId: Value(sourceId),
+          createdAt: Value(now),
+        ),
+      );
 }
 
 TodoEntity _todo(

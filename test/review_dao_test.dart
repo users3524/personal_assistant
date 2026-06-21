@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/review_dao.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/review_entity.dart';
@@ -93,7 +94,69 @@ void main() {
         expect(daily?.createdAt, DateTime(2026, 6, 22, 3));
       },
     );
+
+    test('deleting daily review cleans milestone source relations', () async {
+      final now = DateTime(2026, 6, 21, 9);
+      final daily = await dao.insertDaily(_daily(now, 'Milestone source'));
+      final other = await dao.insertDaily(
+        _daily(DateTime(2026, 6, 22), 'Other source'),
+      );
+      final milestoneId = await _insertMilestone(db, now);
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceType: 'daily_review',
+        sourceId: daily.id!,
+        now: now,
+      );
+      await _insertMilestoneRelation(
+        db,
+        milestoneId: milestoneId,
+        sourceType: 'daily_review',
+        sourceId: other.id!,
+        now: now,
+      );
+
+      await dao.deleteDaily(DateTime(2026, 6, 21));
+
+      final relations = await db.select(db.milestoneRelations).get();
+      expect(relations.map((relation) => relation.sourceId), [other.id]);
+      expect(await dao.getDailyByDate(DateTime(2026, 6, 21)), null);
+      expect(await dao.getDailyByDate(DateTime(2026, 6, 22)), isNotNull);
+    });
   });
+}
+
+Future<int> _insertMilestone(AppDatabase db, DateTime now) {
+  return db
+      .into(db.milestones)
+      .insert(
+        MilestonesCompanion.insert(
+          title: 'Linked review milestone',
+          occurredAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+}
+
+Future<int> _insertMilestoneRelation(
+  AppDatabase db, {
+  required int milestoneId,
+  required String sourceType,
+  required int sourceId,
+  required DateTime now,
+}) {
+  return db
+      .into(db.milestoneRelations)
+      .insert(
+        MilestoneRelationsCompanion.insert(
+          milestoneId: milestoneId,
+          sourceType: sourceType,
+          sourceId: Value(sourceId),
+          createdAt: Value(now),
+        ),
+      );
 }
 
 DailyReviewEntity _daily(

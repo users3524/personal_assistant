@@ -135,7 +135,17 @@ class AntiqueDao {
   }
 
   Future<void> delete(int id) async {
-    await (_db.delete(_db.antiqueItems)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      final logIds = await _pattingLogIdsForItem(id);
+      if (logIds.isNotEmpty) {
+        await (_db.delete(_db.milestoneRelations)..where(
+              (t) =>
+                  t.sourceType.equals('patting_log') & t.sourceId.isIn(logIds),
+            ))
+            .go();
+      }
+      await (_db.delete(_db.antiqueItems)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   // ===== 查询筛选 =====
@@ -283,7 +293,13 @@ class AntiqueDao {
 
   /// 删除打卡记录
   Future<void> deletePattingLog(int id) async {
-    await (_db.delete(_db.pattingLogs)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      await (_db.delete(_db.milestoneRelations)..where(
+            (t) => t.sourceType.equals('patting_log') & t.sourceId.equals(id),
+          ))
+          .go();
+      await (_db.delete(_db.pattingLogs)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   /// 批量获取每个藏品最新一条有照片的打卡记录的第一张图路径
@@ -397,5 +413,12 @@ class AntiqueDao {
     DateTime end,
   ) {
     return column.isBiggerOrEqualValue(start) & column.isSmallerThanValue(end);
+  }
+
+  Future<List<int>> _pattingLogIdsForItem(int itemId) async {
+    final rows = await (_db.select(
+      _db.pattingLogs,
+    )..where((t) => t.itemId.equals(itemId))).get();
+    return rows.map((row) => row.id).toList();
   }
 }

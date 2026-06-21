@@ -274,6 +274,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                 keyDeliverablesCtrl: TextEditingController(
                   text: p.keyDeliverables.join('\n'),
                 ),
+                badgesCtrl: TextEditingController(text: p.badges.join(', ')),
                 isVisible: p.isVisible,
               ),
             )
@@ -312,6 +313,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       p.descCtrl.dispose();
       p.techStackCtrl.dispose();
       p.keyDeliverablesCtrl.dispose();
+      p.badgesCtrl.dispose();
     }
     super.dispose();
   }
@@ -401,6 +403,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               .where((e) => e.isNotEmpty)
               .toList(),
           keyDeliverables: _splitLines(p.keyDeliverablesCtrl.text),
+          badges: _splitDelimitedList(p.badgesCtrl.text),
           startDate: DateTime.now(),
           isVisible: p.isVisible,
         ),
@@ -648,6 +651,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
                               descCtrl: TextEditingController(),
                               techStackCtrl: TextEditingController(),
                               keyDeliverablesCtrl: TextEditingController(),
+                              badgesCtrl: TextEditingController(),
                             ),
                           ),
                         );
@@ -985,6 +989,17 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
               ),
               maxLines: 3,
             ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: item.badgesCtrl,
+              decoration: const InputDecoration(
+                labelText: '项目标签',
+                hintText: '逗号或换行分隔，会在模板中显示为徽章',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              maxLines: 2,
+            ),
           ],
         ),
       ),
@@ -995,6 +1010,12 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
       .split(RegExp(r'\r?\n'))
       .map((line) => line.trim())
       .where((line) => line.isNotEmpty)
+      .toList();
+
+  List<String> _splitDelimitedList(String value) => value
+      .split(RegExp(r'[,，;；\r\n]+'))
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
       .toList();
 }
 
@@ -1057,6 +1078,7 @@ class _ProjectEditItem {
   final TextEditingController descCtrl;
   final TextEditingController techStackCtrl;
   final TextEditingController keyDeliverablesCtrl;
+  final TextEditingController badgesCtrl;
   bool isVisible;
 
   _ProjectEditItem({
@@ -1066,6 +1088,7 @@ class _ProjectEditItem {
     required this.descCtrl,
     required this.techStackCtrl,
     required this.keyDeliverablesCtrl,
+    required this.badgesCtrl,
     this.isVisible = true,
   });
 }

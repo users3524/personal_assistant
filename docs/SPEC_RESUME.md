@@ -74,7 +74,7 @@
 | `description` | 描述。 |
 | `tech_stack` | 技术栈列表。 |
 | `key_deliverables` | 关键交付列表，模板会展示；编辑页支持按行编辑。 |
-| `badges` | 标签列表，模板会展示；当前编辑页尚未完整编辑该字段。 |
+| `badges` | 标签列表，模板会展示；编辑页支持逗号或换行分隔编辑。 |
 | `link` | 链接。 |
 | `start_date` / `end_date` | 时间范围。 |
 | `is_visible` | 是否展示。 |
@@ -117,7 +117,7 @@
 | 工作经历 | ReorderableListView，支持可见性开关、公司、职位、描述、技术栈。 |
 | 教育背景 | ReorderableListView，支持可见性开关、学校、专业、学历、描述。 |
 | 技能 | ReorderableListView，支持可见性开关、技能名、分类、熟练度。 |
-| 项目经历 | ReorderableListView，支持可见性开关、项目名、角色、描述、技术栈、关键交付。 |
+| 项目经历 | ReorderableListView，支持可见性开关、项目名、角色、描述、技术栈、关键交付、标签。 |
 | 保存 | 一次性保存所有编辑项到 Repository。 |
 
 当前编辑页使用逗号分隔文本解析技术栈。
@@ -142,7 +142,7 @@
 | 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `work_experiences` 导入列缺 `responsibilities`。 | 补齐导入字段，并增加导出-导入镜像测试。 |
 | 备份恢复列清单滞后 | `BackupService._restoreData()` 的 `project_experiences` 导入列缺 `key_deliverables` / `badges`。 | 补齐导入字段，并覆盖 `StringListConverter` 字段。 |
 | 模板未持久化 | `selectedTemplateIdProvider` 是内存 `StateProvider<int>`；`user_preferences.resume_template_id` 字段存在但当前未接入。 | 切换模板时写入偏好，初始化时读取。 |
-| 项目成果编辑缺口 | 模板可展示 `keyDeliverables` / `badges`，编辑页已支持 `keyDeliverables`，尚未支持 `badges`。 | 增加 badges 编辑控件。 |
+| 项目成果编辑缺口 | 模板可展示 `keyDeliverables` / `badges`，编辑页已支持两者编辑。 | 后续接入高光导入时继续复用字段。 |
 
 ## 8. 当前未实现
 
@@ -150,8 +150,7 @@
 2. 从日报/周报高光导入项目经历。
 3. 里程碑素材池。
 4. PDF 生成与打印。
-5. 项目 `badges` 的完整编辑 UI。
-6. 简历模板持久化到 `user_preferences.resume_template_id`。
+5. 简历模板持久化到 `user_preferences.resume_template_id`。
 
 ## 9. 未来 AI 简历规划原则
 

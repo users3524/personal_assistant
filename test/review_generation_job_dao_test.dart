@@ -77,5 +77,49 @@ void main() {
       expect(job?.failureReason, null);
       expect(job?.processedAt, null);
     });
+
+    test('prunes only expired successful raw asset dumps', () async {
+      await dao.markSuccess(
+        '2026-06-10',
+        rawAssetsDump: '{"old":true}',
+        processedAt: DateTime(2026, 6, 10, 2),
+      );
+      await dao.markSuccess(
+        '2026-06-15',
+        rawAssetsDump: '{"fresh":true}',
+        processedAt: DateTime(2026, 6, 15, 2),
+      );
+      await dao.markFailed(
+        '2026-06-09',
+        rawAssetsDump: '{"failed":true}',
+        failureReason: 'network',
+        processedAt: DateTime(2026, 6, 9, 2),
+      );
+      await dao.getOrCreatePending('2026-06-08');
+      await db.customStatement(
+        'UPDATE review_generation_jobs '
+        'SET raw_assets_dump = ? WHERE target_date = ?',
+        ['{"pending":true}', '2026-06-08'],
+      );
+
+      final pruned = await dao.pruneSuccessfulRawAssetDumps(
+        now: DateTime(2026, 6, 18, 2),
+      );
+
+      expect(pruned, 1);
+      expect((await dao.getByTargetDate('2026-06-10'))?.rawAssetsDump, null);
+      expect(
+        (await dao.getByTargetDate('2026-06-15'))?.rawAssetsDump,
+        '{"fresh":true}',
+      );
+      expect(
+        (await dao.getByTargetDate('2026-06-09'))?.rawAssetsDump,
+        '{"failed":true}',
+      );
+      expect(
+        (await dao.getByTargetDate('2026-06-08'))?.rawAssetsDump,
+        '{"pending":true}',
+      );
+    });
   });
 }

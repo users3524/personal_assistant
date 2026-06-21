@@ -122,6 +122,20 @@ class ReviewGenerationJobDao implements ReviewGenerationJobStore {
     );
   }
 
+  Future<int> pruneSuccessfulRawAssetDumps({
+    DateTime? now,
+    Duration retention = const Duration(days: 7),
+  }) async {
+    final cutoff = (now ?? DateTime.now()).subtract(retention);
+    return (_db.update(_db.reviewGenerationJobs)..where(
+          (t) =>
+              t.status.equals(ReviewGenerationJobStatus.success.storageValue) &
+              t.rawAssetsDump.isNotNull() &
+              t.processedAt.isSmallerOrEqualValue(cutoff),
+        ))
+        .write(const ReviewGenerationJobsCompanion(rawAssetsDump: Value(null)));
+  }
+
   Future<void> _markProcessed(
     String targetDate, {
     required ReviewGenerationJobStatus status,

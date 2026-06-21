@@ -168,7 +168,7 @@ Collection
 AI Assistant
   -> ReviewRepository -> ReviewDao -> daily_reviews / weekly_reports
   -> ChatTurnDao -> chat_turns
-  -> ReviewGenerationJobDao -> review_generation_jobs
+  -> ReviewGenerationJobDao -> review_generation_jobs / success raw dump 7 天后清理
   -> AILogScheduler: Android WorkManager 或桌面/Web No-Op
   -> AIService: OfflineReviewGenerator 或 OpenAIService
   -> TodoRepository 读取今日已完成任务标题
@@ -188,4 +188,4 @@ Resume
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流、raw dump 留存和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。

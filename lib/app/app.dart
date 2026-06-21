@@ -46,6 +46,7 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
   NotificationService().init();
   unawaited(_runReviewCatchUpGuard(ref));
   unawaited(_scheduleAILogTasks(ref));
+  unawaited(_pruneReviewGenerationJobs(ref));
   return true;
 });
 
@@ -55,6 +56,15 @@ Future<void> _runReviewCatchUpGuard(Ref ref) async {
     await ReviewCatchUpGuard(dao).ensureYesterdayJob();
   } catch (_) {
     // 补偿守卫只负责低优先级兜底，不能影响应用启动。
+  }
+}
+
+Future<void> _pruneReviewGenerationJobs(Ref ref) async {
+  try {
+    final dao = await ref.read(reviewGenerationJobDaoProvider.future);
+    await dao.pruneSuccessfulRawAssetDumps();
+  } catch (_) {
+    // 冷数据清理失败不影响主流程，下次启动继续尝试。
   }
 }
 

@@ -147,6 +147,10 @@ class BackupService {
     data['chat_turns'] = (await _db.select(_db.chatTurns).get())
         .map((r) => _rowToMap(r))
         .toList();
+    data['review_generation_jobs'] =
+        (await _db.select(_db.reviewGenerationJobs).get())
+            .map((r) => _rowToMap(r))
+            .toList();
     data['resume_profile'] = (await _db.select(_db.resumeProfile).get())
         .map((r) => _rowToMap(r))
         .toList();
@@ -179,6 +183,7 @@ class BackupService {
     await _db.delete(_db.educations).go();
     await _db.delete(_db.workExperiences).go();
     await _db.delete(_db.resumeProfile).go();
+    await _db.delete(_db.reviewGenerationJobs).go();
     await _db.delete(_db.chatTurns).go();
     await _db.delete(_db.weeklyReports).go();
     await _db.delete(_db.dailyReviews).go();
@@ -202,6 +207,7 @@ class BackupService {
       'daily_reviews',
       'weekly_reports',
       'chat_turns',
+      'review_generation_jobs',
       'resume_profile',
       'work_experiences',
       'educations',
@@ -334,6 +340,16 @@ class BackupService {
         'is_offline',
         'consumes_cloud_turn',
         'source',
+        'created_at',
+      ],
+      'review_generation_jobs': [
+        'id',
+        'target_date',
+        'status',
+        'raw_assets_dump',
+        'attempt_count',
+        'failure_reason',
+        'processed_at',
         'created_at',
       ],
       'resume_profile': [
@@ -487,7 +503,7 @@ class BackupService {
   /// 需手动将 ms 转为秒，否则读回时被 ×1000 导致日期膨胀（如 58400 年）。
   static const _dateColumnSuffixes = {'_at', '_date'};
   static const _exactDateColumns = {'date'};
-  static const _stringDateColumns = {'turn_date'};
+  static const _stringDateColumns = {'turn_date', 'target_date'};
 
   /// 是否为日期列
   bool _isDateColumn(String col) {
@@ -696,6 +712,13 @@ class BackupService {
     }
     if (tableName == 'weekly_reports' && columnName == 'is_manually_edited') {
       return false;
+    }
+    if (tableName == 'review_generation_jobs' && columnName == 'status') {
+      return 'pending';
+    }
+    if (tableName == 'review_generation_jobs' &&
+        columnName == 'attempt_count') {
+      return 0;
     }
     if (columnName == 'is_visible') {
       return true;

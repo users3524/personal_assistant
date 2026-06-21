@@ -1,6 +1,8 @@
 /// App root widget.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/database/app_database_provider.dart';
 import '../core/database/user_preferences_dao.dart';
 import '../core/notification_service.dart';
+import '../features/ai_assistant/data/repositories/review_repository_impl.dart';
+import '../features/ai_assistant/domain/services/review_catch_up_guard.dart';
 import '../l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
@@ -40,8 +44,18 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
   } catch (_) {}
   // 通知初始化放后台，不阻塞启动
   NotificationService().init();
+  unawaited(_runReviewCatchUpGuard(ref));
   return true;
 });
+
+Future<void> _runReviewCatchUpGuard(Ref ref) async {
+  try {
+    final dao = await ref.read(reviewGenerationJobDaoProvider.future);
+    await ReviewCatchUpGuard(dao).ensureYesterdayJob();
+  } catch (_) {
+    // 补偿守卫只负责低优先级兜底，不能影响应用启动。
+  }
+}
 
 class PersonalAssistantApp extends ConsumerWidget {
   const PersonalAssistantApp({super.key});

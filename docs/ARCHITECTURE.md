@@ -111,7 +111,7 @@ feature/
 
 来源：`lib/core/database/app_database.dart`
 
-当前 `schemaVersion = 10`，注册 15 张表：
+当前 `schemaVersion = 11`，注册 16 张表：
 
 | 表 | 当前用途 |
 | --- | --- |
@@ -125,6 +125,7 @@ feature/
 | `daily_reviews` | 每日复盘。 |
 | `weekly_reports` | 每周周报。 |
 | `chat_turns` | 复盘对话与离线便签；按本地 `YYYY-MM-DD` 记录每日云端 turn 计数。 |
+| `review_generation_jobs` | 深夜/前台补偿生成任务冷表；按本地 `YYYY-MM-DD` 记录任务状态、原始素材 dump、尝试次数和失败原因。 |
 | `resume_profile` | 简历个人资料。 |
 | `work_experiences` | 工作经历。 |
 | `educations` | 教育经历。 |
@@ -144,6 +145,7 @@ feature/
 | `<8` | 为文玩榜单与日期区间统计补充 `patting_logs(item_id, date DESC)`、`patting_logs(date, item_id)` 索引。 |
 | `<9` | 为 `user_preferences` 增加 `ai_config`，保存非敏感 LLM 策略 JSON。 |
 | `<10` | 创建 `chat_turns`，并补充 `turn_date + consumes_cloud_turn`、`turn_date + created_at` 索引。 |
+| `<11` | 创建 `review_generation_jobs`，并补充 `target_date` 唯一索引和 `status + target_date` 查询索引。 |
 
 ## 6. 当前模块依赖流
 
@@ -164,6 +166,7 @@ Collection
 AI Assistant
   -> ReviewRepository -> ReviewDao -> daily_reviews / weekly_reports
   -> ChatTurnDao -> chat_turns
+  -> ReviewGenerationJobDao -> review_generation_jobs
   -> AIService: OfflineReviewGenerator 或 OpenAIService
   -> TodoRepository 读取今日已完成任务标题
 
@@ -182,4 +185,4 @@ Resume
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖。

@@ -1,12 +1,13 @@
 /// AI 复盘仓库实现。
 library;
 
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
 import '../datasources/chat_turn_dao.dart';
+import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
@@ -79,6 +80,13 @@ final reviewDaoProvider = FutureProvider<ReviewDao>((ref) async {
 final chatTurnDaoProvider = FutureProvider<ChatTurnDao>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return ChatTurnDao(db);
+});
+
+final reviewGenerationJobDaoProvider = FutureProvider<ReviewGenerationJobDao>((
+  ref,
+) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return ReviewGenerationJobDao(db);
 });
 
 final reviewRepositoryProvider = FutureProvider<ReviewRepository>((ref) async {

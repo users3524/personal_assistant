@@ -15,6 +15,7 @@ import '../../features/todo/data/datasources/todo_lists_table.dart';
 import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
 import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
 import '../../features/ai_assistant/data/datasources/chat_turns_table.dart';
+import '../../features/ai_assistant/data/datasources/review_generation_jobs_table.dart';
 import '../../features/collection/data/datasources/antique_items_table.dart';
 import '../../features/collection/data/datasources/valuation_records_table.dart';
 import '../../features/collection/data/datasources/patting_logs_table.dart';
@@ -41,6 +42,7 @@ part 'app_database.g.dart';
     DailyReviews,
     WeeklyReports,
     ChatTurns,
+    ReviewGenerationJobs,
     ResumeProfile,
     WorkExperiences,
     Educations,
@@ -52,7 +54,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +90,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(chatTurns);
         await _createChatTurnIndexes();
       }
+      if (from < 11) {
+        await m.createTable(reviewGenerationJobs);
+        await _createReviewGenerationJobIndexes();
+      }
     },
   );
 
@@ -105,6 +111,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _createChatTurnIndexes() async {
     for (final statement in chatTurnIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createReviewGenerationJobIndexes() async {
+    for (final statement in reviewGenerationJobIndexStatements) {
       await customStatement(statement);
     }
   }

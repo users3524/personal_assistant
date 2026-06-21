@@ -67,6 +67,12 @@ void main() {
         (backupJson['chat_turns'] as List<dynamic>).single['turnDate'],
         '2026-06-20',
       );
+      expect(backupJson['review_generation_jobs'], hasLength(1));
+      expect(
+        (backupJson['review_generation_jobs'] as List<dynamic>)
+            .single['targetDate'],
+        '2026-06-20',
+      );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -152,6 +158,16 @@ void main() {
       expect(turn.isOffline, false);
       expect(turn.consumesCloudTurn, true);
       expect(turn.source, 'daily_review_chat');
+
+      final job = await restoredDb
+          .select(restoredDb.reviewGenerationJobs)
+          .getSingle();
+      expect(job.targetDate, '2026-06-20');
+      expect(job.status, 'failed');
+      expect(job.rawAssetsDump, '{"target_date":"2026-06-20"}');
+      expect(job.attemptCount, 2);
+      expect(job.failureReason, 'json parse failed');
+      expect(job.processedAt, DateTime(2026, 6, 21, 2));
       expect(await apiKeyStore.read(), null);
     });
 
@@ -204,6 +220,60 @@ void main() {
         ).importBackup(file.path);
 
         expect(await sourceDb.select(sourceDb.chatTurns).get(), isEmpty);
+      },
+    );
+
+    test(
+      'imports legacy backups without review jobs as an empty table',
+      () async {
+        final now = DateTime(2026, 6, 20, 10, 30);
+        await sourceDb
+            .into(sourceDb.reviewGenerationJobs)
+            .insert(
+              ReviewGenerationJobsCompanion.insert(
+                targetDate: '2026-06-20',
+                status: const Value('failed'),
+                failureReason: const Value('stale job'),
+                createdAt: Value(now),
+              ),
+            );
+        final backup = {
+          'version': 1,
+          'exportedAt': now.toIso8601String(),
+          'user_preferences': [
+            {
+              'id': 1,
+              'themeMode': 'system',
+              'language': 'zh',
+              'notificationEnabled': true,
+              'aiProvider': 'offline',
+              'aiApiKey': null,
+              'aiBaseUrl': '',
+              'aiModel': '',
+              'aiConfig': null,
+              'dailyReviewTime': '21:00',
+              'weeklyReportDay': 'sunday',
+              'resumeTemplateId': 0,
+              'todoCategories': '[]',
+              'createdAt': now.millisecondsSinceEpoch,
+              'updatedAt': now.millisecondsSinceEpoch,
+            },
+          ],
+        };
+        final file = File(
+          '${tempDir.path}${Platform.pathSeparator}legacy_no_jobs.json',
+        );
+        await file.writeAsString(jsonEncode(backup));
+
+        await BackupService(
+          sourceDb,
+          apiKeyStore: apiKeyStore,
+        ).importBackup(file.path);
+
+        expect(
+          await sourceDb.select(sourceDb.reviewGenerationJobs).get(),
+          isEmpty,
+        );
       },
     );
 
@@ -649,6 +719,20 @@ Future<void> _seedSourceDatabase(
           content: 'Need a short review',
           consumesCloudTurn: const Value(true),
           source: const Value('daily_review_chat'),
+          createdAt: Value(now),
+        ),
+      );
+
+  await db
+      .into(db.reviewGenerationJobs)
+      .insert(
+        ReviewGenerationJobsCompanion.insert(
+          targetDate: '2026-06-20',
+          status: const Value('failed'),
+          rawAssetsDump: const Value('{"target_date":"2026-06-20"}'),
+          attemptCount: const Value(2),
+          failureReason: const Value('json parse failed'),
+          processedAt: Value(DateTime(2026, 6, 21, 2)),
           createdAt: Value(now),
         ),
       );

@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 任务、清单、子任务、软删除、归档、统计、周/月视图。 |
 | 文玩/盘串 | 藏品档案、分类字段、照片、盘玩打卡、打卡对比、月历、趣味榜单；日志重型榜单已下沉到 DAO 批量聚合；估值功能已应用层下线，schema v8 遗留表/列暂留兼容。 |
-| AI 复盘 | 独立复盘历史入口、对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入、每日 15 轮云端请求限制和离线便签。 |
+| AI 复盘 | 独立复盘历史入口、月度复盘日历、对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入、每日 15 轮云端请求限制和离线便签。 |
 | 动态简历 | 三模板预览、长表单编辑、可见性开关、拖拽排序、图片导出分享。 |
 
 ## 2. 技术栈
@@ -113,7 +113,7 @@ feature/
 
 来源：`lib/core/database/app_database.dart`
 
-当前 `schemaVersion = 12`，注册 16 张表：
+当前 `schemaVersion = 15`，注册 20 张表：
 
 | 表 | 当前用途 |
 | --- | --- |
@@ -128,11 +128,15 @@ feature/
 | `weekly_reports` | 每周周报。 |
 | `chat_turns` | 复盘对话与离线便签；按本地 `YYYY-MM-DD` 记录每日云端 turn 计数。 |
 | `review_generation_jobs` | 深夜/前台补偿生成任务冷表；按本地 `YYYY-MM-DD` 记录任务状态、原始素材 dump、尝试次数和失败原因。 |
+| `milestones` | 高光主表；记录标题、描述、发生时间、重要性和用户确认状态。 |
+| `milestone_relations` | 高光多源关系；支持 `todo`、`daily_review`、`patting_log` 和 `manual` 来源。 |
 | `resume_profile` | 简历个人资料。 |
 | `work_experiences` | 工作经历。 |
 | `educations` | 教育经历。 |
 | `skill_items` | 技能项。 |
 | `project_experiences` | 项目经历。 |
+| `project_milestone_relations` | 项目经历与高光多对多关系。 |
+| `vector_embeddings` | 本地向量表；保存来源、模型、维度和 Float32 BLOB 向量数据。 |
 
 迁移历史：
 
@@ -149,6 +153,9 @@ feature/
 | `<10` | 创建 `chat_turns`，并补充 `turn_date + consumes_cloud_turn`、`turn_date + created_at` 索引。 |
 | `<11` | 创建 `review_generation_jobs`，并补充 `target_date` 唯一索引和 `status + target_date` 查询索引。 |
 | `<12` | 为 `daily_reviews` 增加 `calibration_required`，不改动 `date` / `summary` 类型。 |
+| `<13` | 创建 `milestones` / `milestone_relations`，并补充高光确认、来源查询索引和来源约束。 |
+| `<14` | 创建 `project_milestone_relations`，支持项目经历与高光多对多绑定。 |
+| `<15` | 创建 `vector_embeddings`，保存向量来源、embedding 模型、维度、BLOB 编码和检索索引。 |
 
 ## 6. 当前模块依赖流
 
@@ -170,6 +177,8 @@ AI Assistant
   -> ReviewRepository -> ReviewDao -> daily_reviews / weekly_reports
   -> ChatTurnDao -> chat_turns
   -> ReviewGenerationJobDao -> review_generation_jobs / success raw dump 7 天后清理
+  -> MilestoneDao -> milestones / milestone_relations / project_milestone_relations
+  -> VectorEmbeddingDao -> vector_embeddings / Dart linear cosine search
   -> AILogScheduler: Android WorkManager 或桌面/Web No-Op
   -> AIService: OfflineReviewGenerator 或 OpenAIService
   -> TodoRepository 读取今日已完成任务标题
@@ -189,4 +198,4 @@ Resume
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11/v12 索引与追加字段迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流、raw dump 留存和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7-v15 索引与追加字段迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流、raw dump 留存和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`milestones` / `project_milestone_relations` 由 `test/milestone_dao_test.dart` 覆盖，`vector_embeddings` 和线性检索由 `test/vector_embedding_dao_test.dart` / `test/linear_vector_search_service_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。

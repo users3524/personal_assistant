@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 周/月视图、任务树、子任务、软删除、归档、统计；树查询已批量化，重新打开可清空完成/取消时间。 |
 | 文玩 | 藏品、照片、盘玩打卡、月历、对比、趣味榜单；日志重型榜单已下沉到 DAO 批量聚合；默认分类含长串；估值功能已应用层下线，遗留表/列暂留兼容。 |
-| AI 复盘 | 独立 `/review` 历史入口、对话式日报、ISO 周报、离线/在线 AI；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；纯文本解析失败时有可见降级；已用 `chat_turns` 实现每日 15 轮云端请求限制和熔断后的离线便签。 |
+| AI 复盘 | 独立 `/review` 历史入口、月度复盘日历、对话式日报、ISO 周报、离线/在线 AI；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；纯文本解析失败时有可见降级；已用 `chat_turns` 实现每日 15 轮云端请求限制和熔断后的离线便签；`review_generation_jobs`、高光表和向量表底座已落地。 |
 | 简历 | 三模板预览、编辑、拖拽排序、可见性、图片导出。 |
 | 设置 | AI 配置、通知、分类管理、JSON 备份；API Key 已走平台安全存储。 |
 
@@ -107,12 +107,12 @@
 | 工作 | 说明 |
 | --- | --- |
 | 策略配置 | 首版 `LLMStrategyConfig` JSON 复用 `user_preferences`，不引入 Hive/SharedPreferences，也暂不新增 `system_configs`。 |
-| PromptBuilder 深化 | 服务层已新增并接入 OpenAI 调用；深夜 raw context pack 优先级裁剪器已实现，后续接入生成任务。 |
+| PromptBuilder 深化 | 服务层已新增并接入 OpenAI 调用；深夜 raw context pack 优先级裁剪器和生成任务冷表已实现，后续接入真实素材组包与生成执行。 |
 | 成本闸门剩余项 | 文本 500 字、STT 60 秒、每日云端 turn 计数和离线便签模式已落地；后续补素材预算裁剪和深夜生成限制。 |
-| 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行；raw context pack 字段契约已定稿。 |
+| 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行；raw context pack 字段契约、裁剪器和任务状态表已定稿并落地。 |
 | 调度接口 | 设计纯 Dart `AILogScheduler` 接口，平台实现放到 infrastructure 层；Android WorkManager 约束不使用 `RequiresDeviceIdle`。 |
-| 生成任务表 | 设计 `review_generation_jobs` 保存 `target_date` 字符串、状态、`raw_assets_dump`、失败原因和清理状态。 |
-| 状态驱动补偿 | Catch-Up Guard 查询昨日 `review_generation_jobs` 状态，而不是只看 `daily_reviews` 是否存在。 |
+| 生成任务表 | `review_generation_jobs` 已保存 `target_date` 字符串、状态、`raw_assets_dump`、失败原因和清理状态。 |
+| 状态驱动补偿 | Catch-Up Guard 已查询昨日 `review_generation_jobs` 状态，而不是只看 `daily_reviews` 是否存在。 |
 | 原始素材留存 | 成功任务的 `raw_assets_dump` 默认保留 7 天；失败任务保留到用户手动清理。 |
 | 素材裁剪器 | `RawContextClipper` 已按 8000 字左右预算和优先级保留关键素材；后续由深夜生成任务调用。 |
 | 结构化输出 | JSON schema、解析失败重试、纯文本降级、`calibration_required` 标记。 |
@@ -124,10 +124,10 @@
 
 | 工作 | 说明 |
 | --- | --- |
-| 向量存储 | 当前无 Embedding 表或检索逻辑；后续需先选型本地向量存储、BLOB/数组编码和维度策略。 |
+| 向量存储 | `vector_embeddings`、Float32 BLOB 编码、模型/维度守卫和 Dart 线性检索已落地；后续需接入 embedding 生成、索引重建任务和 RAG 使用链路。 |
 | 人生罗盘 | 当前无五维目标表；后续需定义固定维度、目标字段、修改冷却和存量任务迁移方式。 |
 | RAG 检索限窗 | 周报/规划只取 Top-K 切片，限制单片长度和总 prompt 预算。 |
 | STAR 润色 | 当前简历无 AI 生成项目 bullet。 |
-| 素材池 | 当前无里程碑表；应先定义 `milestones` 和 `milestone_relations` 多源关联。 |
-| 项目-高光关联 | 当前无 `project_milestone_relations`；后续用于支持一个项目关联多个高光。 |
+| 素材池 | `milestones` 和 `milestone_relations` 多源关联已落地；后续接入自动抽取、用户确认和简历素材投递。 |
+| 项目-高光关联 | `project_milestone_relations` 已落地；后续接入项目经历页面的高光选择/排序 UI。 |
 | PDF 导出 | 当前简历只支持图片分享；PDF 前置方案已落在 `SPEC_RESUME.md`，实现时再接入 `pdf` / `printing`。 |

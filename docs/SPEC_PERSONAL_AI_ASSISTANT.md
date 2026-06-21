@@ -12,11 +12,11 @@
 | 待办 | `/todos` | 待办树、子任务、状态流转、软删除、归档、周/月视图、今日复盘入口。 |
 | 简历 | `/resume` | 三模板预览、编辑资料/经历/技能/项目、拖拽排序、可见性开关、图片导出分享。 |
 | 设置 | `/settings` | AI 配置、通知、分类管理、文玩设置、JSON 备份导入导出、许可页。 |
-| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 独立复盘历史入口、对话式日报、日报详情、ISO 周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界、PromptBuilder 预算、每日 15 轮云端请求限制。 |
+| AI 复盘 | `/review`, `/review/daily/*`, `/review/weekly/:id` | 独立复盘历史入口、月度复盘日历、对话式日报、日报详情、ISO 周报生成/查看、离线或在线 AI 生成、文本/STT 输入边界、PromptBuilder 预算、每日 15 轮云端请求限制。 |
 
 ## 2. 当前数据库表
 
-当前 `schemaVersion = 10`，表结构来自 Drift 手写表定义。
+当前 `schemaVersion = 15`，表结构来自 Drift 手写表定义。
 
 | 表 | 所属模块 | 当前状态 |
 | --- | --- | --- |
@@ -30,13 +30,18 @@
 | `daily_reviews` | AI 复盘 | 使用中。 |
 | `weekly_reports` | AI 复盘 | 使用中。 |
 | `chat_turns` | AI 复盘 | 使用中；保存复盘对话、离线便签和每日云端 turn 计数。 |
+| `review_generation_jobs` | AI 复盘 | 使用中；保存深夜/前台补偿生成任务状态和原始素材 dump。 |
+| `milestones` | AI 复盘/简历素材 | 使用中；高光主表，当前有 DAO、迁移、备份和测试。 |
+| `milestone_relations` | AI 复盘/简历素材 | 使用中；高光与待办、日报、文玩打卡或手动来源的多源关系。 |
 | `resume_profile` | 简历 | 使用中。 |
 | `work_experiences` | 简历 | 使用中。 |
 | `educations` | 简历 | 使用中。 |
 | `skill_items` | 简历 | 使用中。 |
 | `project_experiences` | 简历 | 使用中。 |
+| `project_milestone_relations` | 简历素材 | 使用中；项目经历与多个高光的多对多关系。 |
+| `vector_embeddings` | AI 长期记忆 | 使用中；保存本地 SQLite BLOB 向量、模型、维度和来源元数据。 |
 
-schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引；schema v9 增加非敏感 AI 策略 JSON；schema v10 增加 `chat_turns`。
+schema v7 补充 `todos` 查询索引；schema v8 补充文玩 `patting_logs` 榜单和日期统计索引；schema v9 增加非敏感 AI 策略 JSON；schema v10 增加 `chat_turns`；schema v11 增加 `review_generation_jobs`；schema v12 为 `daily_reviews` 增加 `calibration_required`；schema v13-v15 依次增加高光、多对多项目高光关系和本地向量表。
 
 ## 3. 当前已实现的数据关系
 
@@ -73,9 +78,9 @@ work_experiences.responsibilities/tech_stack -> List<String>
 
 | 能力 | 当前状态 |
 | --- | --- |
-| 深夜 2:00-5:00 后台引擎 | 当前无后台调度实现。 |
+| 深夜 2:00-5:00 后台引擎 | 已有 Android WorkManager 注册、No-Op 平台实现和前台 Catch-Up Guard；尚未实现 WorkManager 唤醒后的素材组包、AI 生成和日报写入闭环。 |
 | 结构化 JSON 输出/重试 | 当前 OpenAI 输出仍按纯文本解析，未接入 JSON schema 和重试。 |
-| RAG / 向量存储 / 人生罗盘 | 当前无表、无检索实现。 |
+| RAG / 人生罗盘 | 当前无完整产品闭环；向量表、线性检索和兼容校验底座已落地，但未接入 embedding 生成与 RAG 调用链。 |
 | STAR 简历生成 | 当前无 AI 简历润色流程。 |
 
 ## 5. 文玩估值模块口径

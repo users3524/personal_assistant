@@ -1,6 +1,6 @@
 # 数据安全与备份现状
 
-最后更新：2026-06-20
+最后更新：2026-06-21
 
 本文只记录当前代码中的安全和备份事实。
 
@@ -43,14 +43,20 @@
 6. `patting_logs`
 7. `daily_reviews`
 8. `weekly_reports`
-9. `resume_profile`
-10. `work_experiences`
-11. `educations`
-12. `skill_items`
-13. `project_experiences`
-14. `collection_categories`
+9. `chat_turns`
+10. `review_generation_jobs`
+11. `milestones`
+12. `milestone_relations`
+13. `resume_profile`
+14. `work_experiences`
+15. `educations`
+16. `skill_items`
+17. `project_experiences`
+18. `project_milestone_relations`
+19. `vector_embeddings`
+20. `collection_categories`
 
-当前数据库有 14 张表，备份导出已覆盖全部存量业务表。估值功能已应用层下线，因此新备份保留 `valuation_records` 键但内容为空；`antique_items.currentValuation` 导出为 `null`。
+当前数据库有 20 张表，备份导出已覆盖全部存量业务表和 AI 冷数据/高光/向量底座表。估值功能已应用层下线，因此新备份保留 `valuation_records` 键但内容为空；`antique_items.currentValuation` 导出为 `null`。
 
 图片处理：导出时会尝试读取 `imagePaths` / `photoPaths` 对应文件，存在则编码为 `base64:<content>`；失败则保留原路径。
 
@@ -77,7 +83,7 @@
 | 限制 | 说明 |
 | --- | --- |
 | 覆盖导入 | 导入前清空现有数据，不是合并。 |
-| 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID 与周报文本字段已纳入导入导出镜像测试。 |
+| 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID、周报文本字段、`chat_turns`、`review_generation_jobs`、高光关系表和 `vector_embeddings` 已纳入导入导出镜像测试。 |
 | 估值兼容 | 旧备份估值历史会归档到藏品备注；新备份不导出估值历史。 |
 | 图片恢复目录 | Base64 图片恢复到应用文档目录，数据库保存相对路径 token。 |
 | 备份文件明文 | 备份 JSON 本身无密码保护和加密；但 AI API Key 已从导出内容中剔除。 |

@@ -3,6 +3,8 @@ library;
 
 import 'dart:convert';
 
+import 'vector_memory_strategy.dart';
+
 class LLMStrategyConfig {
   static const offlineProvider = '离线模式';
   static const defaultOpenAIBaseUrl = 'https://api.openai.com/v1';
@@ -15,6 +17,7 @@ class LLMStrategyConfig {
   final int weeklyReportMaxTokens;
   final int chatMaxTokens;
   final int promptBudgetChars;
+  final VectorMemoryStrategy vectorMemory;
 
   const LLMStrategyConfig({
     this.provider = offlineProvider,
@@ -24,6 +27,7 @@ class LLMStrategyConfig {
     this.weeklyReportMaxTokens = 1000,
     this.chatMaxTokens = 1000,
     this.promptBudgetChars = 12000,
+    this.vectorMemory = const VectorMemoryStrategy(),
   });
 
   factory LLMStrategyConfig.fromLegacy({
@@ -71,6 +75,11 @@ class LLMStrategyConfig {
         json['promptBudgetChars'],
         fallback: 12000,
       ),
+      vectorMemory: VectorMemoryStrategy.fromJson(
+        json['vectorMemory'] is Map<String, dynamic>
+            ? json['vectorMemory'] as Map<String, dynamic>
+            : null,
+      ),
     );
   }
 
@@ -94,6 +103,7 @@ class LLMStrategyConfig {
     'weeklyReportMaxTokens': weeklyReportMaxTokens,
     'chatMaxTokens': chatMaxTokens,
     'promptBudgetChars': promptBudgetChars,
+    'vectorMemory': vectorMemory.toJson(),
   };
 
   String toJsonString() => jsonEncode(toJson());

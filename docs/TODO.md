@@ -95,7 +95,7 @@
 - [x] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
 - [x] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
 - [x] 高光判定：高门槛、单日最多 2 条、允许 0 条。
-- [ ] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。
+- [x] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。
 - [ ] 设计 `vector_embeddings`：sourceType/sourceId、embeddingModel、dimension、vectorData；sourceType 首版使用当前业务源名，避免写入尚无表支撑的 `habit_log`。
 - [ ] 明确 `vector_data` 编码格式：Float32/Float64、端序、归一化策略和版本字段。
 - [ ] 检索前校验 embedding 模型和维度，不兼容时拒绝相似度计算并触发重建。

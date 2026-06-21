@@ -99,6 +99,7 @@ void main() {
               as Map<String, dynamic>;
       expect(exportedPrefs['aiConfig'], contains('"provider":"OpenAI"'));
       expect(exportedPrefs['aiConfig'], contains('"chatMaxTokens":1000'));
+      expect(exportedPrefs['aiConfig'], contains('"vectorMemory"'));
       expect(exportedPrefs['aiConfig'], isNot(contains('existing-secret-key')));
       expect(exportedPrefs['aiConfig'], isNot(contains('apiKey')));
 
@@ -121,6 +122,10 @@ void main() {
       ).getLLMStrategyConfig();
       expect(restoredStrategy.provider, 'OpenAI');
       expect(restoredStrategy.chatMaxTokens, 1000);
+      expect(
+        restoredStrategy.vectorMemory.storageBackend.storageValue,
+        'sqlite_blob',
+      );
 
       final lists = await restoredDb.select(restoredDb.todoLists).get();
       expect(lists, hasLength(1));

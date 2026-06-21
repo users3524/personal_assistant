@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/ai/llm_strategy_config.dart';
+import 'package:personal_assistant/core/ai/vector_memory_strategy.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/core/database/user_preferences_dao.dart';
 import 'package:personal_assistant/core/security/api_key_store.dart';
@@ -77,6 +78,16 @@ void main() {
         weeklyReportMaxTokens: 1400,
         chatMaxTokens: 900,
         promptBudgetChars: 10000,
+        vectorMemory: VectorMemoryStrategy(
+          enabled: true,
+          embeddingProfile: EmbeddingProfile(
+            provider: 'OpenAI',
+            model: 'text-embedding-3-small',
+            dimension: 1536,
+          ),
+          linearScanThreshold: 8000,
+          rebuildBatchSize: 64,
+        ),
       );
 
       await dao.setLLMStrategyConfig(config);
@@ -91,6 +102,22 @@ void main() {
       expect(restored.model, config.model);
       expect(restored.dailyReviewMaxTokens, 600);
       expect(restored.promptBudgetChars, 10000);
+      expect(restored.vectorMemory.enabled, true);
+      expect(
+        restored.vectorMemory.storageBackend,
+        VectorStorageBackend.sqliteBlob,
+      );
+      expect(
+        restored.vectorMemory.retrievalMode,
+        VectorRetrievalMode.dartLinearCosine,
+      );
+      expect(
+        restored.vectorMemory.embeddingProfile.model,
+        'text-embedding-3-small',
+      );
+      expect(restored.vectorMemory.embeddingProfile.dimension, 1536);
+      expect(restored.vectorMemory.linearScanThreshold, 8000);
+      expect(restored.vectorMemory.rebuildBatchSize, 64);
     });
 
     test('falls back to legacy AI columns when JSON is absent', () async {

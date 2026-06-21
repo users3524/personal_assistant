@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'app_database.dart';
@@ -15,6 +16,7 @@ import '../utils/image_utils.dart';
 class BackupService {
   final AppDatabase _db;
   final ApiKeyStore _apiKeyStore;
+  int _restoredImageCounter = 0;
 
   BackupService(this._db, {ApiKeyStore? apiKeyStore})
     : _apiKeyStore = apiKeyStore ?? SecureApiKeyStore();
@@ -434,19 +436,7 @@ class BackupService {
 
           // 图片列表：base64 → 解码写盘
           if ((col == 'image_paths' || col == 'photo_paths') && v is List) {
-            v = v
-                .map<dynamic>((p) {
-                  if (p is String && p.startsWith('base64:')) {
-                    return _decodeAndSaveImage(p.substring(7));
-                  }
-                  if (p is String &&
-                      (p.startsWith('/data/') || p.startsWith('/storage/'))) {
-                    return null; // 别的设备的绝对路径，没用
-                  }
-                  return p;
-                })
-                .whereType<String>()
-                .toList();
+            v = await _restoreImagePathList(v, col);
           }
 
           vals.add(_toRaw(v, col));
@@ -734,20 +724,48 @@ class BackupService {
     return ordered;
   }
 
-  /// 将 Base64 解码并写入文件，返回文件路径
-  String _decodeAndSaveImage(String base64str) {
+  Future<List<String>> _restoreImagePathList(
+    List<dynamic> paths,
+    String columnName,
+  ) async {
+    final restored = <String>[];
+    for (final item in paths) {
+      if (item is! String || item.isEmpty) continue;
+      if (item.startsWith('base64:')) {
+        final saved = await _decodeAndSaveImage(
+          item.substring(7),
+          columnName == 'photo_paths' ? 'patting_images' : 'antique_images',
+        );
+        if (saved != null) restored.add(saved);
+        continue;
+      }
+      if (item.startsWith('/data/') || item.startsWith('/storage/')) {
+        continue; // 别的设备的绝对路径，没用
+      }
+      restored.add(item);
+    }
+    return restored;
+  }
+
+  /// 将 Base64 解码并写入应用文档目录，返回相对路径 token。
+  Future<String?> _decodeAndSaveImage(
+    String base64str,
+    String subdirectory,
+  ) async {
     try {
       final bytes = base64Decode(base64str);
-      final dir = Directory(
-        '${Directory.systemTemp.path}/personal_assistant_images',
-      );
-      if (!dir.existsSync()) dir.createSync(recursive: true);
-      final fileName = 'restored_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final file = File('${dir.path}/$fileName');
-      file.writeAsBytesSync(bytes);
-      return file.path;
+      final appDir = await getApplicationDocumentsDirectory();
+      final dir = Directory(p.join(appDir.path, subdirectory));
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final fileName =
+          'restored_${DateTime.now().microsecondsSinceEpoch}_${_restoredImageCounter++}.jpg';
+      final file = File(p.join(dir.path, fileName));
+      await file.writeAsBytes(bytes);
+      return p.posix.join(subdirectory, fileName);
     } catch (_) {
-      return '';
+      return null;
     }
   }
 }

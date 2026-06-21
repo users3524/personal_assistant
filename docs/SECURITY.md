@@ -67,7 +67,7 @@
 3. 按固定顺序用 `customStatement` 插入数据。
 4. 将 drift `toJson()` 的 camelCase key 转为 snake_case。
 5. 对日期列把毫秒时间戳转换为 Drift SQLite 使用的秒时间戳。
-6. 对 `base64:` 图片解码到系统临时目录 `personal_assistant_images`。
+6. 对 `base64:` 图片解码到应用文档目录下的 `antique_images/` 或 `patting_images/`，数据库保存相对路径 token。
 7. 对旧备份缺失的新增列表字段使用空列表默认值，避免历史 schema 字段缺口导致导入中断。
 8. 若旧备份中包含 `user_preferences.aiApiKey` / `ai_api_key`，导入时迁移到安全存储并清空数据库字段；若备份不含密钥，覆盖导入会清空当前安全存储中的 AI Key。
 9. 若旧备份中包含 `valuation_records` 或 `antique_items.currentValuation`，导入时归档到对应藏品的 `notes`，不再回灌估值表。
@@ -79,7 +79,7 @@
 | 覆盖导入 | 导入前清空现有数据，不是合并。 |
 | 表覆盖现状 | `todo_lists`、任务树字段、软删除字段、简历 List 字段、日报完成任务 ID 与周报文本字段已纳入导入导出镜像测试。 |
 | 估值兼容 | 旧备份估值历史会归档到藏品备注；新备份不导出估值历史。 |
-| 图片恢复目录 | Base64 图片恢复到系统临时目录，不是应用文档目录。 |
+| 图片恢复目录 | Base64 图片恢复到应用文档目录，数据库保存相对路径 token。 |
 | 备份文件明文 | 备份 JSON 本身无密码保护和加密；但 AI API Key 已从导出内容中剔除。 |
 
 ## 5. 通知权限

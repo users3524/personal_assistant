@@ -161,14 +161,14 @@ schema v8 为榜单和日期区间统计补充了两个索引：`idx_patting_log
 
 1. 数据库存储统一收敛为相对路径 token。
 2. UI、分享、保存、备份导出统一复用现有 `resolveImageFile()` 或 `ResolvedImage`，避免再造多个路径解析入口。
-3. 备份恢复解码 `base64:` 图片时写入应用文档目录，而不是系统临时目录。
+3. 备份恢复解码 `base64:` 图片时写入应用文档目录，数据库继续保存相对路径 token。
 4. 迁移旧绝对路径前先校验文件是否存在，能复制到 `antique_images/` 的再转相对路径，不能复制的保留原值并提示用户。
 
 注意：当前 `resolveImageFile()` 是异步函数，返回 `Future<File>`。页面层展示图片时应优先使用 `ResolvedImage`；业务操作如分享、保存、备份导出则在执行前 `await resolveImageFile(path)`。
 
 ## 10. 备份与 AI 复盘衔接
 
-当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。导出图片时已复用 `resolveImageFile()`，可稳定打包相对路径和绝对路径。恢复图片目前仍写入系统临时目录，后续需要改为应用文档目录并返回相对路径 token。
+当前 `BackupService` 已导出 `antique_items`、`patting_logs` 和 `collection_categories`。`valuation_records` 兼容键仍保留但新导出为空；旧备份导入时估值历史归档到藏品备注，不再回灌估值表。导出图片时已复用 `resolveImageFile()`，可稳定打包相对路径和绝对路径。恢复图片会写入应用文档目录下的 `antique_images/` 或 `patting_images/`，并返回相对路径 token。
 
 AI 复盘侧当前 `DailyReviewChatPage` 生成和保存日报时，会通过 `AntiqueRepository.sumPattingMinutesByDate()` 读取复盘日期当天 `patting_logs.duration_minutes` 总和，写入 `daily_reviews.patting_minutes` 并传给 AI 日报生成。当前只接入数字事实；后续深夜素材包还应读取当天打卡 `note` 和照片路径摘要，把文玩打卡作为“兴趣/放松/情绪调节”事实输入。白天文玩打卡本身不应触发云端请求。
 

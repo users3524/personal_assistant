@@ -287,6 +287,83 @@ void main() {
       expect((item['imagePaths'] as List<dynamic>).single, 'base64:AQIDBA==');
       expect((log['photoPaths'] as List<dynamic>).single, 'base64:AQIDBA==');
     });
+
+    test(
+      'restores base64 collection images into application documents',
+      () async {
+        final appDocDir = Directory(
+          '${tempDir.path}${Platform.pathSeparator}restore_docs',
+        );
+        await appDocDir.create();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(pathProviderChannel, (call) async {
+              if (call.method == 'getApplicationDocumentsDirectory') {
+                return appDocDir.path;
+              }
+              return null;
+            });
+
+        final now = DateTime(2026, 6, 20, 10, 30);
+        final backup = {
+          'version': 1,
+          'exportedAt': now.toIso8601String(),
+          'antique_items': [
+            {
+              'id': 1,
+              'name': '恢复图片藏品',
+              'category': '长串',
+              'acquiredDate': now.millisecondsSinceEpoch,
+              'condition': 'good',
+              'imagePaths': ['base64:CQgH'],
+              'createdAt': now.millisecondsSinceEpoch,
+              'updatedAt': now.millisecondsSinceEpoch,
+            },
+          ],
+          'patting_logs': [
+            {
+              'id': 1,
+              'itemId': 1,
+              'date': now.millisecondsSinceEpoch,
+              'durationMinutes': 12,
+              'method': 'bare_hand',
+              'photoPaths': ['base64:BgUE'],
+              'createdAt': now.millisecondsSinceEpoch,
+            },
+          ],
+        };
+        final file = File(
+          '${tempDir.path}${Platform.pathSeparator}restore_images.json',
+        );
+        await file.writeAsString(jsonEncode(backup));
+
+        await BackupService(
+          sourceDb,
+          apiKeyStore: apiKeyStore,
+        ).importBackup(file.path);
+
+        final item = await sourceDb.select(sourceDb.antiqueItems).getSingle();
+        final log = await sourceDb.select(sourceDb.pattingLogs).getSingle();
+        final itemPath = item.imagePaths.single;
+        final logPath = log.photoPaths.single;
+
+        expect(itemPath.startsWith('antique_images/'), true);
+        expect(logPath.startsWith('patting_images/'), true);
+        expect(
+          await File(
+            '${appDocDir.path}${Platform.pathSeparator}'
+            '${itemPath.replaceAll('/', Platform.pathSeparator)}',
+          ).readAsBytes(),
+          [9, 8, 7],
+        );
+        expect(
+          await File(
+            '${appDocDir.path}${Platform.pathSeparator}'
+            '${logPath.replaceAll('/', Platform.pathSeparator)}',
+          ).readAsBytes(),
+          [6, 5, 4],
+        );
+      },
+    );
   });
 }
 

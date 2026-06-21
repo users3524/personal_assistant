@@ -178,6 +178,9 @@ class BackupService {
         (await _db.select(_db.projectMilestoneRelations).get())
             .map((r) => _rowToMap(r))
             .toList();
+    data['vector_embeddings'] = (await _db.select(_db.vectorEmbeddings).get())
+        .map(_vectorEmbeddingToBackupMap)
+        .toList();
     data['collection_categories'] =
         (await _db.select(_db.collectionCategories).get())
             .map((r) => _rowToMap(r))
@@ -190,6 +193,7 @@ class BackupService {
   Future<void> _restoreData(Map<String, dynamic> data) async {
     // 清空现有数据
     await _db.delete(_db.projectMilestoneRelations).go();
+    await _db.delete(_db.vectorEmbeddings).go();
     await _db.delete(_db.projectExperiences).go();
     await _db.delete(_db.skillItems).go();
     await _db.delete(_db.educations).go();
@@ -230,6 +234,7 @@ class BackupService {
       'skill_items',
       'project_experiences',
       'project_milestone_relations',
+      'vector_embeddings',
     ];
 
     // 每张表的 snake_case 列名，与实际 SQL schema 一致
@@ -455,6 +460,19 @@ class BackupService {
         'sort_order',
         'created_at',
       ],
+      'vector_embeddings': [
+        'id',
+        'source_type',
+        'source_id',
+        'embedding_model',
+        'dimension',
+        'vector_data',
+        'storage_backend',
+        'encoding_version',
+        'content_hash',
+        'created_at',
+        'updated_at',
+      ],
     };
 
     // camelCase → snake_case（drift.toJson 输出的是 camelCase）
@@ -514,6 +532,9 @@ class BackupService {
           if ((col == 'image_paths' || col == 'photo_paths') && v is List) {
             v = await _restoreImagePathList(v, col);
           }
+          if (col == 'vector_data' && v is String && v.startsWith('base64:')) {
+            v = base64Decode(v.substring(7));
+          }
 
           vals.add(_toRaw(v, col));
         }
@@ -570,6 +591,7 @@ class BackupService {
     }
     if (v is double) return v;
     if (v is bool) return v ? 1 : 0;
+    if (v is Uint8List) return v;
     if (v is List) return jsonEncode(v);
     // ISO 8601 日期字符串 → DateTime → 转换成秒 epoch 给 SQLite
     if (v is String && v.length >= 19 && v[4] == '-' && v[10] == 'T') {
@@ -581,6 +603,12 @@ class BackupService {
 
   Map<String, dynamic> _rowToMap(DataClass row) {
     return row.toJson();
+  }
+
+  Map<String, dynamic> _vectorEmbeddingToBackupMap(VectorEmbedding row) {
+    final data = row.toJson();
+    data['vectorData'] = 'base64:${base64Encode(row.vectorData)}';
+    return data;
   }
 
   Map<String, dynamic> _sanitizeUserPreferences(Map<String, dynamic> row) {
@@ -778,6 +806,15 @@ class BackupService {
     }
     if (tableName == 'milestone_relations' && columnName == 'source_type') {
       return 'manual';
+    }
+    if (tableName == 'vector_embeddings' && columnName == 'source_type') {
+      return 'manual';
+    }
+    if (tableName == 'vector_embeddings' && columnName == 'storage_backend') {
+      return 'sqlite_blob';
+    }
+    if (tableName == 'vector_embeddings' && columnName == 'encoding_version') {
+      return 'float32_le_v1';
     }
     if (columnName == 'is_visible') {
       return true;

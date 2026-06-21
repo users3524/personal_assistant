@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/chat_turns_table.dart';
@@ -5,6 +7,7 @@ import 'package:personal_assistant/features/ai_assistant/data/datasources/milest
 import 'package:personal_assistant/features/ai_assistant/data/datasources/milestones_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/project_milestone_relations_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/review_generation_jobs_table.dart';
+import 'package:personal_assistant/features/ai_assistant/data/datasources/vector_embeddings_table.dart';
 import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
 import 'package:drift/native.dart';
@@ -30,6 +33,10 @@ void main() {
       expect(
         await _projectMilestoneRelationIndexNames(db),
         _expectedProjectMilestoneRelationIndexNames,
+      );
+      expect(
+        await _vectorEmbeddingIndexNames(db),
+        _expectedVectorEmbeddingIndexNames,
       );
     });
 
@@ -296,6 +303,80 @@ INSERT INTO project_milestone_relations (
       expect(relation.milestoneId, 1);
       expect(relation.sortOrder, 2);
     });
+
+    test('upgrades v14 databases with vector embeddings', () async {
+      final db = AppDatabase(
+        NativeDatabase.memory(
+          setup: (rawDb) {
+            rawDb.execute(_createV12DailyReviewsTableSql);
+            rawDb.execute(_createV13MilestonesTableSql);
+            rawDb.execute(_createV13MilestoneRelationsTableSql);
+            rawDb.execute(_createProjectExperiencesTableSql);
+            rawDb.execute(_createV14ProjectMilestoneRelationsTableSql);
+            rawDb.execute('PRAGMA user_version = 14');
+          },
+        ),
+      );
+      addTearDown(db.close);
+
+      final columns = await _columnNames(db, 'vector_embeddings');
+
+      expect(
+        columns,
+        containsAll([
+          'source_type',
+          'source_id',
+          'embedding_model',
+          'dimension',
+          'vector_data',
+          'storage_backend',
+          'encoding_version',
+          'content_hash',
+        ]),
+      );
+      expect(
+        await _vectorEmbeddingIndexNames(db),
+        _expectedVectorEmbeddingIndexNames,
+      );
+
+      await db.customStatement(
+        '''
+INSERT INTO vector_embeddings (
+  source_type, source_id, embedding_model, dimension, vector_data,
+  storage_backend, encoding_version, content_hash, created_at, updated_at
+) VALUES (
+  'daily_review', 1, 'text-embedding-3-small', 4, ?,
+  'sqlite_blob', 'float32_le_v1', 'hash-1',
+  strftime('%s', '2026-06-21'), strftime('%s', '2026-06-21')
+)
+''',
+        [
+          Uint8List.fromList([1, 2, 3, 4]),
+        ],
+      );
+
+      final row = await db.select(db.vectorEmbeddings).getSingle();
+      expect(row.sourceType, 'daily_review');
+      expect(row.embeddingModel, 'text-embedding-3-small');
+      expect(row.dimension, 4);
+      expect(row.vectorData, [1, 2, 3, 4]);
+      expect(row.storageBackend, 'sqlite_blob');
+      expect(row.encodingVersion, 'float32_le_v1');
+
+      await expectLater(
+        db.customStatement(
+          '''
+INSERT INTO vector_embeddings (
+  source_type, source_id, embedding_model, dimension, vector_data
+) VALUES ('habit_log', 1, 'text-embedding-3-small', 4, ?)
+''',
+          [
+            Uint8List.fromList([1]),
+          ],
+        ),
+        throwsA(anything),
+      );
+    });
   });
 }
 
@@ -316,6 +397,9 @@ final _expectedMilestoneRelationIndexNames = milestoneRelationIndexStatements
     .toSet();
 final _expectedProjectMilestoneRelationIndexNames =
     projectMilestoneRelationIndexStatements.map(_indexNameOf).toSet();
+final _expectedVectorEmbeddingIndexNames = vectorEmbeddingIndexStatements
+    .map(_indexNameOf)
+    .toSet();
 
 String _indexNameOf(String createIndexStatement) {
   final match = RegExp(
@@ -386,6 +470,15 @@ Future<Set<String>> _projectMilestoneRelationIndexNames(AppDatabase db) async {
 SELECT name FROM sqlite_master
 WHERE type = 'index' AND tbl_name = 'project_milestone_relations'
 AND name LIKE 'idx_project_milestone_relations_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _vectorEmbeddingIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'vector_embeddings'
+AND name LIKE 'idx_vector_embeddings_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
 }
@@ -597,5 +690,15 @@ CREATE TABLE project_experiences (
   end_date INTEGER NULL,
   is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1)),
   sort_order INTEGER NOT NULL DEFAULT 0
+);
+''';
+
+const _createV14ProjectMilestoneRelationsTableSql = '''
+CREATE TABLE project_milestone_relations (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES project_experiences(id) ON DELETE CASCADE,
+  milestone_id INTEGER NOT NULL REFERENCES milestones(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 ''';

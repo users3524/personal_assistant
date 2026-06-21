@@ -90,6 +90,11 @@ void main() {
             .single['sortOrder'],
         1,
       );
+      expect(backupJson['vector_embeddings'], hasLength(1));
+      expect(
+        (backupJson['vector_embeddings'] as List<dynamic>).single['vectorData'],
+        'base64:AQIDBA==',
+      );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -214,6 +219,16 @@ void main() {
       expect(projectMilestone.projectId, project.id);
       expect(projectMilestone.milestoneId, milestone.id);
       expect(projectMilestone.sortOrder, 1);
+      final vectorEmbedding = await restoredDb
+          .select(restoredDb.vectorEmbeddings)
+          .getSingle();
+      expect(vectorEmbedding.sourceType, 'daily_review');
+      expect(vectorEmbedding.sourceId, daily.id);
+      expect(vectorEmbedding.embeddingModel, 'text-embedding-3-small');
+      expect(vectorEmbedding.dimension, 4);
+      expect(vectorEmbedding.vectorData, [1, 2, 3, 4]);
+      expect(vectorEmbedding.storageBackend, 'sqlite_blob');
+      expect(vectorEmbedding.encodingVersion, 'float32_le_v1');
       expect(await apiKeyStore.read(), null);
     });
 
@@ -819,6 +834,23 @@ Future<void> _seedSourceDatabase(
           milestoneId: milestoneId,
           sortOrder: const Value(1),
           createdAt: Value(now),
+        ),
+      );
+
+  await db
+      .into(db.vectorEmbeddings)
+      .insert(
+        VectorEmbeddingsCompanion.insert(
+          sourceType: 'daily_review',
+          sourceId: Value(dailyId),
+          embeddingModel: 'text-embedding-3-small',
+          dimension: 4,
+          vectorData: Uint8List.fromList([1, 2, 3, 4]),
+          storageBackend: const Value('sqlite_blob'),
+          encodingVersion: const Value('float32_le_v1'),
+          contentHash: const Value('daily-review-hash'),
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
 

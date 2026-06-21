@@ -12,6 +12,7 @@ import '../datasources/chat_turn_dao.dart';
 import '../datasources/milestone_dao.dart';
 import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
+import '../datasources/vector_embedding_dao.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
   final ReviewDao _dao;
@@ -95,6 +96,13 @@ final reviewGenerationJobDaoProvider = FutureProvider<ReviewGenerationJobDao>((
 final milestoneDaoProvider = FutureProvider<MilestoneDao>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return MilestoneDao(db);
+});
+
+final vectorEmbeddingDaoProvider = FutureProvider<VectorEmbeddingDao>((
+  ref,
+) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return VectorEmbeddingDao(db);
 });
 
 final aiLogSchedulerProvider = Provider<AILogScheduler>((ref) {

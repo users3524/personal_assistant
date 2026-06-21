@@ -19,6 +19,7 @@ import '../../features/ai_assistant/data/datasources/review_generation_jobs_tabl
 import '../../features/ai_assistant/data/datasources/milestones_table.dart';
 import '../../features/ai_assistant/data/datasources/milestone_relations_table.dart';
 import '../../features/ai_assistant/data/datasources/project_milestone_relations_table.dart';
+import '../../features/ai_assistant/data/datasources/vector_embeddings_table.dart';
 import '../../features/collection/data/datasources/antique_items_table.dart';
 import '../../features/collection/data/datasources/valuation_records_table.dart';
 import '../../features/collection/data/datasources/patting_logs_table.dart';
@@ -54,13 +55,14 @@ part 'app_database.g.dart';
     SkillItems,
     ProjectExperiences,
     ProjectMilestoneRelations,
+    VectorEmbeddings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +115,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(projectMilestoneRelations);
         await _createProjectMilestoneRelationIndexes();
       }
+      if (from < 15) {
+        await m.createTable(vectorEmbeddings);
+        await _createVectorEmbeddingIndexes();
+      }
     },
   );
 
@@ -154,6 +160,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _createProjectMilestoneRelationIndexes() async {
     for (final statement in projectMilestoneRelationIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createVectorEmbeddingIndexes() async {
+    for (final statement in vectorEmbeddingIndexStatements) {
       await customStatement(statement);
     }
   }

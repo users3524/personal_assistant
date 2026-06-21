@@ -126,14 +126,14 @@
 
 | 能力 | 当前实现 |
 | --- | --- |
-| 图片导出 | 使用 `RepaintBoundary` 截图当前预览；`_exportAsImage()` 已 `await boundary.toImage()` 和 `toByteData()`。 |
-| 分享 | 使用 `share_plus` 分享 PNG 图片。 |
-| 临时文件 | 当前写入 `Directory.systemTemp`。 |
+| 图片导出 | `ResumePngExportService` 使用 `RepaintBoundary` 截图当前预览，并等待 `debugNeedsPaint` 结束。 |
+| 分享 | 页面导出完成且仍 `mounted` 后，使用 `share_plus` 分享 PNG 图片。 |
+| 临时文件 | 写入系统临时目录下 `resume_exports/`，并清理过期 `resume_*.png`。 |
 | 导出依赖 | 当前 `pubspec.yaml` 只有 `share_plus`，没有 `pdf` / `printing`。 |
 | PDF 导出 | 当前未实现。 |
 | Markdown 导出 | 当前未实现。 |
 
-当前 PNG 导出仍在页面方法中完成，尚未抽成独立服务；也没有显式等待 `debugNeedsPaint` 结束，分享前没有再次检查页面是否仍 mounted。后续若继续保留图片导出，应补齐绘制状态等待、生命周期检查、临时目录策略和失败降级。
+当前 PNG 导出已从页面抽到 `ResumePngExportService`；页面层只负责导出状态、分享前生命周期检查和用户可见错误提示。
 
 ## 7. 当前数据债
 

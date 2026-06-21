@@ -1,17 +1,14 @@
 /// 简历首页 — 默认预览模式，点击编辑进入长条滑动编辑页。
 library;
 
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../domain/entities/resume_entity.dart';
 import '../providers/resume_providers.dart';
+import '../services/resume_png_export_service.dart';
 import '../widgets/resume_templates.dart';
 
 class ResumeHomePage extends ConsumerStatefulWidget {
@@ -23,6 +20,7 @@ class ResumeHomePage extends ConsumerStatefulWidget {
 
 class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
   final _repaintKey = GlobalKey();
+  final _pngExportService = ResumePngExportService();
   bool _isExporting = false;
 
   @override
@@ -137,25 +135,15 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
   Future<void> _exportAsImage() async {
     setState(() => _isExporting = true);
     try {
-      final boundary =
-          _repaintKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) throw Exception('无法获取预览区域');
+      final file = await _pngExportService.export(_repaintKey);
+      if (!mounted) return;
 
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw Exception('编码失败');
-
-      final dir = Directory.systemTemp;
-      final file = File(
-        '${dir.path}/resume_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-      await file.writeAsBytes(byteData.buffer.asUint8List());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text:
-            '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text:
+              '个人简历 - ${ref.read(resumeDataProvider).valueOrNull?.profile.fullName ?? ""}',
+        ),
       );
     } catch (e) {
       if (mounted) {

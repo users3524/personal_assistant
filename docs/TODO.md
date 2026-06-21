@@ -64,7 +64,7 @@
 - [x] 为 `project_experiences.key_deliverables` 增加编辑 UI。
 - [x] 为 `project_experiences.badges` 增加编辑 UI。
 - [x] 将选中模板持久化到 `user_preferences.resume_template_id`。
-- [ ] 将简历 PNG 导出抽成服务，补齐 `debugNeedsPaint` 等待、分享前 mounted 检查和临时目录策略。
+- [x] 将简历 PNG 导出抽成服务，补齐 `debugNeedsPaint` 等待、分享前 mounted 检查和临时目录策略。
 - [ ] 将 PDF 导出列为简历模块后续交付能力；实现前先完成 `pdf`/`printing` 依赖评估、确定性 A4 模板设计和导出测试方案。
 
 ## P2：未来 AI 助手设计

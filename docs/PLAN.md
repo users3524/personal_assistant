@@ -9,18 +9,18 @@
 | 范围 | 结论 |
 | --- | --- |
 | 路由 | 主 Tab 为盘串、待办、简历；设置、复盘首页和复盘详情为全屏路由。 |
-| 数据库 | `schemaVersion = 9`，14 张表。 |
+| 数据库 | `schemaVersion = 10`，15 张表。 |
 | 待办 | 已有任务树、子任务、清单筛选与管理、软删除、归档、统计；树查询已批量化，补充了待办查询索引，重新打开可清空完成/取消时间；今日统计、本周完成率、拖延率已有专项单元测试。 |
 | 文玩 | 已有藏品、图片、盘玩、月历、榜单；日志重型榜单已下沉到 DAO 批量聚合，并为 `patting_logs` 补充查询索引；估值已应用层下线，遗留表/列暂留兼容。 |
-| AI 复盘 | 已有独立 `/review` 历史入口、对话式日报和 ISO 周报；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；未实现深夜后台。 |
+| AI 复盘 | 已有独立 `/review` 历史入口、对话式日报和 ISO 周报；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；`chat_turns` 已落地并支持每日 15 轮云端请求限制；未实现深夜后台。 |
 | 简历 | 已有三模板和图片导出，未实现 PDF/STAR。 |
 | 设置 | 已有 AI 配置、通知、分类管理、JSON 备份；AI API Key 已迁移到平台安全存储。 |
-| 备份 | 数据库有 14 张表；`BackupService` 已覆盖全部存量业务表，并补齐 `todo_lists`、任务树、软删除、简历 List 字段、日报完成任务 ID 与周报文本字段镜像测试。 |
+| 备份 | 数据库有 15 张表；`BackupService` 已覆盖全部存量业务表和 `chat_turns`，并补齐 `todo_lists`、任务树、软删除、简历 List 字段、日报完成任务 ID、周报文本字段与复盘 turn 镜像测试。 |
 
 ## 2. 下一步建议顺序
 
-1. AI 智能化前先做 schema RFC：`chat_turns`、`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
-2. 再进入 15 轮限制、前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
+1. AI 智能化下一步继续做 schema RFC：`review_generation_jobs`、`milestones`、`vector_embeddings`、人生罗盘相关表。
+2. 再进入前台 Catch-Up Guard、深夜引擎、RAG、STAR 这类新功能。
 3. 旧估值兼容路径稳定后，再评估是否物理移除 `valuation_records` 和 `current_valuation`。
 
 ## 3. 已吸收的智能化规划优点

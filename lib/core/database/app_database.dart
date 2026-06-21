@@ -14,6 +14,7 @@ import '../../features/todo/data/datasources/todos_table.dart';
 import '../../features/todo/data/datasources/todo_lists_table.dart';
 import '../../features/ai_assistant/data/datasources/daily_reviews_table.dart';
 import '../../features/ai_assistant/data/datasources/weekly_reports_table.dart';
+import '../../features/ai_assistant/data/datasources/chat_turns_table.dart';
 import '../../features/collection/data/datasources/antique_items_table.dart';
 import '../../features/collection/data/datasources/valuation_records_table.dart';
 import '../../features/collection/data/datasources/patting_logs_table.dart';
@@ -39,6 +40,7 @@ part 'app_database.g.dart';
     PattingLogs,
     DailyReviews,
     WeeklyReports,
+    ChatTurns,
     ResumeProfile,
     WorkExperiences,
     Educations,
@@ -50,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +84,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 9) {
         await m.addColumn(userPreferences, userPreferences.aiConfig);
       }
+      if (from < 10) {
+        await m.createTable(chatTurns);
+        await _createChatTurnIndexes();
+      }
     },
   );
 
@@ -93,6 +99,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _createPattingLogIndexes() async {
     for (final statement in pattingLogIndexStatements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createChatTurnIndexes() async {
+    for (final statement in chatTurnIndexStatements) {
       await customStatement(statement);
     }
   }

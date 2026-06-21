@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 任务、清单、子任务、软删除、归档、统计、周/月视图。 |
 | 文玩/盘串 | 藏品档案、分类字段、照片、盘玩打卡、打卡对比、月历、趣味榜单；日志重型榜单已下沉到 DAO 批量聚合；估值功能已应用层下线，schema v8 遗留表/列暂留兼容。 |
-| AI 复盘 | 独立复盘历史入口、对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入。 |
+| AI 复盘 | 独立复盘历史入口、对话式日报、日报详情、ISO 周报、离线模板生成器、OpenAI 兼容调用、文本/STT 输入边界、文玩盘玩分钟输入、每日 15 轮云端请求限制和离线便签。 |
 | 动态简历 | 三模板预览、长表单编辑、可见性开关、拖拽排序、图片导出分享。 |
 
 ## 2. 技术栈
@@ -111,7 +111,7 @@ feature/
 
 来源：`lib/core/database/app_database.dart`
 
-当前 `schemaVersion = 9`，注册 14 张表：
+当前 `schemaVersion = 10`，注册 15 张表：
 
 | 表 | 当前用途 |
 | --- | --- |
@@ -124,6 +124,7 @@ feature/
 | `patting_logs` | 文玩盘玩/打卡日志。 |
 | `daily_reviews` | 每日复盘。 |
 | `weekly_reports` | 每周周报。 |
+| `chat_turns` | 复盘对话与离线便签；按本地 `YYYY-MM-DD` 记录每日云端 turn 计数。 |
 | `resume_profile` | 简历个人资料。 |
 | `work_experiences` | 工作经历。 |
 | `educations` | 教育经历。 |
@@ -142,6 +143,7 @@ feature/
 | `<7` | 为待办树查询、清单筛选、活跃任务统计和今日完成统计补充 `todos` 索引。 |
 | `<8` | 为文玩榜单与日期区间统计补充 `patting_logs(item_id, date DESC)`、`patting_logs(date, item_id)` 索引。 |
 | `<9` | 为 `user_preferences` 增加 `ai_config`，保存非敏感 LLM 策略 JSON。 |
+| `<10` | 创建 `chat_turns`，并补充 `turn_date + consumes_cloud_turn`、`turn_date + created_at` 索引。 |
 
 ## 6. 当前模块依赖流
 
@@ -161,6 +163,7 @@ Collection
 
 AI Assistant
   -> ReviewRepository -> ReviewDao -> daily_reviews / weekly_reports
+  -> ChatTurnDao -> chat_turns
   -> AIService: OfflineReviewGenerator 或 OpenAIService
   -> TodoRepository 读取今日已完成任务标题
 
@@ -179,4 +182,4 @@ Resume
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8 索引迁移由 `test/app_database_migration_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖。

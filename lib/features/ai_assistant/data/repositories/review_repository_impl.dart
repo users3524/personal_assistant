@@ -6,6 +6,7 @@ import 'package:riverpod/riverpod.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
+import '../datasources/chat_turn_dao.dart';
 import '../datasources/review_dao.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
@@ -73,6 +74,11 @@ class ReviewRepositoryImpl implements ReviewRepository {
 final reviewDaoProvider = FutureProvider<ReviewDao>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return ReviewDao(db);
+});
+
+final chatTurnDaoProvider = FutureProvider<ChatTurnDao>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return ChatTurnDao(db);
 });
 
 final reviewRepositoryProvider = FutureProvider<ReviewRepository>((ref) async {

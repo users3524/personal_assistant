@@ -12,7 +12,7 @@
 | --- | --- |
 | 待办 | 周/月视图、任务树、子任务、软删除、归档、统计；树查询已批量化，重新打开可清空完成/取消时间。 |
 | 文玩 | 藏品、照片、盘玩打卡、月历、对比、趣味榜单；日志重型榜单已下沉到 DAO 批量聚合；默认分类含长串；估值功能已应用层下线，遗留表/列暂留兼容。 |
-| AI 复盘 | 独立 `/review` 历史入口、对话式日报、ISO 周报、离线/在线 AI；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；纯文本解析失败时有可见降级。 |
+| AI 复盘 | 独立 `/review` 历史入口、对话式日报、ISO 周报、离线/在线 AI；日报会读取当日文玩盘玩分钟，文本输入限 500 字，语音输入 60 秒自动截断；纯文本解析失败时有可见降级；已用 `chat_turns` 实现每日 15 轮云端请求限制和熔断后的离线便签。 |
 | 简历 | 三模板预览、编辑、拖拽排序、可见性、图片导出。 |
 | 设置 | AI 配置、通知、分类管理、JSON 备份；API Key 已走平台安全存储。 |
 
@@ -51,18 +51,18 @@
 | 备份导入/导出补齐 | `todo_lists` 未覆盖；`user_preferences` 缺 `todo_categories`；`todos` 缺 `list_id/parent_id/recurrence_rule/deleted_at`；简历表缺新增 List 字段。 |
 | 文玩图片路径统一 | UI 展示、分享、保存到相册和备份导出已复用 `resolveImageFile()` / `ResolvedImage`；后续继续处理备份恢复写入应用文档目录。 |
 | 估值兼容收尾 | 应用层已下线估值；后续仅需在旧备份兼容稳定后评估 schema 物理移除。 |
-| 复盘页限制补齐 | 已补文本 500 字和语音 60 秒；后续仍需新增 turn 计数、PromptBuilder 预算和离线便签模式。 |
+| 复盘页限制补齐 | 已补文本 500 字、语音 60 秒、每日 15 轮云端 turn 计数和离线便签模式；后续仍需继续完善 PromptBuilder 预算在页面层的统一接管。 |
 | 测试补齐 | 当前测试是占位，需要 DAO、Provider、迁移、备份恢复测试。 |
 | API Key 安全边界 | 已接入平台安全存储并从 JSON 备份中剔除；后续需要做真机平台验证和加密备份格式评估。 |
 
 ## 4. 下一版 Schema 微迁移顺序
 
-以下是智能化迁移的 schema 草案，不属于当前 `schemaVersion = 9`。后续应按小版本递增释放，每个版本只覆盖一个风险面，并配套迁移、备份恢复和 DAO/Provider 测试。
+以下是智能化迁移的 schema 草案；其中 v9/v10 已落地，后续应继续按小版本递增释放，每个版本只覆盖一个风险面，并配套迁移、备份恢复和 DAO/Provider 测试。
 
 | 对象 | 规划用途 | 注意事项 |
 | --- | --- | --- |
 | `user_preferences.ai_config` | 保存首版 `LLMStrategyConfig` JSON。 | 已在 schema v9 落地；API Key 不放 JSON，继续走安全存储。 |
-| `chat_turns` | 保存日间对话、离线便签、在线 turn 计数。 | `turn_date` 使用本地 `YYYY-MM-DD` 字符串；索引 `turn_date + consumes_cloud_turn` 和 `turn_date + created_at`。 |
+| `chat_turns` | 已在 schema v10 落地，保存日间对话、离线便签、在线 turn 计数。 | `turn_date` 使用本地 `YYYY-MM-DD` 字符串；索引 `turn_date + consumes_cloud_turn` 和 `turn_date + created_at`。 |
 | `review_generation_jobs` | 保存深夜生成任务、状态、`raw_assets_dump`、`attempt_count`、失败原因。 | `target_date` 使用本地 `YYYY-MM-DD`；成功 7 天后清理 raw dump。 |
 | `daily_reviews.calibration_required` | 日报热表增加校准状态。 | 只保存高频读取字段，不把原始长文本塞入日报表。 |
 | `milestones` | 高光中转池/正式池。 | `is_confirmed_by_user = false` 时不得直接投递正式简历。 |
@@ -74,7 +74,7 @@
 
 | 版本 | 阶段 | 范围 | 验证重点 |
 | --- | --- | --- |
-| v10 | 捕获层 | 新增 `chat_turns`，必要时扩展策略预算字段；不改 `daily_reviews`。 | 15 轮熔断按 `role=user AND consumes_cloud_turn=true` 计数；旧备份无 `chat_turns` 时可导入为空表。 |
+| v10 | 捕获层 | 已新增 `chat_turns`；不改 `daily_reviews`。 | 15 轮熔断按 `role=user AND consumes_cloud_turn=true` 计数；旧备份无 `chat_turns` 时可导入为空表。 |
 | v11 | 生成任务层 | 新增 `review_generation_jobs`，为 `daily_reviews` 追加 `calibration_required` 等热字段。 | Catch-Up Guard、raw dump 留存、解析降级；`daily_reviews.date` / `summary` 不改名、不改类型。 |
 | v12 | 高光层 | 新增 `milestones`、`milestone_relations`、`project_milestone_relations`。 | 高光确认流、多源追溯、源数据删除时事务清理多态关联。 |
 | v13 | 向量层 | 新增 `vector_embeddings` 和人生罗盘相关表/字段。 | embedding 模型/维度兼容校验、线性检索性能基准、分区/Isolate 策略。 |
@@ -102,15 +102,13 @@
 
 ## 7. P2：AI 助手增强
 
-以下均未实现：
+以下为剩余后续项：
 
 | 工作 | 说明 |
 | --- | --- |
 | 策略配置 | 首版 `LLMStrategyConfig` JSON 复用 `user_preferences`，不引入 Hive/SharedPreferences，也暂不新增 `system_configs`。 |
-| PromptBuilder | 新增业务服务层，负责 prompt 组装、预算估算、裁剪、turn 拦截和离线模式切换。 |
-| 每日 15 轮限制 | 新增 `chat_turns` 或等价持久化表，记录日期、角色、是否离线、是否消耗云端请求。 |
-| 成本闸门剩余项 | 文本 500 字和 STT 60 秒已落地；后续补每日 turn 计数、PromptBuilder 预算和离线便签模式。 |
-| 离线便签模式 | 达到 turn 上限后继续本地落盘，但停止云端请求。 |
+| PromptBuilder 深化 | 服务层已新增；后续继续把页面层 prompt 预算和更完整的裁剪策略统一接管。 |
+| 成本闸门剩余项 | 文本 500 字、STT 60 秒、每日云端 turn 计数和离线便签模式已落地；后续补素材预算裁剪和深夜生成限制。 |
 | 深夜日报引擎 | 后台调度目标窗口、充电/Wi-Fi 条件、下次打开 App 补偿执行、素材打包。 |
 | 调度接口 | 设计纯 Dart `AILogScheduler` 接口，平台实现放到 infrastructure 层；Android WorkManager 约束不使用 `RequiresDeviceIdle`。 |
 | 生成任务表 | 设计 `review_generation_jobs` 保存 `target_date` 字符串、状态、`raw_assets_dump`、失败原因和清理状态。 |

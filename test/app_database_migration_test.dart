@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
+import 'package:personal_assistant/features/ai_assistant/data/datasources/chat_turns_table.dart';
 import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
 import 'package:drift/native.dart';
@@ -12,6 +13,7 @@ void main() {
 
       expect(await _todoIndexNames(db), _expectedTodoIndexNames);
       expect(await _pattingLogIndexNames(db), _expectedPattingLogIndexNames);
+      expect(await _chatTurnIndexNames(db), _expectedChatTurnIndexNames);
     });
 
     test('upgrades v6 databases with query indexes', () async {
@@ -60,11 +62,31 @@ INSERT INTO user_preferences (
       expect(prefs.aiProvider, 'OpenAI');
       expect(prefs.aiConfig, null);
     });
+
+    test('upgrades v9 databases with chat turns table and indexes', () async {
+      final db = AppDatabase(
+        NativeDatabase.memory(
+          setup: (rawDb) {
+            rawDb.execute(_createV9UserPreferencesTableSql);
+            rawDb.execute('PRAGMA user_version = 9');
+          },
+        ),
+      );
+      addTearDown(db.close);
+
+      final columns = await _columnNames(db, 'chat_turns');
+
+      expect(columns, containsAll(['turn_date', 'consumes_cloud_turn']));
+      expect(await _chatTurnIndexNames(db), _expectedChatTurnIndexNames);
+    });
   });
 }
 
 final _expectedTodoIndexNames = todoIndexStatements.map(_indexNameOf).toSet();
 final _expectedPattingLogIndexNames = pattingLogIndexStatements
+    .map(_indexNameOf)
+    .toSet();
+final _expectedChatTurnIndexNames = chatTurnIndexStatements
     .map(_indexNameOf)
     .toSet();
 
@@ -92,6 +114,15 @@ Future<Set<String>> _pattingLogIndexNames(AppDatabase db) async {
 SELECT name FROM sqlite_master
 WHERE type = 'index' AND tbl_name = 'patting_logs'
 AND name LIKE 'idx_patting_logs_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _chatTurnIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'chat_turns'
+AND name LIKE 'idx_chat_turns_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
 }
@@ -168,6 +199,26 @@ CREATE TABLE user_preferences (
   ai_api_key TEXT NULL,
   ai_base_url TEXT NULL,
   ai_model TEXT NULL,
+  daily_review_time TEXT NOT NULL DEFAULT '21:00',
+  weekly_report_day TEXT NOT NULL DEFAULT 'sunday',
+  resume_template_id INTEGER NOT NULL DEFAULT 0,
+  todo_categories TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+''';
+
+const _createV9UserPreferencesTableSql = '''
+CREATE TABLE user_preferences (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  theme_mode TEXT NOT NULL DEFAULT 'system',
+  language TEXT NOT NULL DEFAULT 'zh',
+  notification_enabled INTEGER NOT NULL DEFAULT 1 CHECK (notification_enabled IN (0, 1)),
+  ai_provider TEXT NOT NULL DEFAULT 'openai',
+  ai_api_key TEXT NULL,
+  ai_base_url TEXT NULL,
+  ai_model TEXT NULL,
+  ai_config TEXT NULL,
   daily_review_time TEXT NOT NULL DEFAULT '21:00',
   weekly_report_day TEXT NOT NULL DEFAULT 'sunday',
   resume_template_id INTEGER NOT NULL DEFAULT 0,

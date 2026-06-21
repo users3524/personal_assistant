@@ -62,6 +62,11 @@ void main() {
       expect(backupJson['todo_lists'], isA<List<dynamic>>());
       expect(backupJson['todo_lists'], hasLength(1));
       expect(backupJson['valuation_records'], isEmpty);
+      expect(backupJson['chat_turns'], hasLength(1));
+      expect(
+        (backupJson['chat_turns'] as List<dynamic>).single['turnDate'],
+        '2026-06-20',
+      );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -139,8 +144,68 @@ void main() {
       expect(weekly.improvements, 'Improvements');
       expect(weekly.nextWeekPlan, 'Next plan');
       expect(weekly.createdAt, now);
+
+      final turn = await restoredDb.select(restoredDb.chatTurns).getSingle();
+      expect(turn.turnDate, '2026-06-20');
+      expect(turn.role, 'user');
+      expect(turn.content, 'Need a short review');
+      expect(turn.isOffline, false);
+      expect(turn.consumesCloudTurn, true);
+      expect(turn.source, 'daily_review_chat');
       expect(await apiKeyStore.read(), null);
     });
+
+    test(
+      'imports legacy backups without chat turns as an empty table',
+      () async {
+        final now = DateTime(2026, 6, 20, 10, 30);
+        await sourceDb
+            .into(sourceDb.chatTurns)
+            .insert(
+              ChatTurnsCompanion.insert(
+                turnDate: '2026-06-20',
+                role: 'user',
+                content: 'stale local turn',
+                consumesCloudTurn: const Value(true),
+                createdAt: Value(now),
+              ),
+            );
+        final backup = {
+          'version': 1,
+          'exportedAt': now.toIso8601String(),
+          'user_preferences': [
+            {
+              'id': 1,
+              'themeMode': 'system',
+              'language': 'zh',
+              'notificationEnabled': true,
+              'aiProvider': 'offline',
+              'aiApiKey': null,
+              'aiBaseUrl': '',
+              'aiModel': '',
+              'aiConfig': null,
+              'dailyReviewTime': '21:00',
+              'weeklyReportDay': 'sunday',
+              'resumeTemplateId': 0,
+              'todoCategories': '[]',
+              'createdAt': now.millisecondsSinceEpoch,
+              'updatedAt': now.millisecondsSinceEpoch,
+            },
+          ],
+        };
+        final file = File(
+          '${tempDir.path}${Platform.pathSeparator}legacy_no_turns.json',
+        );
+        await file.writeAsString(jsonEncode(backup));
+
+        await BackupService(
+          sourceDb,
+          apiKeyStore: apiKeyStore,
+        ).importBackup(file.path);
+
+        expect(await sourceDb.select(sourceDb.chatTurns).get(), isEmpty);
+      },
+    );
 
     test('exports LLM strategy config without API key material', () async {
       await UserPreferencesDao(sourceDb, apiKeyStore: apiKeyStore).setAIConfig(
@@ -572,6 +637,19 @@ Future<void> _seedSourceDatabase(
           isAiGenerated: const Value(true),
           createdAt: Value(now),
           updatedAt: Value(now),
+        ),
+      );
+
+  await db
+      .into(db.chatTurns)
+      .insert(
+        ChatTurnsCompanion.insert(
+          turnDate: '2026-06-20',
+          role: 'user',
+          content: 'Need a short review',
+          consumesCloudTurn: const Value(true),
+          source: const Value('daily_review_chat'),
+          createdAt: Value(now),
         ),
       );
 }

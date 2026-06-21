@@ -12,7 +12,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/ai/ai_provider.dart';
+import '../../../../core/ai/llm_strategy_config.dart';
+import '../../../../core/ai/prompt_builder.dart';
 import '../../data/repositories/review_repository_impl.dart';
+import '../../domain/entities/chat_turn_entity.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../../collection/presentation/providers/antique_providers.dart';
 import '../../../todo/presentation/providers/todo_providers.dart';
@@ -42,6 +45,7 @@ class DailyReviewChatPage extends ConsumerStatefulWidget {
 
 class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
   static const _maxTextInputLength = 500;
+  static const _chatTurnSource = 'daily_review_chat';
 
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
@@ -290,6 +294,27 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     final ai = ref.read(aiServiceProvider);
     if (ai != null) {
       try {
+        final usesCloud = _usesCloudAI();
+        if (usesCloud) {
+          final decision = await _decideOnlineDelivery();
+          if (!decision.shouldCallCloud) {
+            await _recordChatTurn(
+              role: 'user',
+              content: text,
+              isOffline: true,
+              consumesCloudTurn: false,
+            );
+            _addBotMessage('${decision.reason}，我已把这条记为离线便签。');
+            setState(() => _isProcessing = false);
+            return;
+          }
+        }
+        await _recordChatTurn(
+          role: 'user',
+          content: text,
+          isOffline: !usesCloud,
+          consumesCloudTurn: usesCloud,
+        );
         final reply = await ai.chat(
           '以下是我的今日复盘：\n'
           '总结：$_summary\n'
@@ -301,11 +326,17 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
           '用户说：$text\n\n'
           '请以温暖、专业的口吻简短回复（50字以内）。',
         );
+        await _recordChatTurn(
+          role: 'assistant',
+          content: reply,
+          isOffline: !usesCloud,
+        );
         _addBotMessage(reply);
       } catch (_) {
         _addBotMessage('收到！你可以继续和我聊，或者回复「保存」来保存复盘。');
       }
     } else {
+      await _recordChatTurn(role: 'user', content: text, isOffline: true);
       _addBotMessage('收到！你可以回复「保存」来保存当前复盘。');
     }
     setState(() => _isProcessing = false);
@@ -320,6 +351,7 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
   Future<void> _generateReview() async {
     final ai = ref.read(aiServiceProvider);
     if (ai == null) {
+      await _recordChatTurn(role: 'user', content: _summary, isOffline: true);
       setState(() {
         _messages.add(
           ChatMessage(
@@ -349,6 +381,37 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
           .toList();
       final reviewDate = _targetReviewDate();
       final pattingMinutes = await _loadPattingMinutes(reviewDate);
+
+      final usesCloud = _usesCloudAI();
+      if (usesCloud) {
+        final decision = await _decideOnlineDelivery();
+        if (!decision.shouldCallCloud) {
+          await _recordChatTurn(
+            role: 'user',
+            content: _summary,
+            isOffline: true,
+            consumesCloudTurn: false,
+          );
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                text: '${decision.reason}，本次不再请求云端；我已把内容作为离线便签保留。',
+                isUser: false,
+              ),
+            );
+            _isProcessing = false;
+            _awaitingConfirmation = true;
+          });
+          return;
+        }
+      }
+
+      await _recordChatTurn(
+        role: 'user',
+        content: _summary,
+        isOffline: !usesCloud,
+        consumesCloudTurn: usesCloud,
+      );
 
       // 调用 AI
       final result = await ai.generateDailyReview(
@@ -386,6 +449,12 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         );
         _isProcessing = false;
       });
+      await _recordChatTurn(
+        role: 'assistant',
+        content:
+            '${result.comment}\n${result.suggestion}\n${result.sentimentTag}',
+        isOffline: !usesCloud,
+      );
     } catch (e) {
       setState(() {
         _messages.add(
@@ -402,6 +471,43 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         _awaitingConfirmation = true;
       });
     }
+  }
+
+  Future<PromptDeliveryDecision> _decideOnlineDelivery() async {
+    final config = ref.read(aiConfigProvider);
+    final dao = await ref.read(chatTurnDaoProvider.future);
+    final turnDate = _turnDateString(_targetReviewDate());
+    final usedTurns = await dao.countCloudTurns(turnDate);
+    return PromptBuilder(strategy: config.strategy).decideDelivery(
+      onlineTurnsUsedToday: usedTurns,
+      apiConfigured: config.apiKey.isNotEmpty,
+    );
+  }
+
+  bool _usesCloudAI() {
+    final config = ref.read(aiConfigProvider);
+    return config.provider != LLMStrategyConfig.offlineProvider &&
+        config.apiKey.trim().isNotEmpty;
+  }
+
+  Future<void> _recordChatTurn({
+    required String role,
+    required String content,
+    bool isOffline = false,
+    bool consumesCloudTurn = false,
+  }) async {
+    final dao = await ref.read(chatTurnDaoProvider.future);
+    await dao.insert(
+      ChatTurnEntity(
+        turnDate: _turnDateString(_targetReviewDate()),
+        role: role,
+        content: content,
+        isOffline: isOffline,
+        consumesCloudTurn: consumesCloudTurn,
+        source: _chatTurnSource,
+        createdAt: DateTime.now(),
+      ),
+    );
   }
 
   Future<void> _saveReview() async {
@@ -574,6 +680,13 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     }
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
+  }
+
+  String _turnDateString(DateTime date) {
+    final local = DateTime(date.year, date.month, date.day);
+    return '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
   }
 
   Future<int> _loadPattingMinutes(DateTime date) async {

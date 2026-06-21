@@ -31,6 +31,7 @@ class ReviewDao {
       aiSuggestion: row.aiSuggestion,
       isAiGenerated: row.isAiGenerated,
       isManuallyEdited: row.isManuallyEdited,
+      calibrationRequired: row.calibrationRequired,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -52,6 +53,7 @@ class ReviewDao {
       aiSuggestion: Value(entity.aiSuggestion),
       isAiGenerated: Value(entity.isAiGenerated),
       isManuallyEdited: Value(entity.isManuallyEdited),
+      calibrationRequired: Value(entity.calibrationRequired),
     );
   }
 

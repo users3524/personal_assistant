@@ -87,7 +87,7 @@
 - [x] `target_date` 使用本地时区 `YYYY-MM-DD` 字符串，不用 epoch milliseconds。
 - [x] Catch-Up Guard 基于 `review_generation_jobs.target_date/status` 补偿，不只检查 `daily_reviews`。
 - [x] `raw_assets_dump` 留存策略：success 保留 7 天，failed/pending 保留到用户手动清理。
-- [ ] 为 `daily_reviews` 设计 `calibration_required` 等热字段，避免把原始素材塞入日报表。
+- [x] 为 `daily_reviews` 设计 `calibration_required` 等热字段，避免把原始素材塞入日报表。
 - [ ] 深夜结构化输出总调用上限 3 次：初次 JSON、一次格式修复、一次纯文本降级；失败后标记待校准，禁止无限重试。
 - [ ] 设计 `milestones` 主表和 `milestone_relations` 多源关联表。
 - [ ] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。

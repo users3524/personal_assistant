@@ -49,10 +49,28 @@ void main() {
       expect(monthReviews.map((review) => review.summary), ['June']);
       expect(rangeCount, 1);
     });
+
+    test('persists daily review calibration flag', () async {
+      await dao.insertDaily(
+        _daily(
+          DateTime(2026, 6, 21),
+          'Malformed AI output',
+          calibrationRequired: true,
+        ),
+      );
+
+      final daily = await dao.getDailyByDate(DateTime(2026, 6, 21));
+
+      expect(daily?.calibrationRequired, true);
+    });
   });
 }
 
-DailyReviewEntity _daily(DateTime date, String summary) {
+DailyReviewEntity _daily(
+  DateTime date,
+  String summary, {
+  bool calibrationRequired = false,
+}) {
   final normalized = DateTime(
     date.year,
     date.month,
@@ -64,6 +82,7 @@ DailyReviewEntity _daily(DateTime date, String summary) {
   return DailyReviewEntity(
     date: normalized,
     summary: summary,
+    calibrationRequired: calibrationRequired,
     createdAt: normalized,
     updatedAt: normalized,
   );

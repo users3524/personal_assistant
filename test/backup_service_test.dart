@@ -141,6 +141,7 @@ void main() {
       expect(daily.date, DateTime(2026, 6, 20));
       expect(daily.completedTodoIds, ['1', '2']);
       expect(daily.pattingMinutes, 45);
+      expect(daily.calibrationRequired, true);
 
       final weekly = await restoredDb
           .select(restoredDb.weeklyReports)
@@ -302,6 +303,49 @@ void main() {
       expect(prefs['aiConfig'], isNot(contains('do-not-export')));
       expect(prefs['aiConfig'], isNot(contains('apiKey')));
     });
+
+    test(
+      'imports legacy daily reviews with calibration flag default false',
+      () async {
+        final now = DateTime(2026, 6, 20, 10, 30);
+        final backup = {
+          'version': 1,
+          'exportedAt': now.toIso8601String(),
+          'daily_reviews': [
+            {
+              'id': 1,
+              'date': DateTime(2026, 6, 20).millisecondsSinceEpoch,
+              'summary': 'Legacy daily',
+              'highlights': null,
+              'improvements': null,
+              'energyLevel': 3,
+              'moodLevel': 4,
+              'completedTodoIds': <String>[],
+              'pattingMinutes': 0,
+              'aiComment': null,
+              'aiSuggestion': null,
+              'isAiGenerated': false,
+              'isManuallyEdited': false,
+              'createdAt': now.millisecondsSinceEpoch,
+              'updatedAt': now.millisecondsSinceEpoch,
+            },
+          ],
+        };
+        final file = File(
+          '${tempDir.path}${Platform.pathSeparator}legacy_daily_no_calibration.json',
+        );
+        await file.writeAsString(jsonEncode(backup));
+
+        await BackupService(
+          sourceDb,
+          apiKeyStore: apiKeyStore,
+        ).importBackup(file.path);
+
+        final daily = await sourceDb.select(sourceDb.dailyReviews).getSingle();
+        expect(daily.summary, 'Legacy daily');
+        expect(daily.calibrationRequired, false);
+      },
+    );
 
     test('imports legacy plaintext API key into secure store only', () async {
       final now = DateTime(2026, 6, 20, 10, 30);
@@ -689,6 +733,7 @@ Future<void> _seedSourceDatabase(
           aiComment: const Value('Keep pace'),
           aiSuggestion: const Value('Add secure storage next'),
           isAiGenerated: const Value(true),
+          calibrationRequired: const Value(true),
           createdAt: Value(now),
           updatedAt: Value(now),
         ),

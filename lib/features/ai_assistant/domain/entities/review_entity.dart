@@ -8,13 +8,14 @@ class DailyReviewEntity {
   final String? highlights;
   final String? improvements;
   final int energyLevel; // 1-5
-  final int moodLevel;   // 1-5
+  final int moodLevel; // 1-5
   final List<int> completedTodoIds;
   final int pattingMinutes;
   final String? aiComment;
   final String? aiSuggestion;
   final bool isAiGenerated;
   final bool isManuallyEdited;
+  final bool calibrationRequired;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -32,6 +33,7 @@ class DailyReviewEntity {
     this.aiSuggestion,
     this.isAiGenerated = false,
     this.isManuallyEdited = false,
+    this.calibrationRequired = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -50,6 +52,7 @@ class DailyReviewEntity {
     String? aiSuggestion,
     bool? isAiGenerated,
     bool? isManuallyEdited,
+    bool? calibrationRequired,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -67,6 +70,7 @@ class DailyReviewEntity {
       aiSuggestion: aiSuggestion ?? this.aiSuggestion,
       isAiGenerated: isAiGenerated ?? this.isAiGenerated,
       isManuallyEdited: isManuallyEdited ?? this.isManuallyEdited,
+      calibrationRequired: calibrationRequired ?? this.calibrationRequired,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -28,6 +28,7 @@ void main() {
             rawDb.execute(_createV6UserPreferencesTableSql);
             rawDb.execute(_createV6TodosTableSql);
             rawDb.execute(_createV6PattingLogsTableSql);
+            rawDb.execute(_createV11DailyReviewsTableSql);
             rawDb.execute('PRAGMA user_version = 6');
           },
         ),
@@ -43,6 +44,7 @@ void main() {
         NativeDatabase.memory(
           setup: (rawDb) {
             rawDb.execute(_createV8UserPreferencesTableSql);
+            rawDb.execute(_createV11DailyReviewsTableSql);
             rawDb.execute('''
 INSERT INTO user_preferences (
   id, theme_mode, language, notification_enabled, ai_provider, ai_api_key,
@@ -73,6 +75,7 @@ INSERT INTO user_preferences (
         NativeDatabase.memory(
           setup: (rawDb) {
             rawDb.execute(_createV9UserPreferencesTableSql);
+            rawDb.execute(_createV11DailyReviewsTableSql);
             rawDb.execute('PRAGMA user_version = 9');
           },
         ),
@@ -95,6 +98,7 @@ INSERT INTO user_preferences (
           setup: (rawDb) {
             rawDb.execute(_createV10UserPreferencesTableSql);
             rawDb.execute(_createV10ChatTurnsTableSql);
+            rawDb.execute(_createV11DailyReviewsTableSql);
             rawDb.execute('PRAGMA user_version = 10');
           },
         ),
@@ -119,6 +123,36 @@ INSERT INTO user_preferences (
         await _reviewGenerationJobIndexNames(db),
         _expectedReviewGenerationJobIndexNames,
       );
+    });
+
+    test('upgrades v11 daily reviews with calibration flag only', () async {
+      final db = AppDatabase(
+        NativeDatabase.memory(
+          setup: (rawDb) {
+            rawDb.execute(_createV11DailyReviewsTableSql);
+            rawDb.execute('''
+INSERT INTO daily_reviews (
+  id, date, summary, energy_level, mood_level, completed_todo_ids,
+  patting_minutes, is_ai_generated, is_manually_edited, created_at, updated_at
+) VALUES (
+  1, strftime('%s', '2026-06-20'), 'Needs review', 3, 4, '[]',
+  0, 1, 0, strftime('%s', '2026-06-20'), strftime('%s', '2026-06-20')
+);
+''');
+            rawDb.execute('PRAGMA user_version = 11');
+          },
+        ),
+      );
+      addTearDown(db.close);
+
+      final tableInfo = await _tableInfo(db, 'daily_reviews');
+      final daily = await db.select(db.dailyReviews).getSingle();
+
+      expect(tableInfo['date'], 'INTEGER');
+      expect(tableInfo['summary'], 'TEXT');
+      expect(tableInfo['calibration_required'], 'INTEGER');
+      expect(daily.summary, 'Needs review');
+      expect(daily.calibrationRequired, false);
     });
   });
 }
@@ -182,6 +216,13 @@ AND name LIKE 'idx_review_generation_jobs_%'
 Future<Set<String>> _columnNames(AppDatabase db, String tableName) async {
   final rows = await db.customSelect('PRAGMA table_info($tableName)').get();
   return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Map<String, String>> _tableInfo(AppDatabase db, String tableName) async {
+  final rows = await db.customSelect('PRAGMA table_info($tableName)').get();
+  return {
+    for (final row in rows) row.read<String>('name'): row.read<String>('type'),
+  };
 }
 
 const _createV6TodosTableSql = '''
@@ -292,5 +333,26 @@ CREATE TABLE chat_turns (
   consumes_cloud_turn INTEGER NOT NULL DEFAULT 0 CHECK (consumes_cloud_turn IN (0, 1)),
   source TEXT NOT NULL DEFAULT 'daily_review_chat',
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+''';
+
+const _createV11DailyReviewsTableSql = '''
+CREATE TABLE daily_reviews (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  date INTEGER NOT NULL,
+  summary TEXT NOT NULL,
+  highlights TEXT NULL,
+  improvements TEXT NULL,
+  energy_level INTEGER NOT NULL,
+  mood_level INTEGER NOT NULL,
+  completed_todo_ids TEXT NOT NULL DEFAULT '[]',
+  patting_minutes INTEGER NOT NULL DEFAULT 0,
+  ai_comment TEXT NULL,
+  ai_suggestion TEXT NULL,
+  is_ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (is_ai_generated IN (0, 1)),
+  is_manually_edited INTEGER NOT NULL DEFAULT 0 CHECK (is_manually_edited IN (0, 1)),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  UNIQUE(date)
 );
 ''';

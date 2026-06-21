@@ -113,7 +113,7 @@ feature/
 
 来源：`lib/core/database/app_database.dart`
 
-当前 `schemaVersion = 11`，注册 16 张表：
+当前 `schemaVersion = 12`，注册 16 张表：
 
 | 表 | 当前用途 |
 | --- | --- |
@@ -124,7 +124,7 @@ feature/
 | `antique_items` | 文玩藏品档案。 |
 | `valuation_records` | 遗留估值兼容表；应用层已下线，新备份不再导出估值历史。 |
 | `patting_logs` | 文玩盘玩/打卡日志。 |
-| `daily_reviews` | 每日复盘。 |
+| `daily_reviews` | 每日复盘；热字段包含 `calibration_required`，用于标记待人工校准。 |
 | `weekly_reports` | 每周周报。 |
 | `chat_turns` | 复盘对话与离线便签；按本地 `YYYY-MM-DD` 记录每日云端 turn 计数。 |
 | `review_generation_jobs` | 深夜/前台补偿生成任务冷表；按本地 `YYYY-MM-DD` 记录任务状态、原始素材 dump、尝试次数和失败原因。 |
@@ -148,6 +148,7 @@ feature/
 | `<9` | 为 `user_preferences` 增加 `ai_config`，保存非敏感 LLM 策略 JSON。 |
 | `<10` | 创建 `chat_turns`，并补充 `turn_date + consumes_cloud_turn`、`turn_date + created_at` 索引。 |
 | `<11` | 创建 `review_generation_jobs`，并补充 `target_date` 唯一索引和 `status + target_date` 查询索引。 |
+| `<12` | 为 `daily_reviews` 增加 `calibration_required`，不改动 `date` / `summary` 类型。 |
 
 ## 6. 当前模块依赖流
 
@@ -188,4 +189,4 @@ Resume
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流、raw dump 留存和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11/v12 索引与追加字段迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流、raw dump 留存和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。

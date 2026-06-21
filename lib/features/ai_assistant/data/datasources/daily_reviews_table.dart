@@ -9,23 +9,26 @@ class DailyReviews extends Table {
   String get tableName => 'daily_reviews';
 
   IntColumn get id => integer().autoIncrement()();
-  DateTimeColumn get date => dateTime()();       // One per day, unique by date
+  DateTimeColumn get date => dateTime()(); // One per day, unique by date
 
   Set<Column> get uniqueKey => {date};
   TextColumn get summary => text()();
   TextColumn get highlights => text().nullable()();
   TextColumn get improvements => text().nullable()();
-  IntColumn get energyLevel => integer()();                  // 1-5
-  IntColumn get moodLevel => integer()();                    // 1-5
+  IntColumn get energyLevel => integer()(); // 1-5
+  IntColumn get moodLevel => integer()(); // 1-5
   TextColumn get completedTodoIds => text()
       .map(const StringListConverter())
       .withDefault(const Constant('[]'))();
-  IntColumn get pattingMinutes => integer()
-      .withDefault(const Constant(0))();
+  IntColumn get pattingMinutes => integer().withDefault(const Constant(0))();
   TextColumn get aiComment => text().nullable()();
   TextColumn get aiSuggestion => text().nullable()();
-  BoolColumn get isAiGenerated => boolean().withDefault(const Constant(false))();
-  BoolColumn get isManuallyEdited => boolean().withDefault(const Constant(false))();
+  BoolColumn get isAiGenerated =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get isManuallyEdited =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get calibrationRequired =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

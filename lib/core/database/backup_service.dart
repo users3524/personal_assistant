@@ -316,6 +316,7 @@ class BackupService {
         'ai_suggestion',
         'is_ai_generated',
         'is_manually_edited',
+        'calibration_required',
         'created_at',
         'updated_at',
       ],
@@ -705,6 +706,9 @@ class BackupService {
       return false;
     }
     if (tableName == 'daily_reviews' && columnName == 'is_manually_edited') {
+      return false;
+    }
+    if (tableName == 'daily_reviews' && columnName == 'calibration_required') {
       return false;
     }
     if (tableName == 'weekly_reports' && columnName == 'is_ai_generated') {

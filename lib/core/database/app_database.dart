@@ -54,7 +54,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -93,6 +93,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         await m.createTable(reviewGenerationJobs);
         await _createReviewGenerationJobIndexes();
+      }
+      if (from < 12) {
+        await m.addColumn(dailyReviews, dailyReviews.calibrationRequired);
       }
     },
   );

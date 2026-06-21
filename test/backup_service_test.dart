@@ -84,6 +84,12 @@ void main() {
             .single['sourceType'],
         'daily_review',
       );
+      expect(backupJson['project_milestone_relations'], hasLength(1));
+      expect(
+        (backupJson['project_milestone_relations'] as List<dynamic>)
+            .single['sortOrder'],
+        1,
+      );
       expect(
         (backupJson['user_preferences'] as List<dynamic>).single['aiApiKey'],
         null,
@@ -197,6 +203,12 @@ void main() {
       expect(relation.sourceType, 'daily_review');
       expect(relation.sourceId, daily.id);
       expect(relation.note, '日报高光');
+      final projectMilestone = await restoredDb
+          .select(restoredDb.projectMilestoneRelations)
+          .getSingle();
+      expect(projectMilestone.projectId, project.id);
+      expect(projectMilestone.milestoneId, milestone.id);
+      expect(projectMilestone.sortOrder, 1);
       expect(await apiKeyStore.read(), null);
     });
 
@@ -728,7 +740,7 @@ Future<void> _seedSourceDatabase(
         ),
       );
 
-  await db
+  final projectId = await db
       .into(db.projectExperiences)
       .insert(
         ProjectExperiencesCompanion.insert(
@@ -790,6 +802,17 @@ Future<void> _seedSourceDatabase(
           sourceType: 'daily_review',
           sourceId: Value(dailyId),
           note: const Value('日报高光'),
+          createdAt: Value(now),
+        ),
+      );
+
+  await db
+      .into(db.projectMilestoneRelations)
+      .insert(
+        ProjectMilestoneRelationsCompanion.insert(
+          projectId: projectId,
+          milestoneId: milestoneId,
+          sortOrder: const Value(1),
           createdAt: Value(now),
         ),
       );

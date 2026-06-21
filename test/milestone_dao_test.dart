@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/milestone_dao.dart';
 import 'package:personal_assistant/features/ai_assistant/domain/entities/milestone_entity.dart';
+import 'package:drift/drift.dart' hide isNotNull;
 
 void main() {
   group('MilestoneDao', () {
@@ -158,7 +159,92 @@ INSERT INTO milestone_relations (
       expect(deleted, 1);
       expect(remaining.single.sourceType, MilestoneSourceType.dailyReview);
     });
+
+    test('binds multiple milestones to one project experience', () async {
+      final now = DateTime(2026, 6, 21, 9);
+      final projectId = await _insertProject(db, now);
+      final first = await dao.insertMilestone(
+        _milestone(
+          title: '完成架构设计',
+          occurredAt: DateTime(2026, 6, 20),
+          now: now,
+        ),
+      );
+      final second = await dao.insertMilestone(
+        _milestone(
+          title: '补齐测试闭环',
+          occurredAt: DateTime(2026, 6, 21),
+          now: now,
+        ),
+      );
+
+      await dao.bindMilestoneToProject(
+        ProjectMilestoneRelationEntity(
+          projectId: projectId,
+          milestoneId: second.id!,
+          sortOrder: 2,
+          createdAt: now,
+        ),
+      );
+      await dao.bindMilestoneToProject(
+        ProjectMilestoneRelationEntity(
+          projectId: projectId,
+          milestoneId: first.id!,
+          sortOrder: 1,
+          createdAt: now,
+        ),
+      );
+      await dao.bindMilestoneToProject(
+        ProjectMilestoneRelationEntity(
+          projectId: projectId,
+          milestoneId: first.id!,
+          sortOrder: 1,
+          createdAt: now.add(const Duration(minutes: 1)),
+        ),
+      );
+
+      final relations = await dao.getProjectMilestoneRelations(projectId);
+      final milestones = await dao.getMilestonesForProject(projectId);
+      final projectIds = await dao.getProjectIdsForMilestone(first.id!);
+
+      expect(relations, hasLength(2));
+      expect(relations.map((relation) => relation.milestoneId), [
+        first.id,
+        second.id,
+      ]);
+      expect(milestones.map((milestone) => milestone.title), [
+        '完成架构设计',
+        '补齐测试闭环',
+      ]);
+      expect(projectIds, [projectId]);
+
+      final deleted = await dao.unbindMilestoneFromProject(
+        projectId: projectId,
+        milestoneId: first.id!,
+      );
+      expect(deleted, 1);
+      expect(
+        (await dao.getProjectMilestoneRelations(
+          projectId,
+        )).map((relation) => relation.milestoneId),
+        [second.id],
+      );
+    });
   });
+}
+
+Future<int> _insertProject(AppDatabase db, DateTime now) {
+  return db
+      .into(db.projectExperiences)
+      .insert(
+        ProjectExperiencesCompanion.insert(
+          name: 'Personal AI Assistant',
+          techStack: const Value([]),
+          keyDeliverables: const Value([]),
+          badges: const Value([]),
+          startDate: now,
+        ),
+      );
 }
 
 MilestoneEntity _milestone({

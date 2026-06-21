@@ -107,3 +107,35 @@ class MilestoneRelationEntity {
     );
   }
 }
+
+class ProjectMilestoneRelationEntity {
+  final int? id;
+  final int projectId;
+  final int milestoneId;
+  final int sortOrder;
+  final DateTime createdAt;
+
+  const ProjectMilestoneRelationEntity({
+    this.id,
+    required this.projectId,
+    required this.milestoneId,
+    this.sortOrder = 0,
+    required this.createdAt,
+  });
+
+  ProjectMilestoneRelationEntity copyWith({
+    int? id,
+    int? projectId,
+    int? milestoneId,
+    int? sortOrder,
+    DateTime? createdAt,
+  }) {
+    return ProjectMilestoneRelationEntity(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      milestoneId: milestoneId ?? this.milestoneId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}

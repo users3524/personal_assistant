@@ -3,6 +3,7 @@ import 'package:personal_assistant/core/database/app_database.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/chat_turns_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/milestone_relations_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/milestones_table.dart';
+import 'package:personal_assistant/features/ai_assistant/data/datasources/project_milestone_relations_table.dart';
 import 'package:personal_assistant/features/ai_assistant/data/datasources/review_generation_jobs_table.dart';
 import 'package:personal_assistant/features/collection/data/datasources/patting_logs_table.dart';
 import 'package:personal_assistant/features/todo/data/datasources/todos_table.dart';
@@ -25,6 +26,10 @@ void main() {
       expect(
         await _milestoneRelationIndexNames(db),
         _expectedMilestoneRelationIndexNames,
+      );
+      expect(
+        await _projectMilestoneRelationIndexNames(db),
+        _expectedProjectMilestoneRelationIndexNames,
       );
     });
 
@@ -233,6 +238,64 @@ INSERT INTO milestone_relations (
         expect(relation.sourceId, 1);
       },
     );
+
+    test('upgrades v13 databases with project milestone relations', () async {
+      final db = AppDatabase(
+        NativeDatabase.memory(
+          setup: (rawDb) {
+            rawDb.execute(_createV12DailyReviewsTableSql);
+            rawDb.execute(_createV13MilestonesTableSql);
+            rawDb.execute(_createV13MilestoneRelationsTableSql);
+            rawDb.execute(_createProjectExperiencesTableSql);
+            rawDb.execute('PRAGMA user_version = 13');
+          },
+        ),
+      );
+      addTearDown(db.close);
+
+      final columns = await _columnNames(db, 'project_milestone_relations');
+
+      expect(
+        columns,
+        containsAll(['project_id', 'milestone_id', 'sort_order', 'created_at']),
+      );
+      expect(
+        await _projectMilestoneRelationIndexNames(db),
+        _expectedProjectMilestoneRelationIndexNames,
+      );
+
+      await db.customStatement('''
+INSERT INTO project_experiences (
+  id, name, tech_stack, key_deliverables, badges, start_date,
+  is_visible, sort_order
+) VALUES (
+  1, 'Personal AI Assistant', '[]', '[]', '[]',
+  strftime('%s', '2026-01-01'), 1, 0
+)
+''');
+      await db.customStatement('''
+INSERT INTO milestones (
+  id, title, occurred_at, created_at, updated_at
+) VALUES (
+  1, 'Delivered high impact feature', strftime('%s', '2026-06-20'),
+  strftime('%s', '2026-06-21'), strftime('%s', '2026-06-21')
+)
+''');
+      await db.customStatement('''
+INSERT INTO project_milestone_relations (
+  project_id, milestone_id, sort_order, created_at
+) VALUES (
+  1, 1, 2, strftime('%s', '2026-06-21')
+)
+''');
+
+      final relation = await db
+          .select(db.projectMilestoneRelations)
+          .getSingle();
+      expect(relation.projectId, 1);
+      expect(relation.milestoneId, 1);
+      expect(relation.sortOrder, 2);
+    });
   });
 }
 
@@ -251,6 +314,8 @@ final _expectedMilestoneIndexNames = milestoneIndexStatements
 final _expectedMilestoneRelationIndexNames = milestoneRelationIndexStatements
     .map(_indexNameOf)
     .toSet();
+final _expectedProjectMilestoneRelationIndexNames =
+    projectMilestoneRelationIndexStatements.map(_indexNameOf).toSet();
 
 String _indexNameOf(String createIndexStatement) {
   final match = RegExp(
@@ -312,6 +377,15 @@ Future<Set<String>> _milestoneRelationIndexNames(AppDatabase db) async {
 SELECT name FROM sqlite_master
 WHERE type = 'index' AND tbl_name = 'milestone_relations'
 AND name LIKE 'idx_milestone_relations_%'
+''').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
+}
+
+Future<Set<String>> _projectMilestoneRelationIndexNames(AppDatabase db) async {
+  final rows = await db.customSelect('''
+SELECT name FROM sqlite_master
+WHERE type = 'index' AND tbl_name = 'project_milestone_relations'
+AND name LIKE 'idx_project_milestone_relations_%'
 ''').get();
   return rows.map((row) => row.read<String>('name')).toSet();
 }
@@ -479,5 +553,49 @@ CREATE TABLE daily_reviews (
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   UNIQUE(date)
+);
+''';
+
+const _createV13MilestonesTableSql = '''
+CREATE TABLE milestones (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  occurred_at INTEGER NOT NULL,
+  importance_score INTEGER NOT NULL DEFAULT 0,
+  is_ai_generated INTEGER NOT NULL DEFAULT 0 CHECK (is_ai_generated IN (0, 1)),
+  is_confirmed_by_user INTEGER NOT NULL DEFAULT 0 CHECK (is_confirmed_by_user IN (0, 1)),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+''';
+
+const _createV13MilestoneRelationsTableSql = '''
+CREATE TABLE milestone_relations (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  milestone_id INTEGER NOT NULL REFERENCES milestones(id) ON DELETE CASCADE,
+  source_type TEXT NOT NULL,
+  source_id INTEGER NULL,
+  note TEXT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  CHECK (source_type IN ('todo', 'daily_review', 'patting_log', 'manual')),
+  CHECK ((source_type = 'manual' AND source_id IS NULL) OR (source_type <> 'manual' AND source_id IS NOT NULL))
+);
+''';
+
+const _createProjectExperiencesTableSql = '''
+CREATE TABLE project_experiences (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  role TEXT NULL,
+  description TEXT NULL,
+  tech_stack TEXT NOT NULL DEFAULT '[]',
+  key_deliverables TEXT NOT NULL DEFAULT '[]',
+  badges TEXT NOT NULL DEFAULT '[]',
+  link TEXT NULL,
+  start_date INTEGER NOT NULL,
+  end_date INTEGER NULL,
+  is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1)),
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 ''';

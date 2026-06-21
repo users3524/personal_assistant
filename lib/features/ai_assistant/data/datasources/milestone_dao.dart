@@ -56,6 +56,29 @@ class MilestoneDao {
     );
   }
 
+  ProjectMilestoneRelationEntity _toProjectRelationEntity(
+    ProjectMilestoneRelation row,
+  ) {
+    return ProjectMilestoneRelationEntity(
+      id: row.id,
+      projectId: row.projectId,
+      milestoneId: row.milestoneId,
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+    );
+  }
+
+  ProjectMilestoneRelationsCompanion _toProjectRelationCompanion(
+    ProjectMilestoneRelationEntity entity,
+  ) {
+    return ProjectMilestoneRelationsCompanion(
+      projectId: Value(entity.projectId),
+      milestoneId: Value(entity.milestoneId),
+      sortOrder: Value(entity.sortOrder),
+      createdAt: Value(entity.createdAt),
+    );
+  }
+
   Future<MilestoneEntity> insertMilestone(MilestoneEntity entity) async {
     final id = await _db
         .into(_db.milestones)
@@ -179,6 +202,75 @@ class MilestoneDao {
                   : t.sourceId.equals(sourceId)),
         ))
         .go();
+  }
+
+  Future<ProjectMilestoneRelationEntity> bindMilestoneToProject(
+    ProjectMilestoneRelationEntity entity,
+  ) async {
+    final id = await _db
+        .into(_db.projectMilestoneRelations)
+        .insert(
+          _toProjectRelationCompanion(entity),
+          mode: InsertMode.insertOrReplace,
+        );
+    return entity.copyWith(id: id);
+  }
+
+  Future<int> unbindMilestoneFromProject({
+    required int projectId,
+    required int milestoneId,
+  }) {
+    return (_db.delete(_db.projectMilestoneRelations)..where(
+          (t) =>
+              t.projectId.equals(projectId) & t.milestoneId.equals(milestoneId),
+        ))
+        .go();
+  }
+
+  Future<List<ProjectMilestoneRelationEntity>> getProjectMilestoneRelations(
+    int projectId,
+  ) async {
+    final rows =
+        await (_db.select(_db.projectMilestoneRelations)
+              ..where((t) => t.projectId.equals(projectId))
+              ..orderBy([
+                (t) => OrderingTerm.asc(t.sortOrder),
+                (t) => OrderingTerm.asc(t.createdAt),
+              ]))
+            .get();
+    return rows.map(_toProjectRelationEntity).toList();
+  }
+
+  Future<List<MilestoneEntity>> getMilestonesForProject(int projectId) async {
+    final rows =
+        await (_db.select(_db.milestones).join([
+                innerJoin(
+                  _db.projectMilestoneRelations,
+                  _db.projectMilestoneRelations.milestoneId.equalsExp(
+                    _db.milestones.id,
+                  ),
+                ),
+              ])
+              ..where(_db.projectMilestoneRelations.projectId.equals(projectId))
+              ..orderBy([
+                OrderingTerm.asc(_db.projectMilestoneRelations.sortOrder),
+                OrderingTerm.desc(_db.milestones.occurredAt),
+              ]))
+            .get();
+
+    return rows
+        .map((row) => row.readTable(_db.milestones))
+        .map(_toMilestoneEntity)
+        .toList();
+  }
+
+  Future<List<int>> getProjectIdsForMilestone(int milestoneId) async {
+    final rows =
+        await (_db.select(_db.projectMilestoneRelations)
+              ..where((t) => t.milestoneId.equals(milestoneId))
+              ..orderBy([(t) => OrderingTerm.asc(t.projectId)]))
+            .get();
+    return rows.map((row) => row.projectId).toList();
   }
 
   void _validateRelation(MilestoneRelationEntity entity) {

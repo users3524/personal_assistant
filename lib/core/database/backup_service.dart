@@ -174,6 +174,10 @@ class BackupService {
         (await _db.select(_db.projectExperiences).get())
             .map((r) => _rowToMap(r))
             .toList();
+    data['project_milestone_relations'] =
+        (await _db.select(_db.projectMilestoneRelations).get())
+            .map((r) => _rowToMap(r))
+            .toList();
     data['collection_categories'] =
         (await _db.select(_db.collectionCategories).get())
             .map((r) => _rowToMap(r))
@@ -185,6 +189,7 @@ class BackupService {
   /// 恢复数据 — 清空当前后逐表插入
   Future<void> _restoreData(Map<String, dynamic> data) async {
     // 清空现有数据
+    await _db.delete(_db.projectMilestoneRelations).go();
     await _db.delete(_db.projectExperiences).go();
     await _db.delete(_db.skillItems).go();
     await _db.delete(_db.educations).go();
@@ -224,6 +229,7 @@ class BackupService {
       'educations',
       'skill_items',
       'project_experiences',
+      'project_milestone_relations',
     ];
 
     // 每张表的 snake_case 列名，与实际 SQL schema 一致
@@ -441,6 +447,13 @@ class BackupService {
         'end_date',
         'is_visible',
         'sort_order',
+      ],
+      'project_milestone_relations': [
+        'id',
+        'project_id',
+        'milestone_id',
+        'sort_order',
+        'created_at',
       ],
     };
 

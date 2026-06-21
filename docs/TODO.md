@@ -92,7 +92,7 @@
 - [x] 设计 `milestones` 主表和 `milestone_relations` 多源关联表。
 - [x] 明确高光来源枚举优先使用当前业务源名：`todo`、`daily_review`、`patting_log`、`manual`，避免使用无法落到现有表的泛名。
 - [x] 为 `milestone_relations.source_type = manual` 明确 `source_id` 可空策略或设计 `manual_milestone_sources`。
-- [ ] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
+- [x] 设计 `project_milestone_relations`，支持一个项目经历关联多个高光。
 - [ ] 为 Todo/Review/Collection 物理删除设计事务级多态关联清理。
 - [ ] 高光判定：高门槛、单日最多 2 条、允许 0 条。
 - [ ] 向量记忆：选型本地向量存储、embedding 模型/维度元数据、重建策略。

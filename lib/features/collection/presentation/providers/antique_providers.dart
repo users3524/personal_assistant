@@ -212,6 +212,12 @@ final totalPattingDurationProvider = FutureProvider<Map<int, int>>((ref) {
   });
 });
 
+final todayPattingDurationProvider = FutureProvider<int>((ref) {
+  return ref.watch(antiqueRepositoryProvider.future).then((repo) {
+    return repo.sumPattingMinutesByDate(DateTime.now());
+  });
+});
+
 final coldPalaceRankProvider = FutureProvider<Map<int, int>>((ref) {
   return ref.watch(antiqueRepositoryProvider.future).then((repo) async {
     final items = await repo.getAll();

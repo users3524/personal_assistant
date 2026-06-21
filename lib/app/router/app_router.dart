@@ -1,42 +1,54 @@
-/// 应用路由配置。
-///
-/// 使用 go_router 的 StatefulShellRoute 实现底部导航，
-/// 每个 Tab 拥有独立的 Navigator 栈，切换 Tab 时保持状态。
+/// Application routes and the main tab shell.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'route_names.dart';
-import '../../features/todo/presentation/pages/todo_list_page.dart';
-import '../../features/todo/presentation/pages/todo_form_page.dart';
-import '../../features/todo/presentation/pages/todo_detail_page.dart';
-import '../../features/collection/presentation/pages/antique_list_page.dart';
-import '../../features/collection/presentation/pages/antique_form_page.dart';
-import '../../features/collection/presentation/pages/antique_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_chat_page.dart';
 import '../../features/ai_assistant/presentation/pages/daily_review_detail_page.dart';
 import '../../features/ai_assistant/presentation/pages/review_home_page.dart';
 import '../../features/ai_assistant/presentation/pages/weekly_report_page.dart';
+import '../../features/collection/presentation/pages/antique_detail_page.dart';
+import '../../features/collection/presentation/pages/antique_form_page.dart';
+import '../../features/collection/presentation/pages/antique_list_page.dart';
+import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/resume/presentation/pages/resume_home_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/todo/presentation/pages/todo_detail_page.dart';
+import '../../features/todo/presentation/pages/todo_form_page.dart';
+import '../../features/todo/presentation/pages/todo_list_page.dart';
+import '../theme/app_colors.dart';
+import 'route_names.dart';
 
-/// 主壳 - 底部导航（带切换动画）
 class MainShell extends StatelessWidget {
-  final StatefulNavigationShell navigationShell;
-
   const MainShell({super.key, required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (icon: Icons.diamond_outlined, selectedIcon: Icons.diamond, label: '盘串'),
-      (
+    const items = [
+      _NavItem(
+        icon: Icons.diamond_outlined,
+        selectedIcon: Icons.diamond,
+        label: '盘串',
+      ),
+      _NavItem(
         icon: Icons.check_circle_outline,
         selectedIcon: Icons.check_circle,
         label: '待办',
       ),
-      (
+      _NavItem(
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home,
+        label: '今天',
+      ),
+      _NavItem(
+        icon: Icons.auto_awesome_outlined,
+        selectedIcon: Icons.auto_awesome,
+        label: '复盘',
+      ),
+      _NavItem(
         icon: Icons.description_outlined,
         selectedIcon: Icons.description,
         label: '简历',
@@ -47,94 +59,107 @@ class MainShell extends StatelessWidget {
       body: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) {
-            // 检查 shell 内当前分支是否有上一级路由
-            final router = GoRouter.of(context);
-            if (router.canPop()) {
-              router.pop();
-            } else {
-              // 如果在非首页 Tab，切回首Tab
-              if (navigationShell.currentIndex != 0) {
-                navigationShell.goBranch(0);
-              }
-            }
+          if (didPop) return;
+          final router = GoRouter.of(context);
+          if (router.canPop()) {
+            router.pop();
+            return;
+          }
+          if (navigationShell.currentIndex != 2) {
+            navigationShell.goBranch(2);
           }
         },
         child: navigationShell,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(items.length, (index) {
-                final isSelected = navigationShell.currentIndex == index;
-                final item = items[index];
+      bottomNavigationBar: _BottomNav(
+        items: items,
+        currentIndex: navigationShell.currentIndex,
+        onTap: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
+      ),
+    );
+  }
+}
 
-                return Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      navigationShell.goBranch(
-                        index,
-                        initialLocation: index == navigationShell.currentIndex,
-                      );
-                    },
-                    child: AnimatedPadding(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeInOut,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            transitionBuilder: (child, animation) =>
-                                ScaleTransition(scale: animation, child: child),
-                            child: Icon(
-                              isSelected ? item.selectedIcon : item.icon,
-                              key: ValueKey('${index}_$isSelected'),
-                              size: isSelected ? 28 : 24,
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
-                            ),
+class _BottomNav extends StatelessWidget {
+  const _BottomNav({
+    required this.items,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  final List<_NavItem> items;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: const Border(top: BorderSide(color: AppColors.line)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              final selected = currentIndex == index;
+              final color = selected ? AppColors.primary : AppColors.muted;
+
+              return Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => onTap(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.primaryLight.withValues(alpha: 0.45)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          selected ? item.selectedIcon : item.icon,
+                          size: selected ? 27 : 23,
+                          color: color,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                          style: TextStyle(
+                            fontSize: selected ? 12 : 11,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: color,
                           ),
-                          const SizedBox(height: 2),
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeInOut,
-                            style: TextStyle(
-                              fontSize: isSelected ? 13 : 11,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
-                            ),
-                            child: Text(item.label),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }),
-            ),
+                ),
+              );
+            }),
           ),
         ),
       ),
@@ -142,8 +167,19 @@ class MainShell extends StatelessWidget {
   }
 }
 
-/// 创建路由配置
-GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
+class _NavItem {
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+}
+
+GoRouter createRouter({String initialLocation = RouteNames.dashboard}) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
@@ -155,7 +191,6 @@ GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
           );
         },
         branches: [
-          // Tab 0: 盘串
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -192,7 +227,6 @@ GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
               ),
             ],
           ),
-          // Tab 1: 待办（含复盘入口）
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -233,7 +267,22 @@ GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
               ),
             ],
           ),
-          // Tab 2: 简历
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.dashboard,
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.reviewHome,
+                builder: (context, state) => const ReviewHomePage(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -244,15 +293,9 @@ GoRouter createRouter({String initialLocation = RouteNames.todoList}) {
           ),
         ],
       ),
-      // 设置页面（全屏，不显示底部导航）
       GoRoute(
         path: RouteNames.settings,
         builder: (context, state) => const SettingsPage(),
-      ),
-      // 复盘页面（全屏，不显示底部导航）
-      GoRoute(
-        path: RouteNames.reviewHome,
-        builder: (context, state) => const ReviewHomePage(),
       ),
       GoRoute(
         path: RouteNames.dailyReviewNew,

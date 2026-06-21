@@ -45,6 +45,7 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
   // 通知初始化放后台，不阻塞启动
   NotificationService().init();
   unawaited(_runReviewCatchUpGuard(ref));
+  unawaited(_scheduleAILogTasks(ref));
   return true;
 });
 
@@ -54,6 +55,15 @@ Future<void> _runReviewCatchUpGuard(Ref ref) async {
     await ReviewCatchUpGuard(dao).ensureYesterdayJob();
   } catch (_) {
     // 补偿守卫只负责低优先级兜底，不能影响应用启动。
+  }
+}
+
+Future<void> _scheduleAILogTasks(Ref ref) async {
+  try {
+    final scheduler = ref.read(aiLogSchedulerProvider);
+    await scheduler.scheduleNightlyReviewGeneration();
+  } catch (_) {
+    // 平台后台调度不可用时依赖前台补偿守卫继续兜底。
   }
 }
 

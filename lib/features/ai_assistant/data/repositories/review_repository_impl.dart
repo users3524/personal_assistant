@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
+import '../../domain/services/ai_log_scheduler.dart';
+import '../../infrastructure/schedulers/ai_log_scheduler_factory.dart';
 import '../datasources/chat_turn_dao.dart';
 import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
@@ -87,6 +89,10 @@ final reviewGenerationJobDaoProvider = FutureProvider<ReviewGenerationJobDao>((
 ) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return ReviewGenerationJobDao(db);
+});
+
+final aiLogSchedulerProvider = Provider<AILogScheduler>((ref) {
+  return createAILogScheduler();
 });
 
 final reviewRepositoryProvider = FutureProvider<ReviewRepository>((ref) async {

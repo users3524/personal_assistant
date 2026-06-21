@@ -81,8 +81,8 @@
 - [x] 设计深夜 raw context pack：待办、离线便签、复盘对话、文玩 `patting_logs`。
 - [x] 实现素材 8000 字左右优先级裁剪策略。
 - [x] 深夜引擎先实现前台 Catch-Up Guard 补偿闭环，再调研 Android 后台调度；目标窗口为 2:00-5:00、充电、Wi-Fi。
-- [ ] 抽象 `AILogScheduler` 域接口，Android WorkManager 与桌面/Web No-Op 实现放到 infrastructure 层。
-- [ ] Android WorkManager 只使用充电 + unmetered network 等可达约束，不把 `RequiresDeviceIdle` 作为硬条件。
+- [x] 抽象 `AILogScheduler` 域接口，Android WorkManager 与桌面/Web No-Op 实现放到 infrastructure 层。
+- [x] Android WorkManager 只使用充电 + unmetered network 等可达约束，不把 `RequiresDeviceIdle` 作为硬条件。
 - [x] 设计 `review_generation_jobs` 冷数据表：`target_date`、`status`、`raw_assets_dump`、`attempt_count`、`failure_reason`、`processed_at`、`created_at`。
 - [x] `target_date` 使用本地时区 `YYYY-MM-DD` 字符串，不用 epoch milliseconds。
 - [x] Catch-Up Guard 基于 `review_generation_jobs.target_date/status` 补偿，不只检查 `daily_reviews`。

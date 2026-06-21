@@ -28,6 +28,7 @@
 | 文件路径 | `path_provider` + `path` | 数据库、图片、配置文件路径。 |
 | 网络 | `dio` | OpenAI 兼容 API 调用、连接检测。 |
 | 通知 | `flutter_local_notifications` + `timezone` | 每日复盘/每周周报提醒。 |
+| 后台调度 | `workmanager` | Android 深夜复盘任务注册；桌面/Web 仍走 No-Op + 前台补偿。 |
 | 图片 | `image_picker` + `gal` | 拍照/相册取图、保存到系统相册。 |
 | 分享 | `share_plus` | 简历图片、文玩图片/对比图分享。 |
 | 语音 | `speech_to_text` | 复盘页语音输入。 |
@@ -45,6 +46,7 @@
 3. `appInitializedProvider` 创建 Drift 数据库。
 4. 从 `user_preferences` 加载主题。
 5. 后台初始化 `NotificationService`。
+6. 后台运行 `ReviewCatchUpGuard`，并通过 `AILogScheduler` 注册深夜复盘调度。
 
 当前底部导航只有 3 个 Tab：
 
@@ -167,6 +169,7 @@ AI Assistant
   -> ReviewRepository -> ReviewDao -> daily_reviews / weekly_reports
   -> ChatTurnDao -> chat_turns
   -> ReviewGenerationJobDao -> review_generation_jobs
+  -> AILogScheduler: Android WorkManager 或桌面/Web No-Op
   -> AIService: OfflineReviewGenerator 或 OpenAIService
   -> TodoRepository 读取今日已完成任务标题
 
@@ -179,10 +182,10 @@ Resume
 
 | 平台 | 代码事实 |
 | --- | --- |
-| Android | `compileSdk = 36`，`minSdk = 24`，`targetSdk = 36`，debug 签名用于 release。 |
-| Web | Flutter 默认 Web 壳，manifest 仍是默认描述。 |
-| Windows | 默认 Flutter Windows runner，窗口标题 `寸积`，初始 1280x720。 |
+| Android | `compileSdk = 36`，`minSdk = 24`，`targetSdk = 36`，debug 签名用于 release；AI 深夜调度通过 WorkManager 注册，约束为充电 + unmetered network。 |
+| Web | Flutter 默认 Web 壳，manifest 仍是默认描述；AI 后台调度为 No-Op，依赖前台 Catch-Up Guard。 |
+| Windows | 默认 Flutter Windows runner，窗口标题 `寸积`，初始 1280x720；AI 后台调度为 No-Op，依赖前台 Catch-Up Guard。 |
 
 ## 8. 测试现状
 
-当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖。
+当前已有 DAO、备份恢复、路由和数据库迁移等专项测试；`test/app_test.dart` 和 `test/widget_test.dart` 仍是占位测试，只断言 `true`。文玩榜单聚合由 `test/antique_dao_test.dart` 覆盖，schema v7/v8/v10/v11 索引迁移由 `test/app_database_migration_test.dart` 覆盖，`chat_turns` 计数规则由 `test/chat_turn_dao_test.dart` 覆盖，`review_generation_jobs` 状态流和 Catch-Up Guard 由 `test/review_generation_job_dao_test.dart` / `test/review_catch_up_guard_test.dart` 覆盖，`AILogScheduler` 的 2:00-5:00 初始延迟和 WorkManager 约束由 `test/ai_log_scheduler_test.dart` 覆盖。

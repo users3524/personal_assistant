@@ -2,7 +2,7 @@
 library;
 
 export '../../data/repositories/review_repository_impl.dart'
-    show reviewRepositoryProvider;
+    show reviewRepositoryProvider, reviewGenerationJobExecutorProvider;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

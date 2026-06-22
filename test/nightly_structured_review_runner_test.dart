@@ -234,6 +234,23 @@ class _FakeReviewGenerationJobStore implements ReviewGenerationJobStore {
   }
 
   @override
+  Future<void> saveRawAssetsDump(
+    String targetDate, {
+    required String rawAssetsDump,
+    DateTime? now,
+  }) async {
+    final existing = await getOrCreatePending(targetDate, now: now);
+    jobs[targetDate] = _job(
+      existing.targetDate,
+      ReviewGenerationJobStatus.pending,
+      id: existing.id,
+      attemptCount: existing.attemptCount,
+      rawAssetsDump: rawAssetsDump,
+      now: existing.createdAt,
+    );
+  }
+
+  @override
   Future<void> markPending(String targetDate, {DateTime? now}) async {
     final existing = await getOrCreatePending(targetDate, now: now);
     jobs[targetDate] = _job(

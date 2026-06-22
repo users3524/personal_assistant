@@ -112,6 +112,25 @@ WHERE target_date = ?
   }
 
   @override
+  Future<void> saveRawAssetsDump(
+    String targetDate, {
+    required String rawAssetsDump,
+    DateTime? now,
+  }) async {
+    await getOrCreatePending(targetDate, now: now);
+    await (_db.update(
+      _db.reviewGenerationJobs,
+    )..where((t) => t.targetDate.equals(targetDate))).write(
+      ReviewGenerationJobsCompanion(
+        status: Value(ReviewGenerationJobStatus.pending.storageValue),
+        rawAssetsDump: Value(rawAssetsDump),
+        failureReason: const Value<String?>(null),
+        processedAt: const Value<DateTime?>(null),
+      ),
+    );
+  }
+
+  @override
   Future<void> markSuccess(
     String targetDate, {
     String? rawAssetsDump,

@@ -10,7 +10,7 @@
   - 验收：不包含 API Key、图片 base64、备份路径；日期使用半开区间；有单元测试覆盖空素材、混合素材和隐私字段。
 - [x] 将 `RawContextClipper` 接入真实 raw pack，保留裁剪前后长度、保留项和丢弃原因。
   - 验收：超预算时不拆坏 JSON 语义；高优完成任务、云端 user turn、有备注文玩打卡优先。
-- [ ] 增加前台执行 pending `review_generation_jobs` 的服务入口。
+- [x] 增加前台执行 pending `review_generation_jobs` 的服务入口。
   - 验收：可从 App 启动补偿和复盘页手动触发；同一 targetDate 不重复并发执行。
 - [ ] 接入 `NightlyStructuredReviewRunner`，把成功输出写入 `daily_reviews`。
   - 验收：成功任务标记 success；失败任务标记 failed；超过 3 次调用上限后设置 `calibration_required`。

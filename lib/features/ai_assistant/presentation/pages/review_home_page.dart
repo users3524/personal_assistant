@@ -10,6 +10,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/services/iso_week.dart';
+import '../../domain/services/review_catch_up_guard.dart';
+import '../../domain/services/review_generation_job_executor.dart';
 import '../providers/review_providers.dart';
 
 class ReviewHomePage extends ConsumerWidget {
@@ -34,10 +36,21 @@ class ReviewHomePage extends ConsumerWidget {
             AppPageHeader(
               title: 'AI 复盘',
               subtitle: '把今天沉淀成明天能用的经验',
-              trailing: IconButton.filledTonal(
-                icon: const Icon(Icons.bar_chart),
-                onPressed: () => _showStats(context),
-                tooltip: '数据看板',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.sync),
+                    onPressed: () => _triggerYesterdayJob(context, ref),
+                    tooltip: '补跑昨夜复盘素材',
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.bar_chart),
+                    onPressed: () => _showStats(context),
+                    tooltip: '数据看板',
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -50,6 +63,45 @@ class ReviewHomePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _triggerYesterdayJob(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final yesterday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 1));
+    final targetDate = ReviewCatchUpGuard.formatLocalDate(yesterday);
+
+    try {
+      final executor = await ref.read(
+        reviewGenerationJobExecutorProvider.future,
+      );
+      final result = await executor.executePending(targetDate);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_executionMessage(result))));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('复盘素材准备失败：$error')));
+    }
+  }
+
+  String _executionMessage(ReviewGenerationJobExecutionResult result) {
+    return switch (result.status) {
+      ReviewGenerationJobExecutionStatus.prepared =>
+        '${result.targetDate} 复盘素材已准备，等待生成执行',
+      ReviewGenerationJobExecutionStatus.skippedAlreadySucceeded =>
+        '${result.targetDate} 已生成，无需重复执行',
+      ReviewGenerationJobExecutionStatus.skippedExhausted =>
+        '${result.targetDate} 已达生成尝试上限，请手动校准',
+      ReviewGenerationJobExecutionStatus.failed =>
+        '${result.targetDate} 复盘素材准备失败：${result.failureReason ?? '未知错误'}',
+    };
   }
 
   Widget _buildReviewEntry(

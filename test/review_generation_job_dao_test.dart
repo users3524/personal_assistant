@@ -97,6 +97,27 @@ void main() {
       expect(job?.processedAt, null);
     });
 
+    test('saves raw assets dump while keeping job pending', () async {
+      await dao.markFailed(
+        '2026-06-20',
+        rawAssetsDump: '{"old":true}',
+        failureReason: 'network',
+        processedAt: DateTime(2026, 6, 21, 2),
+      );
+
+      await dao.saveRawAssetsDump(
+        '2026-06-20',
+        rawAssetsDump: '{"clip":{"kept_count":1}}',
+        now: DateTime(2026, 6, 21, 8),
+      );
+
+      final job = await dao.getByTargetDate('2026-06-20');
+      expect(job?.status, ReviewGenerationJobStatus.pending);
+      expect(job?.rawAssetsDump, '{"clip":{"kept_count":1}}');
+      expect(job?.failureReason, null);
+      expect(job?.processedAt, null);
+    });
+
     test('prunes only expired successful raw asset dumps', () async {
       await dao.markSuccess(
         '2026-06-10',

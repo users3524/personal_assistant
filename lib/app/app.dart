@@ -53,7 +53,13 @@ final appInitializedProvider = FutureProvider<bool>((ref) async {
 Future<void> _runReviewCatchUpGuard(Ref ref) async {
   try {
     final dao = await ref.read(reviewGenerationJobDaoProvider.future);
-    await ReviewCatchUpGuard(dao).ensureYesterdayJob();
+    final result = await ReviewCatchUpGuard(dao).ensureYesterdayJob();
+    if (result.shouldRunCatchUp) {
+      final executor = await ref.read(
+        reviewGenerationJobExecutorProvider.future,
+      );
+      await executor.executePending(result.targetDate);
+    }
   } catch (_) {
     // 补偿守卫只负责低优先级兜底，不能影响应用启动。
   }

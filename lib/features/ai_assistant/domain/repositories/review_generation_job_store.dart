@@ -12,6 +12,12 @@ abstract class ReviewGenerationJobStore {
 
   Future<int> incrementAttempt(String targetDate, {DateTime? now});
 
+  Future<void> saveRawAssetsDump(
+    String targetDate, {
+    required String rawAssetsDump,
+    DateTime? now,
+  });
+
   Future<void> markSuccess(
     String targetDate, {
     String? rawAssetsDump,

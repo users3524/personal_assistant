@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ai/raw_context_pack_builder.dart';
+import '../../../../core/ai/raw_context_pack_clipper.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
@@ -13,6 +15,7 @@ import '../datasources/milestone_dao.dart';
 import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
 import '../datasources/vector_embedding_dao.dart';
+import '../../domain/services/review_generation_job_executor.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
   final ReviewDao _dao;
@@ -92,6 +95,22 @@ final reviewGenerationJobDaoProvider = FutureProvider<ReviewGenerationJobDao>((
   final db = await ref.watch(appDatabaseProvider.future);
   return ReviewGenerationJobDao(db);
 });
+
+final reviewGenerationJobExecutorProvider =
+    FutureProvider<ReviewGenerationJobExecutor>((ref) async {
+      final db = await ref.watch(appDatabaseProvider.future);
+      final jobs = ReviewGenerationJobDao(db);
+      return ReviewGenerationJobExecutor(
+        jobs: jobs,
+        buildRawAssetsDump: (targetDate) async {
+          final date = ReviewGenerationJobExecutor.parseTargetDate(targetDate);
+          final clipped = await RawContextPackClipper(
+            packBuilder: RawContextPackBuilder(db),
+          ).build(date);
+          return clipped.toJsonString();
+        },
+      );
+    });
 
 final milestoneDaoProvider = FutureProvider<MilestoneDao>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);

@@ -13,8 +13,11 @@ void main() {
       final result = clipper.clip(items);
 
       expect(result.budgetChars, RawContextClipper.defaultBudgetChars);
+      expect(result.inputChars, 'todochat'.length);
+      expect(result.usedChars, 'todochat'.length);
       expect(result.kept.map((item) => item.content), ['todo', 'chat']);
       expect(result.dropped, isEmpty);
+      expect(result.dropReasons, isEmpty);
       expect(result.wasClipped, false);
     });
 
@@ -25,7 +28,7 @@ void main() {
         _item(
           'ship-fix',
           RawContextSource.todo,
-          priority: 1,
+          priority: 5,
           isCompletedTodo: true,
         ),
         _item('later', RawContextSource.manualNote),
@@ -37,6 +40,10 @@ void main() {
       expect(
         result.dropped.map((item) => item.content),
         containsAll(['ordinary-note', 'later']),
+      );
+      expect(
+        result.dropReasonFor(result.dropped.first),
+        RawContextDropReason.budgetExceeded,
       );
       expect(result.wasClipped, true);
     });
@@ -97,8 +104,30 @@ void main() {
 
       expect(result.kept, isEmpty);
       expect(result.dropped, items);
+      expect(result.inputChars, 'content'.length);
       expect(result.usedChars, 0);
+      expect(
+        result.dropReasonFor(items.last),
+        RawContextDropReason.budgetExceeded,
+      );
       expect(result.wasClipped, true);
+    });
+
+    test('records empty content drop reasons before budget checks', () {
+      const clipper = RawContextClipper(budgetChars: 100);
+      final items = [
+        _item('', RawContextSource.todo),
+        _item('content', RawContextSource.chatTurn),
+      ];
+
+      final result = clipper.clip(items);
+
+      expect(result.kept.map((item) => item.content), ['content']);
+      expect(result.dropped.single.content, '');
+      expect(
+        result.dropReasonFor(result.dropped.single),
+        RawContextDropReason.emptyContent,
+      );
     });
   });
 }

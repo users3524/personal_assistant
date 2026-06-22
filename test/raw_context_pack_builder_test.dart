@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_assistant/core/ai/raw_context_clipper.dart';
 import 'package:personal_assistant/core/ai/raw_context_pack_builder.dart';
+import 'package:personal_assistant/core/ai/raw_context_pack_clipper.dart';
 import 'package:personal_assistant/core/database/app_database.dart';
 
 void main() {
@@ -226,6 +227,90 @@ void main() {
       expect(dump, isNot(contains(secureStorageRef)));
       expect(dump, isNot(contains('photoPaths')));
       expect(dump, contains('"photo_count":2'));
+    });
+  });
+
+  group('RawContextPackClipper', () {
+    late AppDatabase db;
+    final generatedAt = DateTime(2026, 6, 22, 3, 5);
+
+    setUp(() {
+      db = AppDatabase.createInMemory();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('clips real raw pack into semantic JSON with metadata', () async {
+      await _insertTodo(
+        db,
+        title: 'High completed',
+        status: 'done',
+        priority: 5,
+        completedAt: DateTime(2026, 6, 21, 10),
+      );
+      await _insertChatTurn(
+        db,
+        content: 'cloud user turn',
+        consumesCloudTurn: true,
+        createdAt: DateTime(2026, 6, 21, 9),
+      );
+      await _insertChatTurn(
+        db,
+        role: 'assistant',
+        content: List.filled(600, 'x').join(),
+        consumesCloudTurn: false,
+        createdAt: DateTime(2026, 6, 21, 9, 1),
+      );
+      final itemId = await _insertAntiqueItem(db);
+      await _insertPattingLog(
+        db,
+        itemId: itemId,
+        date: DateTime(2026, 6, 21, 20),
+        durationMinutes: 15,
+        note: 'Surface looked warmer',
+      );
+
+      final packBuilder = RawContextPackBuilder(db, now: () => generatedAt);
+      final fullPack = await packBuilder.build(DateTime(2026, 6, 21));
+      final inputItems = fullPack.toClipperItems();
+      final keepBudget = inputItems
+          .where(
+            (item) =>
+                item.isCompletedTodo ||
+                item.isCoachingTurn ||
+                item.hasPattingNote,
+          )
+          .fold<int>(0, (total, item) => total + item.charCount);
+      final clipped = await RawContextPackClipper(
+        packBuilder: packBuilder,
+        clipper: RawContextClipper(budgetChars: keepBudget),
+      ).build(DateTime(2026, 6, 21));
+
+      final encoded = clipped.toJsonString();
+      final json = jsonDecode(encoded) as Map<String, Object?>;
+      final clip = json['clip'] as Map<String, Object?>;
+      final droppedItems = clip['dropped_items'] as List<Object?>;
+
+      expect(json['target_date'], '2026-06-21');
+      expect(clip['input_chars'], greaterThan(clip['kept_chars'] as int));
+      expect(clip['kept_count'], 3);
+      expect(clip['dropped_count'], 1);
+      expect(droppedItems.single, containsPair('reason', 'budget_exceeded'));
+      expect(
+        (json['todos'] as List<Object?>).single,
+        containsPair('title', 'High completed'),
+      );
+      expect(
+        (json['chat_turns'] as List<Object?>).single,
+        containsPair('content', 'cloud user turn'),
+      );
+      expect(
+        (json['patting_logs'] as List<Object?>).single,
+        containsPair('note', 'Surface looked warmer'),
+      );
+      expect(encoded, isNot(contains(List.filled(120, 'x').join())));
     });
   });
 }

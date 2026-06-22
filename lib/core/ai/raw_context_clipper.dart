@@ -9,6 +9,15 @@ enum RawContextSource {
   manualNote,
 }
 
+enum RawContextDropReason {
+  emptyContent('empty_content'),
+  budgetExceeded('budget_exceeded');
+
+  final String storageValue;
+
+  const RawContextDropReason(this.storageValue);
+}
+
 class RawContextItem {
   final RawContextSource source;
   final String content;
@@ -36,6 +45,8 @@ class RawContextItem {
 class RawContextClipResult {
   final List<RawContextItem> kept;
   final List<RawContextItem> dropped;
+  final Map<RawContextItem, RawContextDropReason> dropReasons;
+  final int inputChars;
   final int usedChars;
   final int budgetChars;
   final bool wasClipped;
@@ -43,10 +54,16 @@ class RawContextClipResult {
   const RawContextClipResult({
     required this.kept,
     required this.dropped,
+    required this.dropReasons,
+    required this.inputChars,
     required this.usedChars,
     required this.budgetChars,
     required this.wasClipped,
   });
+
+  RawContextDropReason? dropReasonFor(RawContextItem item) {
+    return dropReasons[item];
+  }
 }
 
 class RawContextClipper {
@@ -57,10 +74,19 @@ class RawContextClipper {
   const RawContextClipper({this.budgetChars = defaultBudgetChars});
 
   RawContextClipResult clip(List<RawContextItem> items) {
+    final inputChars = items.fold<int>(
+      0,
+      (total, item) => total + item.charCount,
+    );
+
     if (budgetChars <= 0) {
       return RawContextClipResult(
         kept: const [],
         dropped: List.unmodifiable(items),
+        dropReasons: Map.unmodifiable({
+          for (final item in items) item: RawContextDropReason.budgetExceeded,
+        }),
+        inputChars: inputChars,
         usedChars: 0,
         budgetChars: budgetChars,
         wasClipped: items.isNotEmpty,
@@ -70,11 +96,13 @@ class RawContextClipper {
     final ordered = [...items]..sort(_comparePriority);
     final kept = <RawContextItem>[];
     final dropped = <RawContextItem>[];
+    final dropReasons = <RawContextItem, RawContextDropReason>{};
     var usedChars = 0;
 
     for (final item in ordered) {
       if (item.content.trim().isEmpty) {
         dropped.add(item);
+        dropReasons[item] = RawContextDropReason.emptyContent;
         continue;
       }
       final nextUsed = usedChars + item.charCount;
@@ -83,12 +111,15 @@ class RawContextClipper {
         usedChars = nextUsed;
       } else {
         dropped.add(item);
+        dropReasons[item] = RawContextDropReason.budgetExceeded;
       }
     }
 
     return RawContextClipResult(
       kept: List.unmodifiable(kept),
       dropped: List.unmodifiable(dropped),
+      dropReasons: Map.unmodifiable(dropReasons),
+      inputChars: inputChars,
       usedChars: usedChars,
       budgetChars: budgetChars,
       wasClipped: dropped.isNotEmpty,
@@ -121,7 +152,7 @@ class RawContextClipper {
         break;
     }
 
-    score += (6 - item.priority.clamp(1, 5)) * 4;
+    score += item.priority.clamp(1, 5) * 4;
     if (item.isCompletedTodo) score += 40;
     if (item.isCoachingTurn) score += 25;
     if (item.hasPattingNote) score += 20;

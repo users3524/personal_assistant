@@ -14,6 +14,8 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
@@ -139,470 +141,545 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(item.name),
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (value) => _handleAction(context, item, value),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('编辑')),
-                  const PopupMenuItem(value: 'compare', child: Text('对比')),
-                  const PopupMenuItem(value: 'delete', child: Text('删除')),
+          backgroundColor: AppColors.surface,
+          body: Stack(
+            children: [
+              ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildImageCarousel(item, _getBannerImages(item)),
+                  Transform.translate(
+                    offset: const Offset(0, -24),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildInfoCard(item),
+                          if (item.categoryMetadata != null &&
+                              item.categoryMetadata!.isNotEmpty) ...[
+                            const SizedBox(height: 18),
+                            _buildMetadataSection(item),
+                          ],
+                          const SizedBox(height: 18),
+                          _buildPattingHeatmap(item),
+                          const SizedBox(height: 18),
+                          _buildPattingTimeline(item),
+                          const SizedBox(height: 24),
+                          _buildBottomActions(item),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
+              SafeArea(child: _buildTopOverlay(context, item)),
             ],
-          ),
-          body: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 图片轮播（最新打卡照片优先）
-                _buildImageCarousel(item, _getBannerImages(item)),
-                // 基本信息 + 情感卡片
-                _buildInfoCard(item),
-                // 本月盘玩热力图
-                _buildPattingHeatmap(item),
-                // 盘玩打卡时间线
-                _buildPattingTimeline(item),
-                // 底部留白，给 FAB 让位
-                const SizedBox(height: 80),
-              ],
-            ),
-          ),
-          floatingActionButton: Container(
-            margin: const EdgeInsets.only(bottom: 8, right: 4),
-            child: FloatingActionButton.extended(
-              label: const Text('打卡'),
-              backgroundColor: Colors.pink,
-              foregroundColor: Colors.white,
-              onPressed: () => _addPattingCheckin(item),
-            ),
           ),
         );
       },
     );
   }
 
+  Widget _buildTopOverlay(BuildContext context, AntiqueEntity item) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          _HeroIconButton(
+            tooltip: '返回',
+            icon: Icons.chevron_left,
+            onPressed: () => context.pop(),
+          ),
+          const Spacer(),
+          _HeroIconButton(
+            tooltip: '编辑',
+            icon: Icons.edit_outlined,
+            onPressed: () => context.push('/collection/${item.id}/edit'),
+          ),
+          const SizedBox(width: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.ink.withValues(alpha: 0.34),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: PopupMenuButton<String>(
+              tooltip: '更多',
+              icon: const Icon(Icons.more_horiz, color: Colors.white),
+              color: AppColors.card,
+              onSelected: (value) => _handleAction(context, item, value),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'edit', child: Text('编辑信息')),
+                const PopupMenuItem(value: 'compare', child: Text('时光对比')),
+                const PopupMenuItem(value: 'delete', child: Text('删除藏品')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildImageCarousel(AntiqueEntity item, List<String> images) {
     if (images.isEmpty) {
       return Container(
-        height: 260,
-        color: Colors.grey.shade200,
+        height: 320,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primaryDark, AppColors.primary],
+          ),
+        ),
         child: const Center(
-          child: Icon(Icons.diamond_outlined, size: 64, color: Colors.grey),
+          child: Icon(Icons.diamond_outlined, size: 70, color: Colors.white70),
         ),
       );
     }
 
-    if (images.length == 1) {
-      return SizedBox(
-        height: 260,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              onTap: () => _showFullScreenImage(context, images[0]),
-              onLongPress: () => _showImageActions(context, images[0]),
-              child: ResolvedImage(
-                path: images[0],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(child: Icon(Icons.image)),
-                ),
-                error: Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(child: Icon(Icons.broken_image)),
-                ),
-              ),
-            ),
-            // 显示照片来源标签
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  _cachedLogs != null &&
-                          _cachedLogs!.any(
-                            (l) => l.photoPaths.contains(images[0]),
-                          )
-                      ? '最新打卡'
-                      : '藏品照片',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: 240,
-          child: PageView.builder(
+    return SizedBox(
+      height: 320,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          PageView.builder(
             controller: _pageController,
             itemCount: images.length,
             onPageChanged: (i) => _currentPage.value = i,
             itemBuilder: (context, index) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  GestureDetector(
-                    onTap: () => _showFullScreenImage(context, images[index]),
-                    onLongPress: () =>
-                        _showImageActions(context, images[index]),
-                    child: ResolvedImage(
-                      path: images[index],
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      placeholder: Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(child: Icon(Icons.image)),
-                      ),
-                      error: Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(child: Icon(Icons.broken_image)),
-                      ),
-                    ),
+              return GestureDetector(
+                onTap: () => _showFullScreenImage(context, images[index]),
+                onLongPress: () => _showImageActions(context, images[index]),
+                child: ResolvedImage(
+                  path: images[index],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: Container(
+                    color: AppColors.primaryLight,
+                    child: const Center(child: Icon(Icons.image)),
                   ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _cachedLogs != null &&
-                                _cachedLogs!.any(
-                                  (l) => l.photoPaths.contains(images[index]),
-                                )
-                            ? '最新打卡'
-                            : '藏品照片',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
+                  error: Container(
+                    color: AppColors.primaryLight,
+                    child: const Center(child: Icon(Icons.broken_image)),
                   ),
-                ],
+                ),
               );
             },
           ),
-        ),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<int>(
-          valueListenable: _currentPage,
-          builder: (_, page, __) => Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              images.length,
-              (i) => Container(
-                width: i == page ? 8 : 6,
-                height: i == page ? 8 : 6,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i == page ? Colors.teal : Colors.grey.shade300,
-                ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x66000000),
+                  Color(0x00000000),
+                  Color(0x99000000),
+                ],
+                stops: [0, 0.45, 1],
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        ValueListenableBuilder<int>(
-          valueListenable: _currentPage,
-          builder: (_, page, __) => Text(
-            '${page + 1} / ${images.length}',
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          Positioned(
+            left: 16,
+            bottom: 42,
+            child: ValueListenableBuilder<int>(
+              valueListenable: _currentPage,
+              builder: (_, page, __) {
+                final current = page >= images.length
+                    ? images.length - 1
+                    : page;
+                return _buildHeroSourceTag(images[current]);
+              },
+            ),
+          ),
+          if (images.length > 1)
+            Positioned(
+              right: 16,
+              bottom: 46,
+              child: _buildHeroDots(images.length),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(AntiqueEntity item) {
+    final daysOwned = DateTime.now().difference(item.acquiredDate).inDays;
+
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: FutureBuilder<List<PattingLogEntity>>(
+        future: _logsFuture,
+        builder: (context, snapshot) {
+          final logs =
+              snapshot.data ?? _cachedLogs ?? const <PattingLogEntity>[];
+          final totalMinutes = logs.fold<int>(
+            0,
+            (sum, log) => sum + log.durationMinutes,
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        height: 1.18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  AppPill(
+                    label: item.category,
+                    color: _categoryColor(item.category),
+                    icon: _categoryIcon(item.category),
+                    isFilled: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '入手日期：${_formatDate(item.acquiredDate)}'
+                '${item.sourceSeller == null ? '' : ' · 来源：${item.sourceSeller}'}',
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              const SizedBox(height: 16),
+              _buildMetricStrip(
+                daysOwned: daysOwned,
+                totalMinutes: totalMinutes,
+                price: item.acquiredPrice,
+              ),
+              const SizedBox(height: 16),
+              _infoRow(
+                '品相',
+                item.conditionLabel,
+                icon: Icons.verified_outlined,
+                valueColor: _conditionColor(item.condition),
+              ),
+              if (item.subtype != null && item.subtype!.isNotEmpty)
+                _infoRow('细分', item.subtype!, icon: Icons.sell_outlined),
+              if (item.notes != null && item.notes!.isNotEmpty) ...[
+                const Divider(height: 20),
+                const Text(
+                  '备注',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.muted,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.notes!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.55,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeroSourceTag(String path) {
+    final isLatestLog =
+        _cachedLogs != null &&
+        _cachedLogs!.any((l) => l.photoPaths.contains(path));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.ink.withValues(alpha: 0.46),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isLatestLog ? Icons.history : Icons.photo_outlined,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            isLatestLog ? '最新打卡' : '藏品照片',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroDots(int count) {
+    return ValueListenableBuilder<int>(
+      valueListenable: _currentPage,
+      builder: (_, page, __) {
+        return Row(
+          children: List.generate(count, (index) {
+            final selected = index == page;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? 18 : 7,
+              height: 7,
+              margin: const EdgeInsets.only(left: 5),
+              decoration: BoxDecoration(
+                color: selected ? Colors.white : Colors.white54,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricStrip({
+    required int daysOwned,
+    required int totalMinutes,
+    required double? price,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          _buildMetricCell('陪伴天数', '$daysOwned'),
+          const _MetricDivider(),
+          _buildMetricCell('总时长', '${totalMinutes}m', color: AppColors.primary),
+          const _MetricDivider(),
+          _buildMetricCell(
+            '入手价',
+            price == null ? '未记录' : '¥${price.toStringAsFixed(0)}',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCell(String label, String value, {Color? color}) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: color ?? AppColors.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataSection(AntiqueEntity item) {
+    final metadata = item.categoryMetadata;
+    if (metadata == null || metadata.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppSectionTitle(title: '参数特征', padding: EdgeInsets.zero),
+        const SizedBox(height: 8),
+        AppSurfaceCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.category == '核桃')
+                _buildWalnutSpecTable(metadata)
+              else
+                _buildSingleSpecRows(metadata),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildInfoCard(AntiqueEntity item) {
-    // 计算拥有天数
-    final daysOwned = DateTime.now().difference(item.acquiredDate).inDays;
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildWalnutSpecTable(Map<String, String> metadata) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        children: [
+          const Row(
             children: [
-              // 名称+分类
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
+              SizedBox(
+                width: 88,
+                child: Text(
+                  '参数',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.muted,
                   ),
-                  Chip(
-                    label: Text(
-                      item.category,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    backgroundColor: Colors.teal.withValues(alpha: 0.1),
-                  ),
-                ],
-              ),
-              if (item.subtype != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  item.subtype!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                ),
-              ],
-              const SizedBox(height: 8),
-              // 情感价值卡片
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.amber.shade50, Colors.orange.shade50],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.favorite, color: Colors.pink, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '陪伴 $daysOwned 天',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.brown,
-                            ),
-                          ),
-                          if (item.description != null &&
-                              item.description!.isNotEmpty)
-                            Text(
-                              item.description!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.brown,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
               ),
-              const Divider(height: 20),
-
-              // 详细信息
-              _infoRow('品相', item.conditionLabel),
-              _infoRow(
-                '入手日期',
-                '${item.acquiredDate.year}-${item.acquiredDate.month.toString().padLeft(2, '0')}-${item.acquiredDate.day.toString().padLeft(2, '0')}',
-              ),
-              if (item.acquiredPrice != null)
-                _infoRow('入手价格', '¥${item.acquiredPrice!.toStringAsFixed(0)}'),
-              if (item.sourceSeller != null) _infoRow('来源', item.sourceSeller!),
-              if (item.notes != null && item.notes!.isNotEmpty) ...[
-                const Divider(height: 12),
-                Text('备注', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(
-                  item.notes!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
-                ),
-              ],
-              // 分类专属参数
-              if (item.categoryMetadata != null &&
-                  item.categoryMetadata!.isNotEmpty) ...[
-                const Divider(height: 16),
-                Text('详细参数', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                // 核桃品类三列显示（行名 | 左参数 | 右参数）
-                if (item.category == '核桃') ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 4,
-                      horizontal: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.brown.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        // 表头
-                        Row(
-                          children: [
-                            const SizedBox(
-                              width: 72,
-                              child: Text(
-                                '参数',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  '左',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: Colors.teal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  '右',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 8),
-                        ...item.categoryMetadata!.entries.map((e) {
-                          final parts = e.value.split(',');
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 72,
-                                  child: Text(
-                                    e.key,
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      parts.isNotEmpty ? parts[0].trim() : '',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 13,
-                                        color: Colors.teal.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      parts.length > 1 ? parts[1].trim() : '',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 13,
-                                        color: Colors.orange.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '左核',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
                     ),
                   ),
-                ] else ...[
-                  // 非核桃品类正常显示
-                  ...item.categoryMetadata!.entries.map((e) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 72,
-                            child: Text(
-                              e.key,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              e.value,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ],
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '右核',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
+          const Divider(height: 18),
+          ...metadata.entries.map((entry) {
+            final parts = entry.value.split(',');
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 88,
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        parts.isNotEmpty ? parts[0].trim() : '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        parts.length > 1 ? parts[1].trim() : '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
 
-  Widget _infoRow(String label, String value, {Color? valueColor}) {
+  Widget _buildSingleSpecRows(Map<String, String> metadata) {
+    return Column(
+      children: metadata.entries.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  entry.key,
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                entry.value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _infoRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    IconData? icon,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          SizedBox(
-            width: 72,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 13),
-            ),
+          if (icon != null) ...[
+            Icon(icon, size: 17, color: valueColor ?? AppColors.muted),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
           ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               value,
+              textAlign: TextAlign.right,
               style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: valueColor,
+                fontWeight: FontWeight.w800,
+                color: valueColor ?? AppColors.ink,
                 fontSize: 14,
               ),
             ),
@@ -612,42 +689,108 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     );
   }
 
+  Widget _buildBottomActions(AntiqueEntity item) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => context.push('/collection/${item.id}/edit'),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('编辑'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () => _addPattingCheckin(item),
+            icon: const Icon(Icons.add_a_photo_outlined),
+            label: const Text('拍照打卡'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  IconData _categoryIcon(String category) {
+    switch (category) {
+      case '核桃':
+        return Icons.circle_outlined;
+      case '手串':
+      case '长串':
+        return Icons.blur_circular_outlined;
+      case '把件':
+        return Icons.category_outlined;
+      default:
+        return Icons.label_outline;
+    }
+  }
+
+  Color _categoryColor(String category) {
+    switch (category) {
+      case '核桃':
+        return AppColors.primary;
+      case '手串':
+        return AppColors.green;
+      case '长串':
+        return AppColors.gold;
+      case '把件':
+        return AppColors.blue;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  Color _conditionColor(AntiqueCondition condition) {
+    switch (condition) {
+      case AntiqueCondition.perfect:
+        return AppColors.green;
+      case AntiqueCondition.good:
+        return AppColors.primary;
+      case AntiqueCondition.fair:
+        return AppColors.orange;
+      case AntiqueCondition.poor:
+        return AppColors.red;
+    }
+  }
+
   // ===== 本月盘玩热力图 =====
 
   Widget _buildPattingHeatmap(AntiqueEntity item) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.local_fire_department,
-                    size: 18,
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '本月打卡热力图',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ],
+              Icon(
+                Icons.local_fire_department_outlined,
+                size: 18,
+                color: AppColors.orange,
               ),
-              const SizedBox(height: 8),
-              FutureBuilder<List<PattingLogEntity>>(
-                future: _logsFuture,
-                builder: (context, snapshot) {
-                  final logs = snapshot.data ?? <PattingLogEntity>[];
-                  return _buildHeatmapGrid(logs);
-                },
+              SizedBox(width: 6),
+              Text(
+                '本月打卡热力图',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<PattingLogEntity>>(
+            future: _logsFuture,
+            builder: (context, snapshot) {
+              final logs = snapshot.data ?? <PattingLogEntity>[];
+              return _buildHeatmapGrid(logs);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -661,14 +804,6 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
     final totalCells = startWeekday + daysInMonth;
     final rows = (totalCells + 6) ~/ 7;
 
-    // 构建打卡日期集合（仅统计本月）
-    final pattingDays = <int>{};
-    for (final log in logs) {
-      if (log.date.year == now.year && log.date.month == now.month) {
-        pattingDays.add(log.date.day);
-      }
-    }
-
     // 按打卡次数分色：1次浅色，2次中色，3次+深色
     final pattingCount = <int, int>{};
     for (final log in logs) {
@@ -677,11 +812,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       }
     }
 
-    Color _heatColor(int count) {
-      if (count == 0) return Colors.grey.shade100;
-      if (count == 1) return Colors.orange.shade100;
-      if (count <= 3) return Colors.orange.shade300;
-      return Colors.orange.shade600;
+    Color heatColor(int count) {
+      if (count == 0) return AppColors.line.withValues(alpha: 0.42);
+      if (count == 1) return AppColors.primaryLight;
+      if (count <= 3) return AppColors.primary.withValues(alpha: 0.62);
+      return AppColors.primaryDark;
     }
 
     return Column(
@@ -693,7 +828,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
               child: Center(
                 child: Text(
                   d,
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  style: const TextStyle(fontSize: 10, color: AppColors.muted),
                 ),
               ),
             );
@@ -716,10 +851,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                   height: 28,
                   margin: const EdgeInsets.all(1),
                   decoration: BoxDecoration(
-                    color: _heatColor(count),
+                    color: heatColor(count),
                     borderRadius: BorderRadius.circular(4),
                     border: isToday
-                        ? Border.all(color: Colors.orange.shade800, width: 1.5)
+                        ? Border.all(color: AppColors.primaryDark, width: 1.5)
                         : null,
                   ),
                   alignment: Alignment.center,
@@ -728,7 +863,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: isToday ? FontWeight.bold : null,
-                      color: count >= 3 ? Colors.white : null,
+                      color: count >= 3 ? Colors.white : AppColors.ink,
                     ),
                   ),
                 );
@@ -741,13 +876,13 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _heatLegend(Colors.grey.shade100, '无'),
+            _heatLegend(AppColors.line.withValues(alpha: 0.42), '无'),
             const SizedBox(width: 8),
-            _heatLegend(Colors.orange.shade100, '1次'),
+            _heatLegend(AppColors.primaryLight, '1次'),
             const SizedBox(width: 8),
-            _heatLegend(Colors.orange.shade300, '2-3次'),
+            _heatLegend(AppColors.primary.withValues(alpha: 0.62), '2-3次'),
             const SizedBox(width: 8),
-            _heatLegend(Colors.orange.shade600, '3次+'),
+            _heatLegend(AppColors.primaryDark, '3次+'),
           ],
         ),
       ],
@@ -767,7 +902,10 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
           ),
         ),
         const SizedBox(width: 3),
-        Text(label, style: TextStyle(fontSize: 9, color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9, color: AppColors.muted),
+        ),
       ],
     );
   }
@@ -775,26 +913,39 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
   // ===== 盘玩打卡时间线 =====
 
   Widget _buildPattingTimeline(AntiqueEntity item) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.timeline, size: 20, color: Colors.teal),
-                  const SizedBox(width: 8),
-                  Text('盘玩时光', style: Theme.of(context).textTheme.titleMedium),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.timeline, size: 20, color: AppColors.primary),
+                    SizedBox(width: 8),
+                    Text(
+                      '成长时间轴',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildTimelineList(item),
+              TextButton.icon(
+                onPressed: () => _showComparePicker(context, item),
+                icon: const Icon(Icons.compare_arrows, size: 18),
+                label: const Text('时光对比'),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          _buildTimelineList(item),
+        ],
       ),
     );
   }
@@ -809,13 +960,17 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.pan_tool_outlined, size: 40, color: Colors.grey),
+                  Icon(
+                    Icons.pan_tool_outlined,
+                    size: 40,
+                    color: AppColors.muted,
+                  ),
                   SizedBox(height: 8),
-                  Text('还没有盘玩记录', style: TextStyle(color: Colors.grey)),
+                  Text('还没有盘玩记录', style: TextStyle(color: AppColors.muted)),
                   SizedBox(height: 4),
                   Text(
                     '点击下方按钮打卡',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(color: AppColors.muted, fontSize: 12),
                   ),
                 ],
               ),
@@ -836,7 +991,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                 .inDays;
             final dayLabel = daysSinceAcquisition == 0
                 ? '入手当天'
-                : '第${daysSinceAcquisition}天';
+                : '第$daysSinceAcquisition天';
             // 日期时间：26/03/05 16:38
             final y = (log.date.year % 100).toString().padLeft(2, '0');
             final m = log.date.month.toString().padLeft(2, '0');
@@ -862,8 +1017,8 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         dayLabel,
                         style: const TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.teal,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -877,29 +1032,39 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                         margin: const EdgeInsets.only(top: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isFirst ? Colors.teal : Colors.teal.shade200,
+                          color: isFirst
+                              ? AppColors.primary
+                              : AppColors.primaryLight,
                           border: Border.all(
-                            color: Colors.teal.shade100,
+                            color: AppColors.primaryLight,
                             width: 3,
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Container(width: 2, color: Colors.teal.shade100),
+                        child: Container(width: 2, color: AppColors.line),
                       ),
                     ],
                   ),
                   const SizedBox(width: 12),
                   // 内容卡片
                   Expanded(
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      elevation: 0,
-                      color: isHighlighted && _isHighlighting
-                          ? Colors.amber.shade100
-                          : Colors.grey.shade50,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: isHighlighted && _isHighlighting
+                            ? AppColors.gold.withValues(alpha: 0.18)
+                            : AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isHighlighted && _isHighlighting
+                              ? AppColors.gold
+                              : AppColors.line,
+                        ),
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -909,7 +1074,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                   dateTimeStr,
                                   style: const TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey,
+                                    color: AppColors.muted,
                                   ),
                                 ),
                                 const Spacer(),
@@ -923,7 +1088,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                     child: Icon(
                                       Icons.edit,
                                       size: 14,
-                                      color: Colors.grey,
+                                      color: AppColors.muted,
                                     ),
                                   ),
                                 ),
@@ -935,7 +1100,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                     child: Icon(
                                       Icons.close,
                                       size: 16,
-                                      color: Colors.grey,
+                                      color: AppColors.muted,
                                     ),
                                   ),
                                 ),
@@ -946,7 +1111,11 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   log.note!,
-                                  style: const TextStyle(fontSize: 13),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    height: 1.45,
+                                    color: AppColors.ink,
+                                  ),
                                 ),
                               ),
                             if (hasPhoto) ...[
@@ -961,27 +1130,27 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
                                     onLongPress: () =>
                                         _showImageActions(context, path),
                                     child: Container(
-                                      width: 150,
-                                      height: 150,
+                                      width: 104,
+                                      height: 104,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.grey.shade300,
+                                          color: AppColors.line,
                                         ),
                                       ),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(7),
+                                        borderRadius: BorderRadius.circular(11),
                                         child: ResolvedImage(
                                           path: path,
                                           fit: BoxFit.cover,
                                           placeholder: const Icon(
                                             Icons.image,
-                                            color: Colors.grey,
+                                            color: AppColors.muted,
                                             size: 28,
                                           ),
                                           error: const Icon(
                                             Icons.broken_image,
-                                            color: Colors.grey,
+                                            color: AppColors.muted,
                                             size: 28,
                                           ),
                                         ),
@@ -1690,6 +1859,47 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
       await ref.read(antiqueListProvider.notifier).deleteItem(item.id!);
       if (mounted) context.pop();
     }
+  }
+}
+
+class _HeroIconButton extends StatelessWidget {
+  const _HeroIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.ink.withValues(alpha: 0.34),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(icon, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricDivider extends StatelessWidget {
+  const _MetricDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 34, color: AppColors.line);
   }
 }
 

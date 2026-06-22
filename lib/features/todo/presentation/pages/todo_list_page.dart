@@ -1422,86 +1422,146 @@ class _ArchivePage extends ConsumerWidget {
     final todoListAsync = ref.watch(todoListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('历史归档')),
-      body: todoListAsync.when(
-        data: (todos) {
-          final archived =
-              todos
-                  .where(
-                    (t) =>
-                        t.status == TodoStatus.done ||
-                        t.status == TodoStatus.cancelled,
-                  )
-                  .toList()
-                ..sort((a, b) {
-                  final aDate = a.completedAt ?? a.cancelledAt ?? a.createdAt;
-                  final bDate = b.completedAt ?? b.cancelledAt ?? b.createdAt;
-                  return bDate.compareTo(aDate);
-                });
-          if (archived.isEmpty) {
-            return const Center(
-              child: Text('暂无已归档的待办', style: TextStyle(color: Colors.grey)),
-            );
-          }
-          final groups = <String, List<TodoEntity>>{};
-          for (final t in archived) {
-            final key = (t.completedAt ?? t.cancelledAt ?? t.createdAt)
-                .toString()
-                .split('T')[0];
-            groups.putIfAbsent(key, () => []);
-            groups[key]!.add(t);
-          }
-          return ListView(
-            children: groups.entries.map((entry) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(
-                      entry.key,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
-                    ),
-                  ),
-                  ...entry.value.map(
-                    (t) => ListTile(
-                      dense: true,
-                      leading: Icon(
-                        t.isDone ? Icons.check_circle : Icons.cancel,
-                        color: t.isDone ? Colors.green : Colors.red,
-                        size: 20,
-                      ),
-                      title: Text(
-                        t.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          decoration: t.isDone
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t.category,
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                      onTap: () => context.push('/todos/${t.id}'),
-                    ),
-                  ),
-                  const Divider(indent: 16, endIndent: 16),
-                ],
-              );
-            }).toList(),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('加载失败: $err')),
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopBar(context),
+            Expanded(
+              child: todoListAsync.when(
+                data: _buildArchiveList,
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(child: Text('加载失败: $err')),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.primary,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.chevron_left),
+            label: const Text('返回'),
+          ),
+          const Expanded(
+            child: Text(
+              '历史归档',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: 64),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArchiveList(List<TodoEntity> todos) {
+    final archived =
+        todos
+            .where(
+              (todo) =>
+                  todo.status == TodoStatus.done ||
+                  todo.status == TodoStatus.cancelled,
+            )
+            .toList()
+          ..sort((a, b) {
+            final aDate = a.completedAt ?? a.cancelledAt ?? a.createdAt;
+            final bDate = b.completedAt ?? b.cancelledAt ?? b.createdAt;
+            return bDate.compareTo(aDate);
+          });
+
+    if (archived.isEmpty) {
+      return const Center(
+        child: Text('暂无已归档的待办', style: TextStyle(color: AppColors.muted)),
+      );
+    }
+
+    final groups = <String, List<TodoEntity>>{};
+    for (final todo in archived) {
+      final date = todo.completedAt ?? todo.cancelledAt ?? todo.createdAt;
+      final key = _formatDateKey(date);
+      groups.putIfAbsent(key, () => []);
+      groups[key]!.add(todo);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+      children: groups.entries.map((entry) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSectionTitle(title: entry.key, padding: EdgeInsets.zero),
+            const SizedBox(height: 8),
+            AppSurfaceCard(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                children: [
+                  for (var i = 0; i < entry.value.length; i++) ...[
+                    _buildArchiveTile(entry.value[i]),
+                    if (i != entry.value.length - 1)
+                      const Divider(height: 1, indent: 52, endIndent: 12),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildArchiveTile(TodoEntity todo) {
+    final isDone = todo.isDone;
+    final color = isDone ? AppColors.green : AppColors.red;
+    return Builder(
+      builder: (context) {
+        return ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          leading: Icon(
+            isDone ? Icons.check_circle : Icons.cancel,
+            color: color,
+            size: 20,
+          ),
+          title: Text(
+            todo.title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isDone ? AppColors.muted : AppColors.ink,
+              decoration: isDone ? TextDecoration.lineThrough : null,
+            ),
+          ),
+          subtitle: Text(
+            '${todo.category} · ${isDone ? '已完成' : '已取消'}',
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+          trailing: const Icon(Icons.chevron_right, size: 18),
+          onTap: () => context.push('/todos/${todo.id}'),
+        );
+      },
+    );
+  }
+
+  String _formatDateKey(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
 // ===== 月视图日历网格 =====

@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/services/iso_week.dart';
 import '../providers/review_providers.dart';
@@ -25,100 +27,25 @@ class ReviewHomePage extends ConsumerWidget {
     final isoWeek = ref.watch(currentIsoWeekProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI 复盘'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => _showStats(context),
-            tooltip: '数据看板',
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 今日状态卡片
-          _buildTodayCard(context, ref, todayReview, now),
-          const SizedBox(height: 16),
-
-          // AI 复盘入口
-          _buildReviewEntry(context, todayReview, now),
-          const SizedBox(height: 24),
-
-          // 本周周报
-          _buildWeeklySection(context, ref, isoWeek),
-          const SizedBox(height: 24),
-
-          // 历史日报
-          _buildHistorySection(context, ref),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTodayCard(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<DailyReviewEntity?> todayReview,
-    DateTime now,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 88),
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
-                child: Text(
-                  '${now.month}/${now.day}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
+            AppPageHeader(
+              title: 'AI 复盘',
+              subtitle: '把今天沉淀成明天能用的经验',
+              trailing: IconButton.filledTonal(
+                icon: const Icon(Icons.bar_chart),
+                onPressed: () => _showStats(context),
+                tooltip: '数据看板',
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${now.year}年${now.month}月${now.day}日',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  todayReview.when(
-                    data: (review) => Text(
-                      review != null ? '今日已复盘 ✓' : '今日尚未复盘',
-                      style: TextStyle(
-                        color: review != null ? Colors.green : Colors.grey,
-                        fontSize: 13,
-                      ),
-                    ),
-                    loading: () => const Text('加载中...'),
-                    error: (_, __) => const Text('加载失败'),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.check_circle,
-              color: todayReview.valueOrNull != null
-                  ? Colors.green
-                  : Colors.grey.shade300,
-              size: 32,
-            ),
+            const SizedBox(height: 16),
+            _buildReviewEntry(context, todayReview, now),
+            const SizedBox(height: 14),
+            _buildWeeklySection(context, ref, isoWeek),
+            const SizedBox(height: 20),
+            _buildHistorySection(context, ref),
           ],
         ),
       ),
@@ -133,54 +60,125 @@ class ReviewHomePage extends ConsumerWidget {
     final hasReviewed = todayReview.valueOrNull != null;
     final review = todayReview.valueOrNull;
 
-    return Card(
-      child: Padding(
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primaryLight.withValues(alpha: 0.55),
+              AppColors.card,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: Theme.of(context).colorScheme.primary,
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${now.month}/${now.day}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text('AI 每日复盘', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'AI 每日复盘',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ),
+                          AppPill(
+                            label: hasReviewed ? '已完成' : '未完成',
+                            color: hasReviewed
+                                ? AppColors.green
+                                : AppColors.orange,
+                            icon: hasReviewed
+                                ? Icons.check_circle
+                                : Icons.pending_outlined,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${now.year}年${now.month}月${now.day}日',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               hasReviewed ? '今日复盘已完成，可以查看或继续对话。' : '回顾今天的工作与生活，让 AI 帮你总结和提升。',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: AppColors.muted,
+              ),
             ),
-            // 显示可改进点（如有）
             if (hasReviewed &&
                 review!.improvements != null &&
                 review.improvements!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.2),
-                  ),
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.line),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lightbulb, size: 16, color: Colors.orange),
+                    const Icon(
+                      Icons.lightbulb_outline,
+                      size: 17,
+                      color: AppColors.orange,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '📌 ${review.improvements}',
+                        review.improvements!,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Colors.brown,
+                          color: AppColors.ink,
+                          height: 1.4,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -216,65 +214,67 @@ class ReviewHomePage extends ConsumerWidget {
     final isWeekend =
         now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      onTap: () => context.push(
+        RouteNames.weeklyReportDetailPath(
+          isoWeek.weekNumber,
+          year: isoWeek.year,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.blue.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.calendar_view_week, color: AppColors.blue),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.calendar_view_week,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
                 Text(
                   '${isoWeek.year} 年第 ${isoWeek.weekNumber} 周周报',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                weeklyAsync.when(
-                  data: (report) => Chip(
-                    label: Text(
-                      report != null ? '已生成' : '未生成',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: report != null ? Colors.green : Colors.grey,
-                      ),
-                    ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
                   ),
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isWeekend ? '周末可生成本周总结' : '每天复盘，周末自动汇总',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            if (!weeklyAsync.hasValue || weeklyAsync.valueOrNull == null)
-              Text(
-                isWeekend ? '📊 周末了！本周有足够的数据，可以生成周报了。' : '每天坚持复盘，周末自动汇总生成周报。',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => context.push(
-                  RouteNames.weeklyReportDetailPath(
-                    isoWeek.weekNumber,
-                    year: isoWeek.year,
-                  ),
-                ),
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(
-                  isWeekend && (weeklyAsync.valueOrNull == null)
-                      ? '生成周报'
-                      : '查看 / 生成周报',
-                ),
-              ),
+          ),
+          const SizedBox(width: 10),
+          weeklyAsync.when(
+            data: (report) => AppPill(
+              label: report != null ? '已生成' : '去生成',
+              color: report != null ? AppColors.green : AppColors.primary,
+              icon: report != null ? Icons.check_circle : Icons.auto_awesome,
+              isFilled: report == null,
             ),
-          ],
-        ),
+            loading: () => const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, __) =>
+                const Icon(Icons.chevron_right, color: AppColors.muted),
+          ),
+        ],
       ),
     );
   }
@@ -282,87 +282,113 @@ class ReviewHomePage extends ConsumerWidget {
   Widget _buildHistorySection(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     final monthAsync = ref.watch(dailyListByMonthProvider(now.month));
+    final avgMood = ref.watch(monthlyAvgMoodProvider).valueOrNull ?? 0;
+    final avgEnergy = ref.watch(monthlyAvgEnergyProvider).valueOrNull ?? 0;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionTitle(
+          title: '${now.month}月复盘记录',
+          padding: EdgeInsets.zero,
+          trailing: TextButton(
+            onPressed: () => _showMonthlyCalendar(context),
+            child: const Text('查看全部'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.history,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${now.month}月复盘记录',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => _showMonthlyCalendar(context),
-                  child: const Text('查看全部'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            monthAsync.when(
-              data: (reviews) {
-                if (reviews.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text(
-                      '本月暂无复盘记录',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-                return Column(
-                  children: reviews.take(5).map((r) {
-                    return ListTile(
-                      dense: true,
-                      leading: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: _moodColor(
-                            r.moodLevel,
-                          ).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            _moodEmoji(r.moodLevel),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        '${r.date.month}/${r.date.day}  ${r.summary}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 18),
-                      onTap: () => context.push(
-                        '/review/daily/${r.date.toIso8601String().split('T')[0]}',
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                ),
+            Expanded(
+              child: AppMetricCard(
+                label: '平均情绪',
+                value: avgMood.toStringAsFixed(1),
+                color: AppColors.orange,
+                icon: Icons.face_outlined,
               ),
-              error: (err, _) => Text('加载失败: $err'),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: AppMetricCard(
+                label: '平均能量',
+                value: avgEnergy.toStringAsFixed(1),
+                color: AppColors.green,
+                icon: Icons.bolt_outlined,
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        AppSurfaceCard(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: monthAsync.when(
+            data: (reviews) {
+              if (reviews.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Text(
+                    '本月暂无复盘记录',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                );
+              }
+              return Column(
+                children: reviews.take(5).map((r) {
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 2,
+                    ),
+                    leading: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: _moodColor(r.moodLevel).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _moodEmoji(r.moodLevel),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      '${r.date.month}/${r.date.day}  ${r.summary}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '情绪 ${r.moodLevel} · 能量 ${r.energyLevel}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, size: 18),
+                    onTap: () => context.push(
+                      '/review/daily/${r.date.toIso8601String().split('T')[0]}',
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.all(18),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, _) => Padding(
+              padding: const EdgeInsets.all(18),
+              child: Text('加载失败: $err'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

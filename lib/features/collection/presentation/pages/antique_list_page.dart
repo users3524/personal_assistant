@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
 import '../widgets/antique_grid_card.dart';
@@ -31,99 +33,121 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         : (gridColumns == 3 ? 0.85 : 0.9);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('文玩包'),
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () => context.push('/settings'),
-        ),
-        actions: [
-          // 月历切换
-          IconButton(
-            icon: Icon(
-              viewMode == CollectionViewMode.grid
-                  ? Icons.calendar_month
-                  : Icons.grid_view,
-            ),
-            tooltip: viewMode == CollectionViewMode.grid ? '月历' : '网格',
-            onPressed: () {
-              ref
-                  .read(collectionViewModeProvider.notifier)
-                  .state = viewMode == CollectionViewMode.grid
-                  ? CollectionViewMode.calendar
-                  : CollectionViewMode.grid;
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort),
-            tooltip: '排序',
-            initialValue: ref.watch(antiqueSortModeProvider),
-            onSelected: (mode) {
-              ref.read(antiqueSortModeProvider.notifier).state = mode;
-              ref.read(antiqueListProvider.notifier).sortBySortMode(mode);
-            },
-            itemBuilder: (context) {
-              final cur = ref.watch(antiqueSortModeProvider);
-              return [
-                CheckedPopupMenuItem(
-                  value: '',
-                  checked: cur == '',
-                  child: const Text('默认排序'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 8, 8),
+              child: AppPageHeader(
+                title: '盘串',
+                subtitle: '记录物件的状态、手感和时间',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: '设置',
+                      onPressed: () => context.push('/settings'),
+                    ),
+                    IconButton.filledTonal(
+                      icon: Icon(
+                        viewMode == CollectionViewMode.grid
+                            ? Icons.calendar_month
+                            : Icons.grid_view,
+                      ),
+                      tooltip: viewMode == CollectionViewMode.grid
+                          ? '月历'
+                          : '网格',
+                      onPressed: () {
+                        ref
+                            .read(collectionViewModeProvider.notifier)
+                            .state = viewMode == CollectionViewMode.grid
+                            ? CollectionViewMode.calendar
+                            : CollectionViewMode.grid;
+                      },
+                    ),
+                    _buildSortMenu(),
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      tooltip: '搜索',
+                      onPressed: () => _showSearch(context, ref),
+                    ),
+                  ],
                 ),
-                CheckedPopupMenuItem(
-                  value: 'acquired_desc',
-                  checked: cur == 'acquired_desc',
-                  child: const Text('入手时间 ↓'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'acquired_asc',
-                  checked: cur == 'acquired_asc',
-                  child: const Text('入手时间 ↑'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'price_desc',
-                  checked: cur == 'price_desc',
-                  child: const Text('入手价格 ↓'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'price_asc',
-                  checked: cur == 'price_asc',
-                  child: const Text('入手价格 ↑'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'patting',
-                  checked: cur == 'patting',
-                  child: const Text('最近盘玩'),
-                ),
-              ];
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _showSearch(context, ref),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(latestPattingPhotosProvider);
-          await ref.read(antiqueListProvider.notifier).refresh();
-        },
-        child: viewMode == CollectionViewMode.calendar
-            ? _buildCalendarView(context)
-            : _buildGridView(
-                context,
-                ref,
-                listAsync,
-                categoryCount,
-                gridColumns,
-                aspectRatio,
               ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(latestPattingPhotosProvider);
+                  await ref.read(antiqueListProvider.notifier).refresh();
+                },
+                child: viewMode == CollectionViewMode.calendar
+                    ? _buildCalendarView(context)
+                    : _buildGridView(
+                        context,
+                        ref,
+                        listAsync,
+                        categoryCount,
+                        gridColumns,
+                        aspectRatio,
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/collection/new'),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildSortMenu() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.sort),
+      tooltip: '排序',
+      initialValue: ref.watch(antiqueSortModeProvider),
+      onSelected: (mode) {
+        ref.read(antiqueSortModeProvider.notifier).state = mode;
+        ref.read(antiqueListProvider.notifier).sortBySortMode(mode);
+      },
+      itemBuilder: (context) {
+        final cur = ref.watch(antiqueSortModeProvider);
+        return [
+          CheckedPopupMenuItem(
+            value: '',
+            checked: cur == '',
+            child: const Text('默认排序'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'acquired_desc',
+            checked: cur == 'acquired_desc',
+            child: const Text('入手时间 ↓'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'acquired_asc',
+            checked: cur == 'acquired_asc',
+            child: const Text('入手时间 ↑'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'price_desc',
+            checked: cur == 'price_desc',
+            child: const Text('入手价格 ↓'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'price_asc',
+            checked: cur == 'price_asc',
+            child: const Text('入手价格 ↑'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'patting',
+            checked: cur == 'patting',
+            child: const Text('最近盘玩'),
+          ),
+        ];
+      },
     );
   }
 
@@ -207,8 +231,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     return dailyPickAsync.when(
       data: (picks) {
         if (picks.isEmpty) return const SizedBox.shrink();
-        return Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -217,49 +241,26 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                   const Icon(
                     Icons.auto_awesome,
                     size: 16,
-                    color: Colors.orange,
+                    color: AppColors.gold,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    '今日伴手推荐',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade800,
+                  const Expanded(
+                    child: Text(
+                      '今日伴手推荐',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      ref.invalidate(dailyPickProvider);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.replay,
-                            size: 14,
-                            color: Colors.orange.shade700,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '换一换',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => ref.invalidate(dailyPickProvider),
+                    child: const AppPill(
+                      label: '换一换',
+                      color: AppColors.gold,
+                      icon: Icons.replay,
                     ),
                   ),
                 ],
@@ -293,21 +294,16 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         latestPhoto ??
         (item.imagePaths.isNotEmpty ? item.imagePaths.first : null);
 
-    return GestureDetector(
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
       onTap: () => context.push('/collection/${item.id}'),
-      child: Container(
+      child: SizedBox(
         width: 100,
-        decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Column(
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
+                top: Radius.circular(16),
               ),
               child: cover != null
                   ? ResolvedImage(
@@ -327,7 +323,8 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 item.name,
                 style: const TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -335,7 +332,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
             ),
             Text(
               item.subtype ?? item.category,
-              style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+              style: const TextStyle(fontSize: 9, color: AppColors.muted),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -350,11 +347,11 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     return Container(
       width: 100,
       height: 72,
-      color: Colors.grey.shade200,
+      color: AppColors.primaryLight.withValues(alpha: 0.35),
       child: Icon(
         category == '核桃' ? Icons.circle : Icons.grain,
         size: 32,
-        color: Colors.grey.shade400,
+        color: AppColors.primary,
       ),
     );
   }
@@ -575,9 +572,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                                           horizontal: 2,
                                           vertical: 1,
                                         ),
-                                        decoration: BoxDecoration(
+                                        decoration: const BoxDecoration(
                                           color: Colors.black54,
-                                          borderRadius: const BorderRadius.only(
+                                          borderRadius: BorderRadius.only(
                                             bottomLeft: Radius.circular(4),
                                             bottomRight: Radius.circular(4),
                                           ),
@@ -1778,19 +1775,37 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final displayLabel = selectedFilter.isEmpty
         ? '共$totalCount件'
         : '$selectedFilter $displayCount件';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    return AppSurfaceCard(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Text(
-            '🏛️ $displayLabel',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              size: 18,
+              color: AppColors.primary,
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              displayLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
           _buildCategoryFilter(context),
         ],
       ),
@@ -1806,19 +1821,15 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         ref.read(categoryDisplayFilterProvider.notifier).state = cat;
       },
       itemBuilder: (ctx) => [
-        const PopupMenuItem(value: '', child: Text('🗂️ 全部分类')),
+        const PopupMenuItem(value: '', child: Text('全部分类')),
         ...categories.map(
           (c) => PopupMenuItem(value: c.name, child: Text(c.name)),
         ),
       ],
-      child: Chip(
-        label: Text(
-          selectedFilter.isEmpty ? '筛选' : selectedFilter,
-          style: const TextStyle(fontSize: 11),
-        ),
-        avatar: const Icon(Icons.filter_list, size: 14),
-        visualDensity: VisualDensity.compact,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: AppPill(
+        label: selectedFilter.isEmpty ? '筛选' : selectedFilter,
+        color: selectedFilter.isEmpty ? AppColors.muted : AppColors.primary,
+        icon: Icons.filter_list,
       ),
     );
   }

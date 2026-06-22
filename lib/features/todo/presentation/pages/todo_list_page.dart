@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_categories_provider.dart';
 import '../providers/todo_providers.dart';
@@ -46,41 +48,46 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     final selectedListFilter = ref.watch(selectedTodoListFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('待办清单'),
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () => context.push('/settings'),
-        ),
-        centerTitle: true,
-        actions: [
-          TextButton.icon(
-            icon: Icon(
-              _viewMode == CalendarView.week
-                  ? Icons.calendar_view_month
-                  : Icons.calendar_view_week,
-            ),
-            label: Text(_viewMode == CalendarView.week ? '月' : '周'),
-            onPressed: () {
-              setState(() {
-                _viewMode = _viewMode == CalendarView.week
-                    ? CalendarView.month
-                    : CalendarView.week;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.archive_outlined),
-            tooltip: '归档',
-            onPressed: () => _showArchivePage(context),
-          ),
-        ],
-      ),
       body: Column(
         children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+              child: AppPageHeader(
+                title: '待办',
+                subtitle: '把今天推进到可以收工的程度',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton.filledTonal(
+                      tooltip: _viewMode == CalendarView.week ? '月视图' : '周视图',
+                      icon: Icon(
+                        _viewMode == CalendarView.week
+                            ? Icons.calendar_view_month
+                            : Icons.calendar_view_week,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _viewMode = _viewMode == CalendarView.week
+                              ? CalendarView.month
+                              : CalendarView.week;
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.archive_outlined),
+                      tooltip: '归档',
+                      onPressed: () => _showArchivePage(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           _buildCalendarHeader(),
           _buildCalendarGrid(),
-          const Divider(height: 1),
           _buildTodoListFilterBar(todoListAsync.valueOrNull ?? const []),
           // 统计仪表盘（仅周视图）
           if (_viewMode == CalendarView.week) const TodoStatsCard(),
@@ -108,12 +115,10 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.task_alt,
                           size: 60,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.3),
+                          color: AppColors.primaryLight,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -324,12 +329,39 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        showCheckmark: false,
-        avatar: Icon(icon, size: 16),
-        label: Text('$label $count'),
-        selected: selected,
-        onSelected: (_) => onTap(),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : AppColors.card,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.line,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? Colors.white : AppColors.muted,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '$label $count',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : AppColors.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -364,7 +396,7 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -376,7 +408,11 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
             _viewMode == CalendarView.week
                 ? '${headerDate.month}月${headerDate.day}日 - ${(headerDate.add(const Duration(days: 6))).month}月${(headerDate.add(const Duration(days: 6))).day}日'
                 : '${headerDate.year}年${monthNames[headerDate.month - 1]}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
           ),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: _next),
         ],
@@ -411,88 +447,66 @@ class _TodoListPageState extends ConsumerState<TodoListPage> {
   Widget _buildWeekGrid(DateTime today, Set<int> reviewDays) {
     final weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Row(
-            children: weekDays.map((day) {
-              final isWeekend = day == '六' || day == '日';
-              return Expanded(
-                child: Center(
-                  child: Text(
-                    day,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isWeekend ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (index) {
-              final date = _weekStart.add(Duration(days: index));
-              final isToday = _isSameDay(date, today);
-              final isSelected = _isSameDay(date, _selectedDate);
-              final isWeekend = index >= 5;
-              final hasReview = reviewDays.contains(date.day);
+    return AppSurfaceCard(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Row(
+        children: List.generate(7, (index) {
+          final date = _weekStart.add(Duration(days: index));
+          final isSelected = _isSameDay(date, _selectedDate);
+          final isToday = _isSameDay(date, today);
+          final hasReview = reviewDays.contains(date.day);
 
-              return GestureDetector(
-                onTap: () => setState(() => _selectedDate = date),
-                child: Container(
-                  width: 38,
-                  height: 42,
-                  alignment: Alignment.center,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 34,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : isToday
-                              ? Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.1)
-                              : null,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${date.day}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isToday ? FontWeight.bold : null,
-                            color: isSelected
-                                ? Colors.white
-                                : isWeekend
-                                ? Colors.grey
-                                : null,
-                          ),
-                        ),
-                      ),
-                      if (hasReview)
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: const BoxDecoration(
-                            color: Colors.teal,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
+          return Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => setState(() => _selectedDate = date),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-              );
-            }),
-          ),
-        ],
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      weekDays[index],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : AppColors.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: isToday || isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: isSelected ? Colors.white : AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: hasReview
+                            ? (isSelected ? Colors.white : AppColors.green)
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -698,16 +712,16 @@ class TodoListView extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh ?? () => Future.value(),
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 80, top: 8),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
         itemCount: combined.length + (done.isNotEmpty ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == pending.length && done.isNotEmpty) {
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(2, 12, 2, 8),
               child: Text(
                 '已完成 (${done.length})',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
+                style: const TextStyle(
+                  color: AppColors.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -748,17 +762,20 @@ class _TodoListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = todo.category == '工作'
-        ? Colors.blue
+        ? AppColors.blue
         : todo.category == '生活'
-        ? Colors.green
-        : Colors.teal;
+        ? AppColors.green
+        : AppColors.primary;
 
     return Dismissible(
       key: ValueKey('todo_list_item_${todo.id}'),
       background: Container(
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
-        color: todo.isDone ? Colors.orange : Colors.green,
+        decoration: BoxDecoration(
+          color: todo.isDone ? AppColors.orange : AppColors.green,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Icon(
           todo.isDone ? Icons.undo : Icons.check,
           color: Colors.white,
@@ -767,7 +784,10 @@ class _TodoListTile extends StatelessWidget {
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        color: Colors.red,
+        decoration: BoxDecoration(
+          color: AppColors.red,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
@@ -781,101 +801,116 @@ class _TodoListTile extends StatelessWidget {
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) onDelete();
       },
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: EdgeInsets.only(
-          left: todo.isSubtask ? 48 : 16,
-          right: 16,
-          top: 2,
-          bottom: 2,
-        ),
-        leading: todo.isSubtask
-            ? const Icon(
-                Icons.subdirectory_arrow_right,
-                size: 18,
-                color: Colors.grey,
-              )
-            : GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onToggle();
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: todo.isDone ? color : Colors.transparent,
-                    border: Border.all(
-                      color: todo.isDone ? color : Colors.grey.shade400,
-                      width: 2,
+      child: Padding(
+        padding: EdgeInsets.only(left: todo.isSubtask ? 24 : 0, bottom: 8),
+        child: AppSurfaceCard(
+          padding: EdgeInsets.zero,
+          onTap: onTap,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 6,
+            ),
+            leading: todo.isSubtask
+                ? const Icon(
+                    Icons.subdirectory_arrow_right,
+                    size: 18,
+                    color: AppColors.muted,
+                  )
+                : GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onToggle();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: todo.isDone ? color : Colors.transparent,
+                        border: Border.all(
+                          color: todo.isDone ? color : AppColors.line,
+                          width: 2,
+                        ),
+                      ),
+                      child: todo.isDone
+                          ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
                   ),
-                  child: todo.isDone
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
-                ),
+            title: Text(
+              todo.title,
+              style: TextStyle(
+                decoration: todo.isDone ? TextDecoration.lineThrough : null,
+                color: todo.isDone ? AppColors.muted : AppColors.ink,
+                fontWeight: todo.isDone ? FontWeight.normal : FontWeight.w700,
               ),
-        title: Text(
-          todo.title,
-          style: TextStyle(
-            decoration: todo.isDone ? TextDecoration.lineThrough : null,
-            color: todo.isDone ? Colors.grey.shade400 : Colors.black87,
-            fontWeight: todo.isDone ? FontWeight.normal : FontWeight.w500,
-          ),
-        ),
-        subtitle: Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: [
-            _TodoMetaChip(label: todo.category, color: color),
-            if (listName != null)
-              _TodoMetaChip(
-                label: listName!,
-                color: Colors.indigo,
-                icon: Icons.folder_outlined,
-              ),
-            if (todo.isParent && todo.subtasks.isNotEmpty)
-              _TodoMetaChip(
-                label:
-                    '${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length}',
-                color: Colors.teal,
-                icon: Icons.account_tree_outlined,
-              ),
-            if (todo.isOverdue && !todo.isDone)
-              const _TodoMetaChip(
-                label: '逾期',
-                color: Colors.red,
-                icon: Icons.warning_amber,
-                isStrong: true,
-              )
-            else if (todo.dueDate != null && !todo.isDone)
-              _TodoMetaChip(
-                label: '${todo.dueDate!.month}/${todo.dueDate!.day}',
-                color: Colors.grey,
-                icon: Icons.event,
-              ),
-          ],
-        ),
-        trailing: todo.isDone
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
                 children: [
-                  if (todo.priority > 3)
-                    Icon(
-                      Icons.local_fire_department,
-                      size: 16,
-                      color: Colors.red.shade400,
+                  _TodoMetaChip(label: todo.category, color: color),
+                  if (listName != null)
+                    _TodoMetaChip(
+                      label: listName!,
+                      color: AppColors.blue,
+                      icon: Icons.folder_outlined,
                     ),
-                  if (todo.isStarred)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4),
-                      child: Icon(Icons.star, size: 16, color: Colors.amber),
+                  if (todo.isParent && todo.subtasks.isNotEmpty)
+                    _TodoMetaChip(
+                      label:
+                          '${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length}',
+                      color: AppColors.primary,
+                      icon: Icons.account_tree_outlined,
+                    ),
+                  if (todo.isOverdue && !todo.isDone)
+                    const _TodoMetaChip(
+                      label: '逾期',
+                      color: AppColors.red,
+                      icon: Icons.warning_amber,
+                      isStrong: true,
+                    )
+                  else if (todo.dueDate != null && !todo.isDone)
+                    _TodoMetaChip(
+                      label: '${todo.dueDate!.month}/${todo.dueDate!.day}',
+                      color: AppColors.muted,
+                      icon: Icons.event,
                     ),
                 ],
               ),
+            ),
+            trailing: todo.isDone
+                ? null
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (todo.priority > 3)
+                        const Icon(
+                          Icons.local_fire_department,
+                          size: 16,
+                          color: AppColors.red,
+                        ),
+                      if (todo.isStarred)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Icon(
+                            Icons.star,
+                            size: 16,
+                            color: AppColors.gold,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }
@@ -898,10 +933,10 @@ class _TodoMetaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1168,54 +1203,45 @@ class TodoStatsCard extends ConsumerWidget {
         ref.watch(weeklyCompletionRateProvider).valueOrNull ?? 0.0;
     final delayRate = ref.watch(delayRateProvider).valueOrNull ?? 0.0;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
+    return AppSurfaceCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildStatItem(
-              context,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatItem(
               icon: Icons.task_alt,
               label: '今日完成',
               value: '$todayCompleted / $todayTotal',
               color: todayCompleted == todayTotal && todayTotal > 0
-                  ? Colors.green
-                  : Colors.blue,
+                  ? AppColors.green
+                  : AppColors.blue,
             ),
-            _buildDivider(),
-            _buildStatItem(
-              context,
+          ),
+          _buildDivider(),
+          Expanded(
+            child: _buildStatItem(
               icon: Icons.trending_up,
               label: '本周达成',
               value: '${(weeklyRate * 100).toInt()}%',
-              color: weeklyRate > 0.8 ? Colors.green : Colors.orange,
+              color: weeklyRate > 0.8 ? AppColors.green : AppColors.orange,
             ),
-            _buildDivider(),
-            _buildStatItem(
-              context,
+          ),
+          _buildDivider(),
+          Expanded(
+            child: _buildStatItem(
               icon: Icons.timer_off_outlined,
               label: '历史拖延',
               value: '${(delayRate * 100).toInt()}%',
-              color: delayRate > 0.3
-                  ? Colors.red.shade400
-                  : Colors.grey.shade600,
+              color: delayRate > 0.3 ? AppColors.red : AppColors.muted,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatItem(
-    BuildContext context, {
+  Widget _buildStatItem({
     required IconData icon,
     required String label,
     required String value,
@@ -1224,29 +1250,35 @@ class TodoStatsCard extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: color,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 16),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 3),
         Text(
           label,
-          style: TextStyle(
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
             fontSize: 11,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
+            color: AppColors.muted,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -1254,7 +1286,7 @@ class TodoStatsCard extends ConsumerWidget {
   }
 
   Widget _buildDivider() =>
-      Container(width: 1, height: 32, color: Colors.grey.shade200);
+      Container(width: 1, height: 52, color: AppColors.line);
 }
 
 // ===== 每日复盘卡片 =====
@@ -1269,68 +1301,65 @@ class _DailyReviewCard extends ConsumerWidget {
     final review = todayReview.valueOrNull;
     final isoWeek = ref.watch(currentIsoWeekProvider);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              if (hasReviewed) {
-                context.push(
-                  '/review/daily/${today.toIso8601String().split('T')[0]}',
-                );
-              } else {
-                context.push('/review/daily/new');
-              }
-            },
-            child: Padding(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: AppSurfaceCard(
               padding: const EdgeInsets.all(14),
+              onTap: () {
+                if (hasReviewed) {
+                  context.push(
+                    '/review/daily/${today.toIso8601String().split('T')[0]}',
+                  );
+                } else {
+                  context.push('/review/daily/new');
+                }
+              },
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: hasReviewed
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.1),
+                      color: (hasReviewed ? AppColors.green : AppColors.gold)
+                          .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       hasReviewed ? Icons.check_circle : Icons.auto_awesome,
-                      color: hasReviewed
-                          ? Colors.green
-                          : Theme.of(context).colorScheme.primary,
-                      size: 22,
+                      color: hasReviewed ? AppColors.green : AppColors.gold,
+                      size: 21,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasReviewed ? '今日已复盘 ✓' : '每日复盘',
+                          hasReviewed ? '今日已复盘' : '每日复盘',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w800,
                             fontSize: 14,
-                            color: hasReviewed ? Colors.green : null,
+                            color: hasReviewed
+                                ? AppColors.green
+                                : AppColors.ink,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           hasReviewed
-                              ? (review!.summary.length > 25
-                                    ? '${review.summary.substring(0, 25)}…'
+                              ? (review!.summary.length > 24
+                                    ? '${review.summary.substring(0, 24)}…'
                                     : review.summary)
-                              : '记录今天的感受和收获',
-                          style: TextStyle(
+                              : '收束今天的感受和收获',
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: AppColors.muted,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1338,35 +1367,47 @@ class _DailyReviewCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.muted,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.assessment, size: 16),
-                  label: Text(
-                    '本周周报',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  onPressed: () => context.push(
-                    RouteNames.weeklyReportDetailPath(
-                      isoWeek.weekNumber,
-                      year: isoWeek.year,
-                    ),
-                  ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 104,
+            child: AppSurfaceCard(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+              onTap: () => context.push(
+                RouteNames.weeklyReportDetailPath(
+                  isoWeek.weekNumber,
+                  year: isoWeek.year,
                 ),
               ),
-            ],
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.assessment_outlined, color: AppColors.blue),
+                  SizedBox(height: 6),
+                  Text(
+                    '本周周报',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

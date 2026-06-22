@@ -20,9 +20,7 @@ void main() {
       await db.close();
     });
 
-    testWidgets('opens review home as a standalone full-screen route', (
-      tester,
-    ) async {
+    testWidgets('opens review home inside the main tab shell', (tester) async {
       final router = createRouter(initialLocation: RouteNames.reviewHome);
 
       await tester.pumpWidget(
@@ -37,9 +35,11 @@ void main() {
       expect(find.text('AI 复盘'), findsOneWidget);
       expect(find.text('AI 每日复盘'), findsOneWidget);
       expect(find.byIcon(Icons.bar_chart), findsOneWidget);
-      expect(find.text('盘串'), findsNothing);
-      expect(find.text('待办'), findsNothing);
-      expect(find.text('简历'), findsNothing);
+      expect(find.text('盘串'), findsOneWidget);
+      expect(find.text('待办'), findsOneWidget);
+      expect(find.text('今天'), findsOneWidget);
+      expect(find.text('复盘'), findsOneWidget);
+      expect(find.text('简历'), findsOneWidget);
     });
 
     testWidgets('opens monthly review calendar with existing daily review', (

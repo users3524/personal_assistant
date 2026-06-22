@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/resume_entity.dart';
 import '../providers/resume_providers.dart';
 import '../services/resume_png_export_service.dart';
@@ -29,96 +31,188 @@ class _ResumeHomePageState extends ConsumerState<ResumeHomePage> {
     final templateId = ref.watch(selectedTemplateIdProvider).valueOrNull ?? 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('简历预览'),
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () => context.push('/settings'),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: '编辑简历',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const _ResumeEditPage()),
-            ),
-          ),
-          IconButton(
-            icon: _isExporting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.share),
-            tooltip: '导出分享',
-            onPressed: _isExporting ? null : _exportAsImage,
-          ),
-          PopupMenuButton<int>(
-            icon: const Icon(Icons.design_services),
-            tooltip: '切换模板',
-            onSelected: (id) =>
-                ref.read(selectedTemplateIdProvider.notifier).select(id),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 0,
-                child: ListTile(
-                  leading: Icon(Icons.article),
-                  title: Text('简洁经典'),
-                  subtitle: Text('单栏布局，适合传统行业'),
-                  dense: true,
+      body: SafeArea(
+        child: dataAsync.when(
+          data: (data) => ListView(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 88),
+            children: [
+              AppPageHeader(
+                title: '简历',
+                subtitle: '预览、编辑并导出你的动态履历',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: '设置',
+                      onPressed: () => context.push('/settings'),
+                    ),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.edit),
+                      tooltip: '编辑简历',
+                      onPressed: _openEditor,
+                    ),
+                    IconButton(
+                      icon: _isExporting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.share_outlined),
+                      tooltip: '导出分享',
+                      onPressed: _isExporting ? null : _exportAsImage,
+                    ),
+                    _buildTemplateMenu(),
+                  ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 1,
-                child: ListTile(
-                  leading: Icon(Icons.credit_card),
-                  title: Text('现代卡片'),
-                  subtitle: Text('双栏布局，适合设计/产品岗'),
-                  dense: true,
+              const SizedBox(height: 14),
+              AppSurfaceCard(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.blue.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        color: AppColors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data.profile.fullName.isEmpty
+                                ? '未填写姓名'
+                                : data.profile.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            data.profile.jobTitle ?? '点击编辑完善职位头衔',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AppPill(
+                      label: _templateName(templateId),
+                      color: AppColors.primary,
+                      icon: Icons.design_services_outlined,
+                    ),
+                  ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 2,
-                child: ListTile(
-                  leading: Icon(Icons.code),
-                  title: Text('技术极简'),
-                  subtitle: Text('等宽字体，适合程序员'),
-                  dense: true,
+              const SizedBox(height: 14),
+              AppSurfaceCard(
+                padding: const EdgeInsets.all(10),
+                child: Center(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: RepaintBoundary(
+                      key: _repaintKey,
+                      child: Container(
+                        width: 360, // A4 比例约束
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _buildTemplate(data, templateId),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
-      body: dataAsync.when(
-        data: (data) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: RepaintBoundary(
-            key: _repaintKey,
-            child: Container(
-              width: 360, // A4 比例约束
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: _buildTemplate(data, templateId),
-            ),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('加载失败: $err')),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('加载失败: $err')),
       ),
     );
+  }
+
+  void _openEditor() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _ResumeEditPage()),
+    );
+  }
+
+  Widget _buildTemplateMenu() {
+    return PopupMenuButton<int>(
+      icon: const Icon(Icons.design_services),
+      tooltip: '切换模板',
+      onSelected: (id) =>
+          ref.read(selectedTemplateIdProvider.notifier).select(id),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 0,
+          child: ListTile(
+            leading: Icon(Icons.article),
+            title: Text('简洁经典'),
+            subtitle: Text('单栏布局，适合传统行业'),
+            dense: true,
+          ),
+        ),
+        const PopupMenuItem(
+          value: 1,
+          child: ListTile(
+            leading: Icon(Icons.credit_card),
+            title: Text('现代卡片'),
+            subtitle: Text('双栏布局，适合设计/产品岗'),
+            dense: true,
+          ),
+        ),
+        const PopupMenuItem(
+          value: 2,
+          child: ListTile(
+            leading: Icon(Icons.code),
+            title: Text('技术极简'),
+            subtitle: Text('等宽字体，适合程序员'),
+            dense: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _templateName(int templateId) {
+    switch (templateId) {
+      case 1:
+        return '现代卡片';
+      case 2:
+        return '技术极简';
+      default:
+        return '简洁经典';
+    }
   }
 
   Widget _buildTemplate(ResumeData data, int templateId) {

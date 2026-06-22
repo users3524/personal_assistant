@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../domain/entities/antique_entity.dart';
 import 'resolved_image.dart';
 
@@ -28,6 +29,7 @@ class AntiqueGridCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         clipBehavior: Clip.antiAlias,
+        color: AppColors.card,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -80,8 +82,9 @@ class AntiqueGridCard extends StatelessWidget {
                   Text(
                     item.name,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                       fontSize: 14,
+                      color: AppColors.ink,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -90,14 +93,25 @@ class AntiqueGridCard extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          item.category,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.primary,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            item.category,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                       if (item.subtype != null && item.subtype!.isNotEmpty) ...[
@@ -107,7 +121,7 @@ class AntiqueGridCard extends StatelessWidget {
                             item.subtype!,
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Colors.orange,
+                              color: AppColors.muted,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -127,9 +141,9 @@ class AntiqueGridCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: Colors.grey.shade100,
+      color: AppColors.primaryLight.withValues(alpha: 0.28),
       child: const Center(
-        child: Icon(Icons.diamond_outlined, size: 48, color: Colors.grey),
+        child: Icon(Icons.diamond_outlined, size: 48, color: AppColors.primary),
       ),
     );
   }

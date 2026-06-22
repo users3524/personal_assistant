@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/models/collection_category.dart';
 import '../../domain/entities/antique_entity.dart';
 import '../providers/antique_providers.dart';
@@ -327,367 +329,593 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? '编辑藏品' : '新增藏品'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _save,
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.surface,
       body: _isLoading && _isEditing
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+          : SafeArea(
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                   children: [
-                    // 名称
-                    TextFormField(
-                      controller: _nameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '名称',
-                        hintText: '输入藏品名称',
-                      ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? '名称不能为空' : null,
-                      autofocus: true,
+                    _buildTopBar(),
+                    const SizedBox(height: 14),
+                    AppPageHeader(
+                      title: _isEditing ? '编辑藏品' : '新增藏品',
+                      subtitle: '记录尺寸、来源和每一次盘玩的开始',
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
+                    _buildImageSection(),
+                    const SizedBox(height: 24),
 
-                    // 分类
-                    Text('分类', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        ..._categories.map((cat) {
-                          final selected = _category == cat.name;
-                          return ChoiceChip(
-                            label: Text(cat.name),
-                            selected: selected,
-                            onSelected: (sel) {
-                              setState(() {
-                                _category = cat.name;
-                                _subtype = null;
-                                _subtypeCtrl.text = '';
-                                _initMetaCtrls();
-                              });
-                            },
-                          );
-                        }).toList(),
-                        if (_categories.every((c) => c.name != _category))
-                          ChoiceChip(
-                            label: Text(_category),
-                            selected: true,
-                            onSelected: null,
-                          ),
-                      ],
+                    const AppSectionTitle(
+                      title: '基础参数',
+                      padding: EdgeInsets.zero,
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: const InputDecoration(
-                              hintText: '自定义分类',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                    _buildBasicSection(),
+                    const SizedBox(height: 24),
+
+                    const AppSectionTitle(
+                      title: '特有参数',
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSpecialSection(),
+                    const SizedBox(height: 32),
+
+                    FilledButton.icon(
+                      onPressed: _isLoading ? null : _save,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
                               ),
-                            ),
-                            onChanged: (v) {
-                              if (v.trim().isNotEmpty) {
-                                setState(() {
-                                  _category = v.trim();
-                                  _subtype = null;
-                                  _subtypeCtrl.text = '';
-                                  _initMetaCtrls();
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ],
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(_isEditing ? '保存修改' : '创建藏品'),
                     ),
-                    const SizedBox(height: 16),
-
-                    // 细分品类
-                    if (_currentSubtypes.isNotEmpty) ...[
-                      Text(
-                        '细分品类',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          ..._currentSubtypes.map((sub) {
-                            final selected = _subtype == sub;
-                            return ChoiceChip(
-                              label: Text(
-                                sub,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              selected: selected,
-                              onSelected: (sel) {
-                                setState(() {
-                                  _subtype = sel ? sub : null;
-                                  _subtypeCtrl.text = sel ? sub : '';
-                                });
-                              },
-                            );
-                          }),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        decoration: const InputDecoration(
-                          hintText: '自定义细分品类',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        controller: _subtypeCtrl,
-                        onChanged: (v) {
-                          if (v.trim().isNotEmpty)
-                            setState(() => _subtype = v.trim());
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // 分类专属字段
-                    if (_getDisplayFields().isNotEmpty) ...[
-                      Text(
-                        '详细参数',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      if (_category == '核桃') ...[
-                        // 核桃专用：每个字段显示左右双输入（包括重量）
-                        ..._getDisplayFields().map((field) {
-                          final leftCtrl = _metaCtrls['左$field'] ??=
-                              TextEditingController();
-                          final rightCtrl = _metaCtrls['右$field'] ??=
-                              TextEditingController();
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: leftCtrl,
-                                    decoration: InputDecoration(
-                                      hintText: '左$field',
-                                      border: const OutlineInputBorder(),
-                                      isDense: true,
-                                      prefixText: '左 ',
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.allow(
-                                        RegExp(r'[\d.]'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: rightCtrl,
-                                    decoration: InputDecoration(
-                                      hintText: '右$field',
-                                      border: const OutlineInputBorder(),
-                                      isDense: true,
-                                      prefixText: '右 ',
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.allow(
-                                        RegExp(r'[\d.]'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ] else ...[
-                        // 非核桃：正常单行
-                        ..._getDisplayFields().map((field) {
-                          final isNumeric =
-                              field.contains('mm') ||
-                              field.contains('重量') ||
-                              field.contains('尺寸');
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: TextField(
-                              controller: _metaCtrls[field],
-                              decoration: InputDecoration(
-                                hintText: field,
-                                border: const OutlineInputBorder(),
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                              ),
-                              keyboardType: isNumeric
-                                  ? TextInputType.number
-                                  : TextInputType.text,
-                              inputFormatters: isNumeric
-                                  ? [
-                                      FilteringTextInputFormatter.allow(
-                                        RegExp(r'[\d.]'),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                          );
-                        }),
-                      ],
-                      const SizedBox(height: 16),
-                    ],
-
-                    // 入手日期
-                    Text(
-                      '入手日期',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _pickDate,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              '${_acquiredDate.year}-${_acquiredDate.month.toString().padLeft(2, '0')}-${_acquiredDate.day.toString().padLeft(2, '0')}',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 入手价格
-                    TextFormField(
-                      controller: _priceCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '入手价格（元）',
-                        hintText: '可选',
-                        prefixText: '¥ ',
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 来源
-                    TextFormField(
-                      controller: _sellerCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '来源 / 卖家',
-                        hintText: '可选',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 品相
-                    Text('品相', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    SegmentedButton<AntiqueCondition>(
-                      segments: const [
-                        ButtonSegment(
-                          value: AntiqueCondition.perfect,
-                          label: Text('全品'),
-                        ),
-                        ButtonSegment(
-                          value: AntiqueCondition.good,
-                          label: Text('良好'),
-                        ),
-                        ButtonSegment(
-                          value: AntiqueCondition.fair,
-                          label: Text('一般'),
-                        ),
-                        ButtonSegment(
-                          value: AntiqueCondition.poor,
-                          label: Text('有损'),
-                        ),
-                      ],
-                      selected: {_condition},
-                      onSelectionChanged: (sel) =>
-                          setState(() => _condition = sel.first),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 图片
-                    Text('照片', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 100,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _imagePaths.length + 1,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          if (index == _imagePaths.length) {
-                            return _buildAddImageButton();
-                          }
-                          return _buildImageThumb(index);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 备注
-                    TextFormField(
-                      controller: _notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '备注',
-                        hintText: '可选',
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
     );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            foregroundColor: AppColors.primary,
+          ),
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.chevron_left),
+          label: const Text('返回'),
+        ),
+        const Spacer(),
+        TextButton(
+          onPressed: _isLoading ? null : _save,
+          child: const Text('保存'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageSection() {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(12),
+      borderColor: AppColors.muted.withValues(alpha: 0.35),
+      onTap: _imagePaths.isEmpty && !_isSavingImage
+          ? _showImagePickerOptions
+          : null,
+      child: _imagePaths.isEmpty
+          ? _buildEmptyImageUpload()
+          : SizedBox(
+              height: 104,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _imagePaths.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  if (index == _imagePaths.length) {
+                    return _buildAddImageButton();
+                  }
+                  return _buildImageThumb(index);
+                },
+              ),
+            ),
+    );
+  }
+
+  Widget _buildEmptyImageUpload() {
+    return SizedBox(
+      height: 112,
+      child: Center(
+        child: _isSavingImage
+            ? const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 34,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '上传封面图',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '支持拍照或从相册选择',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildBasicSection() {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: _nameCtrl,
+            decoration: _fieldDecoration(
+              label: '藏品名称',
+              hint: '例如：南疆石狮子头',
+              icon: Icons.diamond_outlined,
+            ),
+            validator: (v) => v == null || v.trim().isEmpty ? '名称不能为空' : null,
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 14),
+          _buildCategorySelector(),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _priceCtrl,
+            decoration: _fieldDecoration(
+              label: '入手价格',
+              hint: '可选',
+              icon: Icons.payments_outlined,
+              prefixText: '¥ ',
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+            ],
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _sellerCtrl,
+            decoration: _fieldDecoration(
+              label: '入手渠道',
+              hint: '例如：潘家园、朋友转让',
+              icon: Icons.storefront_outlined,
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 14),
+          _DateRow(
+            icon: Icons.calendar_today_outlined,
+            label: '入手日期',
+            value: _formatDate(_acquiredDate),
+            onTap: _pickDate,
+          ),
+          const SizedBox(height: 14),
+          _buildConditionSelector(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategorySelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel('分类'),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ..._categories.map((cat) {
+                final selected = _category == cat.name;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildChoicePill(
+                    label: cat.name,
+                    icon: _categoryIcon(cat.name),
+                    color: _categoryColor(cat.name),
+                    isSelected: selected,
+                    onTap: () {
+                      setState(() {
+                        _category = cat.name;
+                        _subtype = null;
+                        _subtypeCtrl.text = '';
+                        _initMetaCtrls();
+                      });
+                    },
+                  ),
+                );
+              }),
+              if (_category.isNotEmpty &&
+                  _categories.every((c) => c.name != _category))
+                _buildChoicePill(
+                  label: _category,
+                  icon: Icons.category_outlined,
+                  color: AppColors.primary,
+                  isSelected: true,
+                  onTap: () {},
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          decoration: _fieldDecoration(
+            hint: '自定义分类',
+            icon: Icons.edit_outlined,
+          ),
+          onChanged: (v) {
+            if (v.trim().isNotEmpty) {
+              setState(() {
+                _category = v.trim();
+                _subtype = null;
+                _subtypeCtrl.text = '';
+                _initMetaCtrls();
+              });
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpecialSection() {
+    final fields = _getDisplayFields();
+
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSubtypeSelector(),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          if (fields.isEmpty)
+            const Text(
+              '当前分类暂无专属字段，可先用备注记录细节。',
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
+            )
+          else
+            _buildMetadataFields(fields),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _notesCtrl,
+            decoration: _fieldDecoration(
+              label: '通用备注',
+              hint: '记录来源、瑕疵、盘玩手感等细节',
+              icon: Icons.notes_outlined,
+            ),
+            maxLines: 3,
+            textInputAction: TextInputAction.newline,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubtypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel('细分品类'),
+        if (_currentSubtypes.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _currentSubtypes.map((sub) {
+                final selected = _subtype == sub;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildChoicePill(
+                    label: sub,
+                    icon: Icons.label_outline,
+                    color: AppColors.primary,
+                    isSelected: selected,
+                    onTap: () {
+                      setState(() {
+                        _subtype = selected ? null : sub;
+                        _subtypeCtrl.text = selected ? '' : sub;
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        TextField(
+          decoration: _fieldDecoration(
+            hint: '自定义细分品类',
+            icon: Icons.sell_outlined,
+          ),
+          controller: _subtypeCtrl,
+          onChanged: (v) {
+            setState(() => _subtype = v.trim().isEmpty ? null : v.trim());
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetadataFields(List<String> fields) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel('详细参数'),
+        const SizedBox(height: 10),
+        if (_category == '核桃')
+          ...fields.map(_buildWalnutMetaField)
+        else
+          ...fields.map(_buildSingleMetaField),
+      ],
+    );
+  }
+
+  Widget _buildWalnutMetaField(String field) {
+    final leftCtrl = _metaCtrls['左$field'] ??= TextEditingController();
+    final rightCtrl = _metaCtrls['右$field'] ??= TextEditingController();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            field,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: leftCtrl,
+                  decoration: _fieldDecoration(hint: '左', prefixText: '左 '),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: rightCtrl,
+                  decoration: _fieldDecoration(hint: '右', prefixText: '右 '),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleMetaField(String field) {
+    final isNumeric =
+        field.contains('mm') || field.contains('重量') || field.contains('尺寸');
+    final controller = _metaCtrls[field] ??= TextEditingController();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: _fieldDecoration(label: field, hint: field),
+        keyboardType: isNumeric
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.text,
+        inputFormatters: isNumeric
+            ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildConditionSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _FieldLabel('品相'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: AntiqueCondition.values.map((condition) {
+            return _buildChoicePill(
+              label: _conditionLabel(condition),
+              icon: _conditionIcon(condition),
+              color: _conditionColor(condition),
+              isSelected: _condition == condition,
+              onTap: () => setState(() => _condition = condition),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChoicePill({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color : AppColors.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: isSelected ? color : AppColors.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? Colors.white : color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? Colors.white : AppColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration({
+    String? label,
+    String? hint,
+    IconData? icon,
+    String? prefixText,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: icon == null ? null : Icon(icon),
+      prefixText: prefixText,
+      filled: true,
+      fillColor: AppColors.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+      ),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  IconData _categoryIcon(String category) {
+    switch (category) {
+      case '核桃':
+        return Icons.circle_outlined;
+      case '手串':
+      case '长串':
+        return Icons.blur_circular_outlined;
+      case '把件':
+        return Icons.category_outlined;
+      default:
+        return Icons.label_outline;
+    }
+  }
+
+  Color _categoryColor(String category) {
+    switch (category) {
+      case '核桃':
+        return AppColors.primary;
+      case '手串':
+        return AppColors.green;
+      case '长串':
+        return AppColors.gold;
+      case '把件':
+        return AppColors.blue;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _conditionLabel(AntiqueCondition condition) {
+    switch (condition) {
+      case AntiqueCondition.perfect:
+        return '全品';
+      case AntiqueCondition.good:
+        return '良好';
+      case AntiqueCondition.fair:
+        return '一般';
+      case AntiqueCondition.poor:
+        return '有损';
+    }
+  }
+
+  IconData _conditionIcon(AntiqueCondition condition) {
+    switch (condition) {
+      case AntiqueCondition.perfect:
+        return Icons.verified_outlined;
+      case AntiqueCondition.good:
+        return Icons.thumb_up_alt_outlined;
+      case AntiqueCondition.fair:
+        return Icons.remove_circle_outline;
+      case AntiqueCondition.poor:
+        return Icons.report_problem_outlined;
+    }
+  }
+
+  Color _conditionColor(AntiqueCondition condition) {
+    switch (condition) {
+      case AntiqueCondition.perfect:
+        return AppColors.green;
+      case AntiqueCondition.good:
+        return AppColors.primary;
+      case AntiqueCondition.fair:
+        return AppColors.orange;
+      case AntiqueCondition.poor:
+        return AppColors.red;
+    }
   }
 
   Widget _buildAddImageButton() {
@@ -697,9 +925,9 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.line),
         ),
         child: _isSavingImage
             ? const Center(
@@ -712,11 +940,19 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
             : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey),
-                  SizedBox(height: 4),
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 28,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(height: 6),
                   Text(
                     '添加',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -730,22 +966,25 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
         Container(
           width: 100,
           height: 100,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(15),
             child: ResolvedImage(
               path: _imagePaths[index],
               fit: BoxFit.cover,
               placeholder: Container(
-                color: Colors.grey.shade100,
+                color: AppColors.surface,
                 child: const Center(
-                  child: Icon(Icons.photo_outlined, color: Colors.grey),
+                  child: Icon(Icons.photo_outlined, color: AppColors.muted),
                 ),
               ),
               error: Container(
-                color: Colors.grey.shade200,
+                color: AppColors.surface,
                 child: const Center(
-                  child: Icon(Icons.broken_image, color: Colors.grey),
+                  child: Icon(Icons.broken_image, color: AppColors.muted),
                 ),
               ),
             ),
@@ -758,8 +997,8 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
             onTap: () => setState(() => _imagePaths.removeAt(index)),
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.black54,
+              decoration: BoxDecoration(
+                color: AppColors.ink.withValues(alpha: 0.72),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close, size: 16, color: Colors.white),
@@ -773,11 +1012,17 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
   void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: AppColors.card,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => SafeArea(
-        child: Wrap(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
               title: const Text('拍照'),
               onTap: () {
                 Navigator.pop(context);
@@ -785,7 +1030,10 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.primary,
+              ),
               title: const Text('从相册选择'),
               onTap: () {
                 Navigator.pop(context);
@@ -806,5 +1054,83 @@ class _AntiqueFormPageState extends ConsumerState<AntiqueFormPage> {
       lastDate: DateTime.now(),
     );
     if (date != null) setState(() => _acquiredDate = date);
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: AppColors.muted,
+      ),
+    );
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  const _DateRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.muted),
+          ],
+        ),
+      ),
+    );
   }
 }

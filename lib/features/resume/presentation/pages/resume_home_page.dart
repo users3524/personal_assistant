@@ -262,6 +262,12 @@ class _ResumeEditPage extends ConsumerStatefulWidget {
 
 class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
   final _formKey = GlobalKey<FormState>();
+  final _scrollController = ScrollController();
+  final _infoKey = GlobalKey();
+  final _eduKey = GlobalKey();
+  final _projectKey = GlobalKey();
+  final _workKey = GlobalKey();
+  final _skillKey = GlobalKey();
 
   // Profile controllers
   final _nameCtrl = TextEditingController();
@@ -368,6 +374,7 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameCtrl.dispose();
     _titleCtrl.dispose();
     _emailCtrl.dispose();
@@ -505,585 +512,685 @@ class _ResumeEditPageState extends ConsumerState<_ResumeEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('编辑简历'),
-        actions: [
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildEditorTopBar(),
+            if (!_isLoading) _buildSectionNav(),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildEditorContent(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditorTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.primary,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.chevron_left),
+            label: const Text('返回'),
+          ),
+          const Expanded(
+            child: Text(
+              '编辑简历',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
           TextButton(
             onPressed: _isLoading ? null : _saveAll,
             child: const Text('保存'),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionTitle('个人信息'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '姓名 *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? '姓名不能为空' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '职位头衔',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _emailCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '邮箱',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _phoneCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '手机号',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _locationCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '所在地',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _summaryCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '个人简介',
-                        hintText: '简短介绍自己...',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-
-                    _sectionTitle('工作经历'),
-                    const SizedBox(height: 8),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _works.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex--;
-                          final item = _works.removeAt(oldIndex);
-                          _works.insert(newIndex, item);
-                        });
-                      },
-                      buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) =>
-                          ReorderableDragStartListener(
-                            key: ValueKey('work_$index'),
-                            index: index,
-                            child: _buildWorkCard(index, _works[index]),
-                          ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(
-                          () => _works.add(
-                            _WorkEditItem(
-                              companyCtrl: TextEditingController(),
-                              positionCtrl: TextEditingController(),
-                              descCtrl: TextEditingController(),
-                              techStackCtrl: TextEditingController(),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('添加工作经历'),
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-
-                    _sectionTitle('教育背景'),
-                    const SizedBox(height: 8),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _educations.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex--;
-                          final item = _educations.removeAt(oldIndex);
-                          _educations.insert(newIndex, item);
-                        });
-                      },
-                      buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) =>
-                          ReorderableDragStartListener(
-                            key: ValueKey('edu_$index'),
-                            index: index,
-                            child: _buildEduCard(index, _educations[index]),
-                          ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(
-                          () => _educations.add(
-                            _EduEditItem(
-                              schoolCtrl: TextEditingController(),
-                              majorCtrl: TextEditingController(),
-                              degreeCtrl: TextEditingController(text: '本科'),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('添加教育经历'),
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-
-                    _sectionTitle('技能'),
-                    const SizedBox(height: 8),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _skills.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex--;
-                          final item = _skills.removeAt(oldIndex);
-                          _skills.insert(newIndex, item);
-                        });
-                      },
-                      buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) =>
-                          ReorderableDragStartListener(
-                            key: ValueKey('skill_$index'),
-                            index: index,
-                            child: _buildSkillCard(index, _skills[index]),
-                          ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(
-                          () => _skills.add(
-                            _SkillEditItem(
-                              nameCtrl: TextEditingController(),
-                              categoryCtrl: TextEditingController(text: 'tool'),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('添加技能'),
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-
-                    _sectionTitle('项目经历'),
-                    const SizedBox(height: 8),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _projects.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex--;
-                          final item = _projects.removeAt(oldIndex);
-                          _projects.insert(newIndex, item);
-                        });
-                      },
-                      buildDefaultDragHandles: false,
-                      itemBuilder: (context, index) =>
-                          ReorderableDragStartListener(
-                            key: ValueKey('proj_$index'),
-                            index: index,
-                            child: _buildProjectCard(index, _projects[index]),
-                          ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(
-                          () => _projects.add(
-                            _ProjectEditItem(
-                              nameCtrl: TextEditingController(),
-                              roleCtrl: TextEditingController(),
-                              descCtrl: TextEditingController(),
-                              techStackCtrl: TextEditingController(),
-                              keyDeliverablesCtrl: TextEditingController(),
-                              badgesCtrl: TextEditingController(),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('添加项目经历'),
-                    ),
-
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _buildSectionNav() {
+    return Container(
+      height: 50,
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          _buildNavPill('个人信息', _infoKey, true),
+          _buildNavPill('教育/技能', _eduKey, false),
+          _buildNavPill('项目经历', _projectKey, false),
+          _buildNavPill('工作经历', _workKey, false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavPill(String label, GlobalKey targetKey, bool active) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => _scrollTo(targetKey),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : AppColors.card,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: active ? AppColors.primary : AppColors.line,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: active ? Colors.white : AppColors.muted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _scrollTo(GlobalKey targetKey) {
+    final targetContext = targetKey.currentContext;
+    if (targetContext == null) return;
+    Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      alignment: 0.02,
+    );
+  }
+
+  Widget _buildEditorContent() {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPersonalSection(),
+            const SizedBox(height: 22),
+            _buildEducationAndSkillsSection(),
+            const SizedBox(height: 22),
+            _buildProjectsSection(),
+            const SizedBox(height: 22),
+            _buildWorksSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPersonalSection() {
+    return _buildEditorSection(
+      key: _infoKey,
+      title: '个人信息',
+      child: AppSurfaceCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: _fieldDecoration('姓名 *'),
+              validator: (v) => v == null || v.trim().isEmpty ? '姓名不能为空' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _titleCtrl,
+              decoration: _fieldDecoration('职位头衔'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emailCtrl,
+              decoration: _fieldDecoration('邮箱'),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _phoneCtrl,
+              decoration: _fieldDecoration('手机号'),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _locationCtrl,
+              decoration: _fieldDecoration('所在地'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _summaryCtrl,
+              decoration: _fieldDecoration('个人简介', hintText: '简短介绍自己...'),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEducationAndSkillsSection() {
+    return _buildEditorSection(
+      key: _eduKey,
+      title: '教育与技能',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _educations.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final item = _educations.removeAt(oldIndex);
+                _educations.insert(newIndex, item);
+              });
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (context, index) => ReorderableDragStartListener(
+              key: ValueKey('edu_$index'),
+              index: index,
+              child: _buildEduCard(index, _educations[index]),
+            ),
+          ),
+          _buildAddButton(
+            label: '添加教育经历',
+            onPressed: () {
+              setState(
+                () => _educations.add(
+                  _EduEditItem(
+                    schoolCtrl: TextEditingController(),
+                    majorCtrl: TextEditingController(),
+                    degreeCtrl: TextEditingController(text: '本科'),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          KeyedSubtree(
+            key: _skillKey,
+            child: const AppSectionTitle(title: '技能', padding: EdgeInsets.zero),
+          ),
+          const SizedBox(height: 8),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _skills.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final item = _skills.removeAt(oldIndex);
+                _skills.insert(newIndex, item);
+              });
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (context, index) => ReorderableDragStartListener(
+              key: ValueKey('skill_$index'),
+              index: index,
+              child: _buildSkillCard(index, _skills[index]),
+            ),
+          ),
+          _buildAddButton(
+            label: '添加技能',
+            onPressed: () {
+              setState(
+                () => _skills.add(
+                  _SkillEditItem(
+                    nameCtrl: TextEditingController(),
+                    categoryCtrl: TextEditingController(text: 'tool'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectsSection() {
+    return _buildEditorSection(
+      key: _projectKey,
+      title: '项目经历',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _projects.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final item = _projects.removeAt(oldIndex);
+                _projects.insert(newIndex, item);
+              });
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (context, index) => ReorderableDragStartListener(
+              key: ValueKey('proj_$index'),
+              index: index,
+              child: _buildProjectCard(index, _projects[index]),
+            ),
+          ),
+          _buildAddButton(
+            label: '添加项目经历',
+            onPressed: () {
+              setState(
+                () => _projects.add(
+                  _ProjectEditItem(
+                    nameCtrl: TextEditingController(),
+                    roleCtrl: TextEditingController(),
+                    descCtrl: TextEditingController(),
+                    techStackCtrl: TextEditingController(),
+                    keyDeliverablesCtrl: TextEditingController(),
+                    badgesCtrl: TextEditingController(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorksSection() {
+    return _buildEditorSection(
+      key: _workKey,
+      title: '工作经历',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _works.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final item = _works.removeAt(oldIndex);
+                _works.insert(newIndex, item);
+              });
+            },
+            buildDefaultDragHandles: false,
+            itemBuilder: (context, index) => ReorderableDragStartListener(
+              key: ValueKey('work_$index'),
+              index: index,
+              child: _buildWorkCard(index, _works[index]),
+            ),
+          ),
+          _buildAddButton(
+            label: '添加工作经历',
+            onPressed: () {
+              setState(
+                () => _works.add(
+                  _WorkEditItem(
+                    companyCtrl: TextEditingController(),
+                    positionCtrl: TextEditingController(),
+                    descCtrl: TextEditingController(),
+                    techStackCtrl: TextEditingController(),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditorSection({
+    required GlobalKey key,
+    required String title,
+    required Widget child,
+  }) {
+    return KeyedSubtree(
+      key: key,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionTitle(title: title, padding: EdgeInsets.zero),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddButton({
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.add, size: 18),
+      label: Text(label),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label, {String? hintText}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hintText,
+      isDense: true,
+      filled: true,
+      fillColor: AppColors.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.line),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.primary),
+      ),
     );
   }
 
   Widget _buildWorkCard(int index, _WorkEditItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
+    return AppSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ReorderableDragStartListener(
+                index: index,
+                child: const Icon(
+                  Icons.drag_handle,
+                  size: 20,
+                  color: AppColors.muted,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '工作 ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '工作 ${index + 1}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
                 ),
-                const Spacer(),
-                Switch(
-                  value: item.isVisible,
-                  onChanged: (v) => setState(() => item.isVisible = v),
+              ),
+              const Spacer(),
+              Switch(
+                value: item.isVisible,
+                onChanged: (v) => setState(() => item.isVisible = v),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 19,
+                  color: AppColors.red,
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Colors.red,
-                  ),
-                  onPressed: () => setState(() => _works.removeAt(index)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.companyCtrl,
-              decoration: const InputDecoration(
-                labelText: '公司',
-                border: OutlineInputBorder(),
-                isDense: true,
+                onPressed: () => setState(() => _works.removeAt(index)),
               ),
+            ],
+          ),
+          const Divider(height: 18),
+          TextFormField(
+            controller: item.companyCtrl,
+            decoration: _fieldDecoration('公司'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.positionCtrl,
+            decoration: _fieldDecoration('职位'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.techStackCtrl,
+            decoration: _fieldDecoration(
+              '技术栈',
+              hintText: '逗号分隔，如: C, RT-Thread',
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.positionCtrl,
-              decoration: const InputDecoration(
-                labelText: '职位',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.techStackCtrl,
-              decoration: const InputDecoration(
-                labelText: '技术栈',
-                hintText: '逗号分隔，如: C, RT-Thread',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.descCtrl,
-              decoration: const InputDecoration(
-                labelText: '描述',
-                hintText: '换行自动转圆点列表',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.descCtrl,
+            decoration: _fieldDecoration('描述', hintText: '换行自动转圆点列表'),
+            maxLines: 2,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEduCard(int index, _EduEditItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
+    return AppSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ReorderableDragStartListener(
+                index: index,
+                child: const Icon(
+                  Icons.drag_handle,
+                  size: 20,
+                  color: AppColors.muted,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '教育 ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                Switch(
-                  value: item.isVisible,
-                  onChanged: (v) => setState(() => item.isVisible = v),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Colors.red,
-                  ),
-                  onPressed: () => setState(() => _educations.removeAt(index)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.schoolCtrl,
-              decoration: const InputDecoration(
-                labelText: '学校',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.majorCtrl,
-              decoration: const InputDecoration(
-                labelText: '专业',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(width: 6),
+              Text(
+                '教育 ${index + 1}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.degreeCtrl,
-              decoration: const InputDecoration(
-                labelText: '学历',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const Spacer(),
+              Switch(
+                value: item.isVisible,
+                onChanged: (v) => setState(() => item.isVisible = v),
               ),
-            ),
-          ],
-        ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 19,
+                  color: AppColors.red,
+                ),
+                onPressed: () => setState(() => _educations.removeAt(index)),
+              ),
+            ],
+          ),
+          const Divider(height: 18),
+          TextFormField(
+            controller: item.schoolCtrl,
+            decoration: _fieldDecoration('学校'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.majorCtrl,
+            decoration: _fieldDecoration('专业'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.degreeCtrl,
+            decoration: _fieldDecoration('学历'),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSkillCard(int index, _SkillEditItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
+    return AppSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ReorderableDragStartListener(
+                index: index,
+                child: const Icon(
+                  Icons.drag_handle,
+                  size: 20,
+                  color: AppColors.muted,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '技能 ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                Text('熟练度: ${item.proficiency}/5'),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, size: 18),
-                  onPressed: () {
-                    if (item.proficiency < 5) {
-                      setState(() => item.proficiency++);
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, size: 18),
-                  onPressed: () {
-                    if (item.proficiency > 1) {
-                      setState(() => item.proficiency--);
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Colors.red,
-                  ),
-                  onPressed: () => setState(() => _skills.removeAt(index)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.nameCtrl,
-              decoration: const InputDecoration(
-                labelText: '技能名称',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.categoryCtrl,
-              decoration: const InputDecoration(
-                labelText: '分类',
-                hintText: 'language / framework / tool / soft',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(width: 6),
+              Text(
+                '技能 ${index + 1}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
+                ),
               ),
+              const Spacer(),
+              AppPill(
+                label: '熟练度 ${item.proficiency}/5',
+                color: AppColors.blue,
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 19),
+                onPressed: () {
+                  if (item.proficiency < 5) {
+                    setState(() => item.proficiency++);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 19),
+                onPressed: () {
+                  if (item.proficiency > 1) {
+                    setState(() => item.proficiency--);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 19,
+                  color: AppColors.red,
+                ),
+                onPressed: () => setState(() => _skills.removeAt(index)),
+              ),
+            ],
+          ),
+          const Divider(height: 18),
+          TextFormField(
+            controller: item.nameCtrl,
+            decoration: _fieldDecoration('技能名称'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.categoryCtrl,
+            decoration: _fieldDecoration(
+              '分类',
+              hintText: 'language / framework / tool / soft',
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildProjectCard(int index, _ProjectEditItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
+    return AppSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ReorderableDragStartListener(
+                index: index,
+                child: const Icon(
+                  Icons.drag_handle,
+                  size: 20,
+                  color: AppColors.muted,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '项目 ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '项目 ${index + 1}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.ink,
                 ),
-                const Spacer(),
-                Switch(
-                  value: item.isVisible,
-                  onChanged: (v) => setState(() => item.isVisible = v),
+              ),
+              const Spacer(),
+              Switch(
+                value: item.isVisible,
+                onChanged: (v) => setState(() => item.isVisible = v),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 19,
+                  color: AppColors.red,
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Colors.red,
-                  ),
-                  onPressed: () => setState(() => _projects.removeAt(index)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.nameCtrl,
-              decoration: const InputDecoration(
-                labelText: '项目名称',
-                border: OutlineInputBorder(),
-                isDense: true,
+                onPressed: () => setState(() => _projects.removeAt(index)),
               ),
+            ],
+          ),
+          const Divider(height: 18),
+          TextFormField(
+            controller: item.nameCtrl,
+            decoration: _fieldDecoration('项目名称'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.roleCtrl,
+            decoration: _fieldDecoration('角色'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.techStackCtrl,
+            decoration: _fieldDecoration('核心技术栈', hintText: '逗号分隔'),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.descCtrl,
+            decoration: _fieldDecoration('描述', hintText: '换行自动转圆点列表'),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.keyDeliverablesCtrl,
+            decoration: _fieldDecoration('关键交付', hintText: '每行一条，会在模板中显示为项目亮点'),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: item.badgesCtrl,
+            decoration: _fieldDecoration(
+              '项目标签',
+              hintText: '逗号或换行分隔，会在模板中显示为徽章',
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.roleCtrl,
-              decoration: const InputDecoration(
-                labelText: '角色',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.techStackCtrl,
-              decoration: const InputDecoration(
-                labelText: '核心技术栈',
-                hintText: '逗号分隔',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.descCtrl,
-              decoration: const InputDecoration(
-                labelText: '描述',
-                hintText: '换行自动转圆点列表',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.keyDeliverablesCtrl,
-              decoration: const InputDecoration(
-                labelText: '关键交付',
-                hintText: '每行一条，会在模板中显示为项目亮点',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: item.badgesCtrl,
-              decoration: const InputDecoration(
-                labelText: '项目标签',
-                hintText: '逗号或换行分隔，会在模板中显示为徽章',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
+            maxLines: 2,
+          ),
+        ],
       ),
     );
   }

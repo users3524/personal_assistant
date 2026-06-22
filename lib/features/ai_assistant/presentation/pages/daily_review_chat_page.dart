@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/ai/ai_provider.dart';
 import '../../../../core/ai/llm_strategy_config.dart';
 import '../../../../core/ai/prompt_builder.dart';
@@ -699,42 +701,22 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     final date = widget.dateStr != null
         ? DateTime.parse(widget.dateStr!)
         : DateTime.now();
-    final dateLabel = '${date.month}/${date.day} 复盘';
+    final dateLabel = widget.dateStr == null
+        ? '今日复盘'
+        : '${date.month}/${date.day} 复盘';
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(dateLabel),
-        actions: [
-          if (!_reviewSaved && _summary.isNotEmpty)
-            TextButton.icon(
-              icon: const Icon(Icons.save, size: 18),
-              label: const Text('保存'),
-              onPressed: _isProcessing ? null : _saveReview,
-            ),
-          if (_reviewSaved || _existingReview != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                // 跳转到编辑模式（传统表单）
-                _showSnack('在聊天中直接修改即可');
-              },
-            ),
-          if (_existingReview != null)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => _showSnack('分享功能开发中'),
-            ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
-            // 消息列表
+            _buildTopBar(dateLabel),
+            _buildStageTabs(),
             Expanded(
               child: ListView.builder(
                 controller: _scrollCtrl,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
@@ -743,7 +725,8 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
               ),
             ),
 
-            // 处理中指示器
+            if (_flowStep >= 3 && !_reviewSaved) _buildScorePanel(),
+
             if (_isProcessing)
               const Padding(
                 padding: EdgeInsets.only(bottom: 8),
@@ -754,9 +737,85 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
                 ),
               ),
 
-            // 输入栏
             _buildInputBar(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(String title) {
+    final canSave = !_reviewSaved && _summary.isNotEmpty && !_isProcessing;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.primary,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('关闭'),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+          if (_existingReview != null)
+            IconButton(
+              tooltip: '分享',
+              icon: const Icon(Icons.ios_share_outlined),
+              onPressed: () => _showSnack('分享功能开发中'),
+            ),
+          TextButton(
+            onPressed: canSave ? _saveReview : null,
+            child: Text(_reviewSaved ? '已保存' : '保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageTabs() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      child: Row(
+        children: [
+          _buildStagePill('今日总结', _flowStep <= 2),
+          const SizedBox(width: 8),
+          _buildStagePill('情绪能量', _flowStep == 3),
+          const SizedBox(width: 8),
+          _buildStagePill('AI 建议', _flowStep >= 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStagePill(String label, bool active) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: active ? AppColors.primary : AppColors.card,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: active ? AppColors.primary : AppColors.line),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: active ? Colors.white : AppColors.muted,
         ),
       ),
     );
@@ -766,12 +825,8 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
     final align = msg.isUser
         ? CrossAxisAlignment.end
         : CrossAxisAlignment.start;
-    final color = msg.isUser
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.surfaceContainerHighest;
-    final textColor = msg.isUser
-        ? Theme.of(context).colorScheme.onPrimary
-        : Theme.of(context).colorScheme.onSurface;
+    final color = msg.isUser ? AppColors.primary : AppColors.card;
+    final textColor = msg.isUser ? Colors.white : AppColors.ink;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -780,16 +835,26 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
         children: [
           Container(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
+              maxWidth: MediaQuery.of(context).size.width * 0.78,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
             decoration: BoxDecoration(
               color: color,
+              border: msg.isUser ? null : Border.all(color: AppColors.line),
+              boxShadow: msg.isUser
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: AppColors.ink.withValues(alpha: 0.04),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(msg.isUser ? 20 : 4),
-                bottomRight: Radius.circular(msg.isUser ? 4 : 20),
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(msg.isUser ? 18 : 5),
+                bottomRight: Radius.circular(msg.isUser ? 5 : 18),
               ),
             ),
             child: Text(
@@ -800,44 +865,136 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
           const SizedBox(height: 2),
           Text(
             '${msg.time.hour.toString().padLeft(2, '0')}:${msg.time.minute.toString().padLeft(2, '0')}',
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            style: const TextStyle(fontSize: 10, color: AppColors.muted),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildScorePanel() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: AppSurfaceCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildScoreRow(
+              label: '情绪',
+              value: _moodLevel,
+              color: AppColors.orange,
+              onChanged: (value) => setState(() => _moodLevel = value),
+            ),
+            const SizedBox(height: 12),
+            _buildScoreRow(
+              label: '能量',
+              value: _energyLevel,
+              color: AppColors.green,
+              onChanged: (value) => setState(() => _energyLevel = value),
+            ),
+            if (_flowStep == 3) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _isProcessing
+                      ? null
+                      : () => _handleTextMessage('确认'),
+                  child: const Text('确认评分'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScoreRow({
+    required String label,
+    required int value,
+    required Color color,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label (1-5)',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: List.generate(5, (index) {
+            final score = index + 1;
+            final selected = value == score;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: index == 4 ? 0 : 8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => onChanged(score),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? color : AppColors.surface,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: selected ? color : AppColors.line,
+                      ),
+                    ),
+                    child: Text(
+                      '$score',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: selected ? Colors.white : AppColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        border: Border(top: BorderSide(color: AppColors.line)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Row(
         children: [
-          // 语音按钮
           IconButton(
             icon: Icon(
               _isListening ? Icons.mic : Icons.mic_none,
-              color: _isListening ? Colors.red : Colors.grey,
+              color: _isListening ? AppColors.red : AppColors.muted,
             ),
             onPressed: _isListening ? _stopListening : _startListening,
           ),
-          // 文本输入
           Expanded(
             child: TextField(
               controller: _msgCtrl,
               decoration: InputDecoration(
-                hintText: _isListening ? '$_lastWords...' : '说说今天的经历...',
+                hintText: _isListening ? '$_lastWords...' : '输入你想说的...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(22),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest,
+                fillColor: AppColors.surface,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
@@ -858,7 +1015,10 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
                   }) => isFocused
                   ? Text(
                       '$currentLength/$maxLength',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
                     )
                   : null,
               onSubmitted: (text) {
@@ -870,21 +1030,25 @@ class _DailyReviewChatPageState extends ConsumerState<DailyReviewChatPage> {
               enabled: !_isProcessing,
             ),
           ),
-          const SizedBox(width: 4),
-          // 发送按钮
-          IconButton(
-            icon: Icon(
-              Icons.send_rounded,
-              color: _msgCtrl.text.isNotEmpty && !_isProcessing
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey,
-            ),
-            onPressed: () {
-              final text = _msgCtrl.text;
-              if (text.trim().isNotEmpty && !_isProcessing) {
-                _handleTextMessage(text);
-                _msgCtrl.clear();
-              }
+          const SizedBox(width: 8),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _msgCtrl,
+            builder: (context, value, _) {
+              final enabled = value.text.trim().isNotEmpty && !_isProcessing;
+              return IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: enabled ? AppColors.primary : AppColors.line,
+                  foregroundColor: enabled ? Colors.white : AppColors.muted,
+                ),
+                icon: const Icon(Icons.arrow_upward),
+                onPressed: enabled
+                    ? () {
+                        final text = _msgCtrl.text;
+                        _handleTextMessage(text);
+                        _msgCtrl.clear();
+                      }
+                    : null,
+              );
             },
           ),
         ],

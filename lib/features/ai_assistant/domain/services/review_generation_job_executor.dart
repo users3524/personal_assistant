@@ -3,6 +3,7 @@ import '../repositories/review_generation_job_store.dart';
 
 enum ReviewGenerationJobExecutionStatus {
   prepared,
+  succeeded,
   skippedAlreadySucceeded,
   skippedExhausted,
   failed,
@@ -21,18 +22,24 @@ class ReviewGenerationJobExecutionResult {
   final ReviewGenerationJobEntity? job;
   final String? failureReason;
 
-  bool get didPrepare => status == ReviewGenerationJobExecutionStatus.prepared;
+  bool get didPrepare =>
+      status == ReviewGenerationJobExecutionStatus.prepared ||
+      status == ReviewGenerationJobExecutionStatus.succeeded;
 }
 
 typedef ReviewRawAssetsDumpBuilder = Future<String> Function(String targetDate);
+typedef ReviewPreparedJobRunner =
+    Future<bool> Function(String targetDate, String rawAssetsDump);
 
 class ReviewGenerationJobExecutor {
   ReviewGenerationJobExecutor({
     required ReviewGenerationJobStore jobs,
     required ReviewRawAssetsDumpBuilder buildRawAssetsDump,
+    ReviewPreparedJobRunner? runPreparedJob,
     DateTime Function()? now,
   }) : _jobs = jobs,
        _buildRawAssetsDump = buildRawAssetsDump,
+       _runPreparedJob = runPreparedJob,
        _now = now ?? DateTime.now;
 
   static final Map<String, Future<ReviewGenerationJobExecutionResult>>
@@ -40,6 +47,7 @@ class ReviewGenerationJobExecutor {
 
   final ReviewGenerationJobStore _jobs;
   final ReviewRawAssetsDumpBuilder _buildRawAssetsDump;
+  final ReviewPreparedJobRunner? _runPreparedJob;
   final DateTime Function() _now;
 
   Future<ReviewGenerationJobExecutionResult> executePending(String targetDate) {
@@ -86,6 +94,21 @@ class ReviewGenerationJobExecutor {
         rawAssetsDump: rawAssetsDump,
         now: _now(),
       );
+
+      final runPreparedJob = _runPreparedJob;
+      if (runPreparedJob != null) {
+        final succeeded = await runPreparedJob(targetDate, rawAssetsDump);
+        final updated = await _jobs.getByTargetDate(targetDate);
+        return ReviewGenerationJobExecutionResult(
+          targetDate: targetDate,
+          status: succeeded
+              ? ReviewGenerationJobExecutionStatus.succeeded
+              : ReviewGenerationJobExecutionStatus.failed,
+          job: updated ?? job,
+          failureReason: updated?.failureReason,
+        );
+      }
+
       final updated = await _jobs.getByTargetDate(targetDate);
       return ReviewGenerationJobExecutionResult(
         targetDate: targetDate,

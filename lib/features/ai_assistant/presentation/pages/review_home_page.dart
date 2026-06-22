@@ -95,6 +95,8 @@ class ReviewHomePage extends ConsumerWidget {
     return switch (result.status) {
       ReviewGenerationJobExecutionStatus.prepared =>
         '${result.targetDate} 复盘素材已准备，等待生成执行',
+      ReviewGenerationJobExecutionStatus.succeeded =>
+        '${result.targetDate} 深夜复盘已生成',
       ReviewGenerationJobExecutionStatus.skippedAlreadySucceeded =>
         '${result.targetDate} 已生成，无需重复执行',
       ReviewGenerationJobExecutionStatus.skippedExhausted =>

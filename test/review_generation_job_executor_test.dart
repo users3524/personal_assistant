@@ -61,6 +61,30 @@ void main() {
       },
     );
 
+    test('runs prepared job and reports succeeded status', () async {
+      final store = _FakeReviewGenerationJobStore();
+      final executor = ReviewGenerationJobExecutor(
+        jobs: store,
+        buildRawAssetsDump: (_) async => '{"target_date":"2026-06-20"}',
+        runPreparedJob: (targetDate, rawAssetsDump) async {
+          await store.markSuccess(
+            targetDate,
+            rawAssetsDump: rawAssetsDump,
+            processedAt: DateTime(2026, 6, 21, 3),
+          );
+          return true;
+        },
+      );
+
+      final result = await executor.executePending('2026-06-20');
+      final job = store.jobs['2026-06-20'];
+
+      expect(result.status, ReviewGenerationJobExecutionStatus.succeeded);
+      expect(result.didPrepare, true);
+      expect(job?.status, ReviewGenerationJobStatus.success);
+      expect(job?.processedAt, DateTime(2026, 6, 21, 3));
+    });
+
     test('skips already successful and exhausted jobs', () async {
       final store = _FakeReviewGenerationJobStore();
       store.jobs['2026-06-19'] = _job(

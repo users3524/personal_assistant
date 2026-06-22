@@ -3,19 +3,21 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ai/ai_provider.dart';
 import '../../../../core/ai/raw_context_pack_builder.dart';
 import '../../../../core/ai/raw_context_pack_clipper.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
 import '../../domain/services/ai_log_scheduler.dart';
+import '../../domain/services/nightly_structured_review_runner.dart';
+import '../../domain/services/review_generation_job_executor.dart';
 import '../../infrastructure/schedulers/ai_log_scheduler_factory.dart';
 import '../datasources/chat_turn_dao.dart';
 import '../datasources/milestone_dao.dart';
 import '../datasources/review_generation_job_dao.dart';
 import '../datasources/review_dao.dart';
 import '../datasources/vector_embedding_dao.dart';
-import '../../domain/services/review_generation_job_executor.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
   final ReviewDao _dao;
@@ -100,6 +102,7 @@ final reviewGenerationJobExecutorProvider =
     FutureProvider<ReviewGenerationJobExecutor>((ref) async {
       final db = await ref.watch(appDatabaseProvider.future);
       final jobs = ReviewGenerationJobDao(db);
+      final reviews = ReviewDao(db);
       return ReviewGenerationJobExecutor(
         jobs: jobs,
         buildRawAssetsDump: (targetDate) async {
@@ -108,6 +111,38 @@ final reviewGenerationJobExecutorProvider =
             packBuilder: RawContextPackBuilder(db),
           ).build(date);
           return clipped.toJsonString();
+        },
+        runPreparedJob: (targetDate, rawAssetsDump) async {
+          final ai = ref.read(aiServiceProvider);
+          if (ai == null) {
+            throw StateError('AI service is not configured');
+          }
+          final runner = NightlyStructuredReviewRunner(
+            jobs: jobs,
+            callModel: (request) => ai.chat(request.prompt),
+            markCalibrationRequired:
+                (date, {required calibrationRequired, now}) {
+                  return reviews.markDailyCalibrationRequired(
+                    date,
+                    calibrationRequired: calibrationRequired,
+                    now: now,
+                  );
+                },
+          );
+          final result = await runner.run(
+            targetDate: targetDate,
+            rawAssetsDump: rawAssetsDump,
+          );
+          final output = result.output;
+          if (!result.isSuccess || output == null) {
+            return false;
+          }
+          await reviews.upsertDailyAiOutput(
+            ReviewGenerationJobExecutor.parseTargetDate(targetDate),
+            aiComment: output.comment,
+            aiSuggestion: output.suggestion,
+          );
+          return true;
         },
       );
     });

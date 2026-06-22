@@ -150,6 +150,46 @@ class ReviewDao {
     return entity;
   }
 
+  Future<DailyReviewEntity> upsertDailyAiOutput(
+    DateTime date, {
+    required String aiComment,
+    required String aiSuggestion,
+    DateTime? now,
+  }) async {
+    final reviewDate = DateTime(date.year, date.month, date.day);
+    final updatedAt = now ?? DateTime.now();
+    final existing = await getDailyByDate(reviewDate);
+    final updated = DailyReviewEntity(
+      id: existing?.id,
+      date: existing?.date ?? reviewDate,
+      summary: existing?.summary.isNotEmpty == true
+          ? existing!.summary
+          : aiComment,
+      highlights: existing?.highlights,
+      improvements: existing?.improvements,
+      energyLevel: existing?.energyLevel ?? 3,
+      moodLevel: existing?.moodLevel ?? 3,
+      completedTodoIds: existing?.completedTodoIds ?? const [],
+      pattingMinutes: existing?.pattingMinutes ?? 0,
+      aiComment: aiComment,
+      aiSuggestion: aiSuggestion,
+      isAiGenerated: true,
+      isManuallyEdited: existing?.isManuallyEdited ?? false,
+      calibrationRequired: false,
+      createdAt: existing?.createdAt ?? updatedAt,
+      updatedAt: updatedAt,
+    );
+
+    if (existing == null) {
+      return insertDaily(updated);
+    }
+
+    await (_db.update(_db.dailyReviews)
+          ..where((t) => t.id.equals(existing.id!)))
+        .write(_dailyToCompanion(updated));
+    return updated;
+  }
+
   Future<DailyReviewEntity> markDailyCalibrationRequired(
     DateTime date, {
     bool calibrationRequired = true,

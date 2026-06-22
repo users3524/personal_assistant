@@ -95,6 +95,48 @@ void main() {
       },
     );
 
+    test('upserts nightly AI output into existing daily review', () async {
+      await dao.insertDaily(
+        _daily(
+          DateTime(2026, 6, 21),
+          'Manual summary',
+          calibrationRequired: true,
+        ),
+      );
+
+      final updated = await dao.upsertDailyAiOutput(
+        DateTime(2026, 6, 21, 18),
+        aiComment: 'Keep the steady pace.',
+        aiSuggestion: 'Start with the most important task.',
+        now: DateTime(2026, 6, 22, 3),
+      );
+      final daily = await dao.getDailyByDate(DateTime(2026, 6, 21));
+
+      expect(updated.summary, 'Manual summary');
+      expect(daily?.aiComment, 'Keep the steady pace.');
+      expect(daily?.aiSuggestion, 'Start with the most important task.');
+      expect(daily?.isAiGenerated, true);
+      expect(daily?.calibrationRequired, false);
+      expect(daily?.updatedAt, DateTime(2026, 6, 22, 3));
+    });
+
+    test('creates daily review when nightly AI output has no draft', () async {
+      await dao.upsertDailyAiOutput(
+        DateTime(2026, 6, 21, 18),
+        aiComment: 'A generated nightly summary.',
+        aiSuggestion: 'Protect tomorrow morning focus.',
+        now: DateTime(2026, 6, 22, 3),
+      );
+
+      final daily = await dao.getDailyByDate(DateTime(2026, 6, 21));
+
+      expect(daily?.summary, 'A generated nightly summary.');
+      expect(daily?.aiComment, 'A generated nightly summary.');
+      expect(daily?.aiSuggestion, 'Protect tomorrow morning focus.');
+      expect(daily?.isAiGenerated, true);
+      expect(daily?.createdAt, DateTime(2026, 6, 22, 3));
+    });
+
     test('deleting daily review cleans milestone source relations', () async {
       final now = DateTime(2026, 6, 21, 9);
       final daily = await dao.insertDaily(_daily(now, 'Milestone source'));

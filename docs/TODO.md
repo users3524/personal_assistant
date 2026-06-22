@@ -12,7 +12,7 @@
   - 验收：超预算时不拆坏 JSON 语义；高优完成任务、云端 user turn、有备注文玩打卡优先。
 - [x] 增加前台执行 pending `review_generation_jobs` 的服务入口。
   - 验收：可从 App 启动补偿和复盘页手动触发；同一 targetDate 不重复并发执行。
-- [ ] 接入 `NightlyStructuredReviewRunner`，把成功输出写入 `daily_reviews`。
+- [x] 接入 `NightlyStructuredReviewRunner`，把成功输出写入 `daily_reviews`。
   - 验收：成功任务标记 success；失败任务标记 failed；超过 3 次调用上限后设置 `calibration_required`。
 - [ ] 在 `ReviewHomePage` 显示生成任务状态和校准入口。
   - 验收：pending、failed、calibrationRequired 三种状态用户可见；不阻塞页面加载。

@@ -12,6 +12,7 @@
 - 新增 `RawContextPackBuilder`，可按目标本地日期组装待办、chat_turns、日报草稿和文玩打卡素材，并覆盖空素材、混合素材、隐私脱敏单元测试。
 - 新增 `RawContextPackClipper`，将真实素材包裁剪为带 `clip` 元数据的 JSON，记录裁剪前后长度、保留项和丢弃原因。
 - 新增 `ReviewGenerationJobExecutor` 前台执行入口，App 启动补偿和复盘页手动触发共用，并按 targetDate 合并并发。
+- 接入 `NightlyStructuredReviewRunner` 到前台执行入口，成功输出写入 `daily_reviews`，失败沿用 failed/calibrationRequired 流程。
 
 ---
 

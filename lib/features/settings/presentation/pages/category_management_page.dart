@@ -4,39 +4,114 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/models/collection_category.dart';
-import '../providers/category_management_providers.dart';
+import '../../../../features/collection/presentation/providers/antique_providers.dart'
+    show antiqueListProvider;
 import '../../../todo/presentation/providers/todo_categories_provider.dart';
-import '../../../../features/collection/presentation/providers/antique_providers.dart' show antiqueListProvider;
+import '../providers/category_management_providers.dart';
 
 class CategoryManagementPage extends ConsumerStatefulWidget {
   const CategoryManagementPage({super.key});
 
   @override
-  ConsumerState<CategoryManagementPage> createState() => _CategoryManagementPageState();
+  ConsumerState<CategoryManagementPage> createState() =>
+      _CategoryManagementPageState();
 }
 
-class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage> {
+class _CategoryManagementPageState
+    extends ConsumerState<CategoryManagementPage> {
+  final _collectionNameCtrl = TextEditingController();
+  final _todoNameCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _collectionNameCtrl.dispose();
+    _todoNameCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('分类管理'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.diamond), text: '文玩类别'),
-              Tab(icon: Icon(Icons.task_alt), text: '待办分类'),
+        backgroundColor: AppColors.surface,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: _buildTabs(),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildCollectionCategories(context),
+                    _buildTodoCategories(context),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildCollectionCategories(context),
-            _buildTodoCategories(context),
-          ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.primary,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.chevron_left),
+            label: const Text('返回'),
+          ),
+          const Expanded(
+            child: Text(
+              '分类管理',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(4),
+      child: TabBar(
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(12),
         ),
+        labelColor: Colors.white,
+        unselectedLabelColor: AppColors.muted,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+        tabs: const [
+          Tab(icon: Icon(Icons.diamond_outlined), text: '文玩类别'),
+          Tab(icon: Icon(Icons.task_alt), text: '待办分类'),
+        ],
       ),
     );
   }
@@ -44,294 +119,382 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
   // ===== 文玩类别管理 =====
 
   Widget _buildCollectionCategories(BuildContext context) {
-    final cats = ref.watch(collectionCategoriesProvider);
+    final categories = ref.watch(collectionCategoriesProvider);
     return Column(
       children: [
-        _buildAddCategoryBar(context),
-        const Divider(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: _buildAddBar(
+            controller: _collectionNameCtrl,
+            hintText: '新文玩类别',
+            onAdd: () {
+              final name = _collectionNameCtrl.text.trim();
+              if (name.isEmpty) return;
+              ref
+                  .read(collectionCategoriesProvider.notifier)
+                  .add(CollectionCategory(name: name));
+              _collectionNameCtrl.clear();
+            },
+          ),
+        ),
         Expanded(
-          child: cats.isEmpty
-              ? const Center(child: Text('暂无分类，请添加'))
+          child: categories.isEmpty
+              ? const Center(
+                  child: Text(
+                    '暂无分类，请添加',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                )
               : ReorderableListView.builder(
-                  itemCount: cats.length,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                  itemCount: categories.length,
                   onReorder: (oldIndex, newIndex) {
-                    ref.read(collectionCategoriesProvider.notifier).reorder(oldIndex, newIndex);
+                    ref
+                        .read(collectionCategoriesProvider.notifier)
+                        .reorder(oldIndex, newIndex);
                   },
                   buildDefaultDragHandles: false,
-                  itemBuilder: (_, i) => Card(
-                    key: ValueKey('cat_${cats[i].name}'),
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: _buildCategoryCard(context, cats[i], i),
-                  ),
+                  itemBuilder: (_, index) {
+                    final category = categories[index];
+                    return _buildCategoryCard(context, category, index);
+                  },
                 ),
         ),
       ],
     );
   }
 
-  Widget _buildAddCategoryBar(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    return Padding(
-      padding: const EdgeInsets.all(12),
+  Widget _buildAddBar({
+    required TextEditingController controller,
+    required String hintText,
+    required VoidCallback onAdd,
+  }) {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
       child: Row(
         children: [
           Expanded(
             child: TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                hintText: '新文玩类别',
-                border: OutlineInputBorder(),
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: hintText,
                 isDense: true,
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
               ),
+              onSubmitted: (_) => onAdd(),
             ),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.add_circle, color: Colors.blue),
-            onPressed: () {
-              if (nameCtrl.text.trim().isNotEmpty) {
-                ref.read(collectionCategoriesProvider.notifier).add(
-                  CollectionCategory(name: nameCtrl.text.trim()),
-                );
-                nameCtrl.clear();
-              }
-            },
+          IconButton.filledTonal(
+            icon: const Icon(Icons.add),
+            tooltip: '添加',
+            onPressed: onAdd,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, CollectionCategory cat, int index) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  Widget _buildCategoryCard(
+    BuildContext context,
+    CollectionCategory category,
+    int index,
+  ) {
+    return AppSurfaceCard(
+      key: ValueKey('cat_${category.name}'),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       child: ExpansionTile(
+        tilePadding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
+        childrenPadding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
         leading: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ReorderableDragStartListener(
               index: index,
-              child: const Icon(Icons.drag_handle, size: 20, color: Colors.grey),
+              child: const Icon(
+                Icons.drag_handle,
+                size: 20,
+                color: AppColors.muted,
+              ),
             ),
-            const SizedBox(width: 4),
-            Icon(cat.name == '核桃' ? Icons.circle : Icons.grain, color: Colors.brown),
+            const SizedBox(width: 6),
+            Icon(_categoryIcon(category.name), color: AppColors.primary),
           ],
         ),
-        title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${cat.subtypes.length} 个子类型 · ${cat.metadataFields.length} 个字段'),
+        title: Text(
+          category.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            color: AppColors.ink,
+          ),
+        ),
+        subtitle: Text(
+          '${category.subtypes.length} 个子类型 · ${category.metadataFields.length} 个字段',
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, size: 18),
-              onPressed: () => _editCategory(context, cat),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              tooltip: '重命名',
+              onPressed: () => _editCategory(context, category),
             ),
             if (index > 0)
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                onPressed: () => _deleteCategory(context, cat),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: AppColors.red,
+                ),
+                tooltip: '删除',
+                onPressed: () => _deleteCategory(context, category),
               ),
           ],
         ),
         children: [
-          _buildSubtypesSection(context, cat),
-          _buildMetadataFieldsSection(context, cat),
+          _buildSubtypesSection(context, category),
+          _buildMetadataFieldsSection(context, category),
         ],
       ),
     );
   }
 
   Widget _buildSubtypesSection(BuildContext context, CollectionCategory cat) {
+    return _buildChipSection(
+      title: '子类型',
+      emptyText: '暂无子类型',
+      onAdd: () => _showInputDialog(context, '为「${cat.name}」添加子类型', '子类型名称', (
+        value,
+      ) {
+        ref
+            .read(collectionCategoriesProvider.notifier)
+            .update(cat.name, cat.copyWith(subtypes: [...cat.subtypes, value]));
+      }),
+      child: cat.subtypes.isEmpty
+          ? null
+          : ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cat.subtypes.length,
+              onReorder: (oldIndex, newIndex) {
+                if (newIndex > oldIndex) newIndex--;
+                final updated = [...cat.subtypes];
+                final item = updated.removeAt(oldIndex);
+                updated.insert(newIndex, item);
+                ref
+                    .read(collectionCategoriesProvider.notifier)
+                    .update(cat.name, cat.copyWith(subtypes: updated));
+              },
+              buildDefaultDragHandles: false,
+              itemBuilder: (_, index) {
+                final subtype = cat.subtypes[index];
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('${cat.name}_subtype_$index'),
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        label: Text(subtype),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        onDeleted: () => _deleteSubtype(context, cat, subtype),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildMetadataFieldsSection(
+    BuildContext context,
+    CollectionCategory cat,
+  ) {
+    return _buildChipSection(
+      title: '专属字段',
+      emptyText: '无专属字段',
+      onAdd: () => _showInputDialog(
+        context,
+        '为「${cat.name}」添加字段',
+        '字段名（如：重量(g)）',
+        (value) {
+          ref
+              .read(collectionCategoriesProvider.notifier)
+              .update(
+                cat.name,
+                cat.copyWith(metadataFields: [...cat.metadataFields, value]),
+              );
+        },
+      ),
+      child: cat.metadataFields.isEmpty
+          ? null
+          : ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cat.metadataFields.length,
+              onReorder: (oldIndex, newIndex) {
+                if (newIndex > oldIndex) newIndex--;
+                final updated = [...cat.metadataFields];
+                final item = updated.removeAt(oldIndex);
+                updated.insert(newIndex, item);
+                ref
+                    .read(collectionCategoriesProvider.notifier)
+                    .update(cat.name, cat.copyWith(metadataFields: updated));
+              },
+              buildDefaultDragHandles: false,
+              itemBuilder: (_, index) {
+                final field = cat.metadataFields[index];
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('${cat.name}_field_$index'),
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        label: Text(field),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        onDeleted: () {
+                          ref
+                              .read(collectionCategoriesProvider.notifier)
+                              .update(
+                                cat.name,
+                                cat.copyWith(
+                                  metadataFields: cat.metadataFields
+                                      .where((m) => m != field)
+                                      .toList(),
+                                ),
+                              );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildChipSection({
+    required String title,
+    required String emptyText,
+    required VoidCallback onAdd,
+    required Widget? child,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
           child: Row(
             children: [
-              const Text('子类型: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.muted,
+                ),
+              ),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.add, size: 18),
-                onPressed: () => _showInputDialog(
-                  context,
-                  '为「${cat.name}」添加子类型',
-                  '子类型名称',
-                  (value) {
-                    ref.read(collectionCategoriesProvider.notifier).update(
-                      cat.name,
-                      cat.copyWith(subtypes: [...cat.subtypes, value]),
-                    );
-                  },
-                ),
+                tooltip: '添加',
+                onPressed: onAdd,
               ),
             ],
           ),
         ),
-        if (cat.subtypes.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Text('暂无子类型', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          )
-        else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: cat.subtypes.length,
-            onReorder: (oldIndex, newIndex) {
-              if (newIndex > oldIndex) newIndex--;
-              final updated = [...cat.subtypes];
-              final item = updated.removeAt(oldIndex);
-              updated.insert(newIndex, item);
-              ref.read(collectionCategoriesProvider.notifier).update(
-                cat.name,
-                cat.copyWith(subtypes: updated),
-              );
-            },
-            buildDefaultDragHandles: false,
-            itemBuilder: (_, i) {
-              final st = cat.subtypes[i];
-              return ReorderableDelayedDragStartListener(
-                key: ValueKey('${cat.name}_st_$i'),
-                index: i,
-                child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 4),
-                    Chip(
-                      label: Text(st, style: const TextStyle(fontSize: 11)),
-                      deleteIcon: const Icon(Icons.close, size: 14),
-                      onDeleted: () {
-                        final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
-                        final count = antiqueItems.where((i) => i.category == cat.name && i.subtype == st).length;
-                        if (count > 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('「$st」有 $count 件藏品正在使用，不能删除')),
-                          );
-                          return;
-                        }
-                        ref.read(collectionCategoriesProvider.notifier).update(
-                          cat.name,
-                          cat.copyWith(subtypes: cat.subtypes.where((s) => s != st).toList()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                ),
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildMetadataFieldsSection(BuildContext context, CollectionCategory cat) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(
-            children: [
-              const Text('专属字段: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.add, size: 18),
-                onPressed: () => _showInputDialog(
-                  context,
-                  '为「${cat.name}」添加字段',
-                  '字段名（如：重量(g)）',
-                  (value) {
-                    ref.read(collectionCategoriesProvider.notifier).update(
-                      cat.name,
-                      cat.copyWith(metadataFields: [...cat.metadataFields, value]),
-                    );
-                  },
-                ),
+        child ??
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: Text(
+                emptyText,
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
-            ],
-          ),
-        ),
-        if (cat.metadataFields.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: Text('无专属字段', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          )
-        else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: cat.metadataFields.length,
-            onReorder: (oldIndex, newIndex) {
-              if (newIndex > oldIndex) newIndex--;
-              final updated = [...cat.metadataFields];
-              final item = updated.removeAt(oldIndex);
-              updated.insert(newIndex, item);
-              ref.read(collectionCategoriesProvider.notifier).update(
-                cat.name,
-                cat.copyWith(metadataFields: updated),
-              );
-            },
-            buildDefaultDragHandles: false,
-            itemBuilder: (_, i) {
-              final f = cat.metadataFields[i];
-              return ReorderableDelayedDragStartListener(
-                key: ValueKey('${cat.name}_mf_$i'),
-                index: i,
-                child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 1, 16, i == cat.metadataFields.length - 1 ? 12 : 1),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 4),
-                    Chip(
-                      label: Text(f, style: const TextStyle(fontSize: 11)),
-                      deleteIcon: const Icon(Icons.close, size: 14),
-                      onDeleted: () {
-                        ref.read(collectionCategoriesProvider.notifier).update(
-                          cat.name,
-                          cat.copyWith(metadataFields: cat.metadataFields.where((m) => m != f).toList()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                ),
-              );
-            },
-          ),
+            ),
       ],
     );
   }
 
-  void _editCategory(BuildContext context, CollectionCategory cat) {
-    _showInputDialog(
-      context,
-      '重命名分类',
-      '分类名称',
-      (value) {
-        ref.read(collectionCategoriesProvider.notifier).update(
+  void _deleteSubtype(
+    BuildContext context,
+    CollectionCategory cat,
+    String subtype,
+  ) {
+    final antiqueItems = ref.read(antiqueListProvider).valueOrNull ?? [];
+    final count = antiqueItems
+        .where((item) => item.category == cat.name && item.subtype == subtype)
+        .length;
+    if (count > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('「$subtype」有 $count 件藏品正在使用，不能删除')),
+      );
+      return;
+    }
+
+    ref
+        .read(collectionCategoriesProvider.notifier)
+        .update(
           cat.name,
-          cat.copyWith(name: value),
+          cat.copyWith(
+            subtypes: cat.subtypes.where((s) => s != subtype).toList(),
+          ),
         );
-      },
-      initialValue: cat.name,
-    );
   }
 
-  void _deleteCategory(BuildContext context, CollectionCategory cat) {
-    // 检查有多少藏品使用了此分类
-    final antiqueItems = ref.watch(antiqueListProvider).valueOrNull ?? [];
-    final count = antiqueItems.where((i) => i.category == cat.name).length;
+  IconData _categoryIcon(String name) {
+    if (name.contains('核桃')) return Icons.circle_outlined;
+    if (name.contains('串')) return Icons.grain_outlined;
+    if (name.contains('把件')) return Icons.category_outlined;
+    return Icons.diamond_outlined;
+  }
+
+  void _editCategory(BuildContext context, CollectionCategory category) {
+    _showInputDialog(context, '重命名分类', '分类名称', (value) {
+      ref
+          .read(collectionCategoriesProvider.notifier)
+          .update(category.name, category.copyWith(name: value));
+    }, initialValue: category.name);
+  }
+
+  void _deleteCategory(BuildContext context, CollectionCategory category) {
+    final antiqueItems = ref.read(antiqueListProvider).valueOrNull ?? [];
+    final count = antiqueItems
+        .where((item) => item.category == category.name)
+        .length;
 
     if (count > 0) {
-      // 有依赖项 → 禁止删除
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('无法删除'),
-          content: Text('「${cat.name}」分类下有 $count 件藏品正在使用，请先移除或修改藏品的分类后再删除。'),
+          content: Text(
+            '「${category.name}」分类下有 $count 件藏品正在使用，请先移除或修改藏品的分类后再删除。',
+          ),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(ctx),
@@ -347,13 +510,18 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除分类'),
-        content: Text('确定删除「${cat.name}」分类吗？'),
+        content: Text('确定删除「${category.name}」分类吗？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () {
-              ref.read(collectionCategoriesProvider.notifier).remove(cat.name);
+              ref
+                  .read(collectionCategoriesProvider.notifier)
+                  .remove(category.name);
               Navigator.pop(ctx);
             },
             child: const Text('删除'),
@@ -378,10 +546,16 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: InputDecoration(hintText: hint, border: const OutlineInputBorder()),
+          decoration: InputDecoration(
+            hintText: hint,
+            border: const OutlineInputBorder(),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
@@ -399,64 +573,74 @@ class _CategoryManagementPageState extends ConsumerState<CategoryManagementPage>
   // ===== 待办分类管理 =====
 
   Widget _buildTodoCategories(BuildContext context) {
-    final cats = ref.watch(todoCategoriesProvider).valueOrNull ?? [];
-    final ctrl = TextEditingController();
+    final categories = ref.watch(todoCategoriesProvider).valueOrNull ?? [];
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: ctrl,
-                  decoration: const InputDecoration(
-                    hintText: '新待办分类',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.add_circle, color: Colors.blue),
-                onPressed: () {
-                  if (ctrl.text.trim().isNotEmpty) {
-                    ref.read(todoCategoriesProvider.notifier).add(ctrl.text.trim());
-                    ctrl.clear();
-                  }
-                },
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: _buildAddBar(
+            controller: _todoNameCtrl,
+            hintText: '新待办分类',
+            onAdd: () {
+              final name = _todoNameCtrl.text.trim();
+              if (name.isEmpty) return;
+              ref.read(todoCategoriesProvider.notifier).add(name);
+              _todoNameCtrl.clear();
+            },
           ),
         ),
-        const Divider(),
         Expanded(
           child: ListView(
-            children: cats.map((cat) => ListTile(
-              leading: const Icon(Icons.folder_outlined),
-              title: Text(cat),
-              trailing: (cat == '生活' || cat == '工作')
-                  ? const Chip(label: Text('默认', style: TextStyle(fontSize: 11)))
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () => _showInputDialog(
-                            context, '重命名分类', '分类名称',
-                            (value) => ref.read(todoCategoriesProvider.notifier).rename(cat, value),
-                            initialValue: cat,
-                          ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+            children: categories.map((category) {
+              final isDefault = category == '生活' || category == '工作';
+              return AppSurfaceCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.folder_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    category,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  trailing: isDefault
+                      ? const AppPill(label: '默认', color: AppColors.green)
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              tooltip: '重命名',
+                              onPressed: () => _showInputDialog(
+                                context,
+                                '重命名分类',
+                                '分类名称',
+                                (value) => ref
+                                    .read(todoCategoriesProvider.notifier)
+                                    .rename(category, value),
+                                initialValue: category,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: AppColors.red,
+                              ),
+                              tooltip: '删除',
+                              onPressed: () => ref
+                                  .read(todoCategoriesProvider.notifier)
+                                  .remove(category),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                          onPressed: () => ref.read(todoCategoriesProvider.notifier).remove(cat),
-                        ),
-                      ],
-                    ),
-            )).toList(),
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],

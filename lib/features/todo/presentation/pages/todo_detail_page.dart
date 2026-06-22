@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/todo_entity.dart';
@@ -38,10 +39,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
 
         final todo = snapshot.data;
         if (todo == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('待办详情')),
-            body: const Center(child: Text('待办不存在')),
-          );
+          return _buildMissingTodoPage();
         }
 
         return Scaffold(
@@ -123,6 +121,85 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
         );
       },
     );
+  }
+
+  Widget _buildMissingTodoPage() {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  foregroundColor: AppColors.primary,
+                ),
+                onPressed: _leaveMissingTodoPage,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('返回'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppSurfaceCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(
+                      Icons.search_off,
+                      color: AppColors.orange,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    '待办不存在',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '这条待办可能已经删除或归档。',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: () => context.go(RouteNames.todoList),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('回到待办'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _leaveMissingTodoPage() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(RouteNames.todoList);
   }
 
   Widget _buildTopBar(TodoEntity todo) {

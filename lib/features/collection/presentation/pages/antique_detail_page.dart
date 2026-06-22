@@ -14,6 +14,7 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/utils/image_utils.dart';
@@ -134,10 +135,7 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         }
         final item = snapshot.data;
         if (item == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('盘串详情')),
-            body: const Center(child: Text('宝贝不存在')),
-          );
+          return _buildMissingItemPage();
         }
 
         return Scaffold(
@@ -180,6 +178,85 @@ class _AntiqueDetailPageState extends ConsumerState<AntiqueDetailPage> {
         );
       },
     );
+  }
+
+  Widget _buildMissingItemPage() {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  foregroundColor: AppColors.primary,
+                ),
+                onPressed: _leaveMissingItemPage,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('返回'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppSurfaceCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight.withValues(alpha: 0.58),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(
+                      Icons.diamond_outlined,
+                      color: AppColors.primaryDark,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    '宝贝不存在',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '这件藏品可能已经删除，或当前数据库中没有对应记录。',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: () => context.go(RouteNames.collectionList),
+                    icon: const Icon(Icons.grid_view),
+                    label: const Text('回到盘串'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _leaveMissingItemPage() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(RouteNames.collectionList);
   }
 
   Widget _buildTopOverlay(BuildContext context, AntiqueEntity item) {

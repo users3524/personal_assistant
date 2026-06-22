@@ -9,7 +9,7 @@
 
 ## Unreleased
 
-暂无。
+- 新增 `RawContextPackBuilder`，可按目标本地日期组装待办、chat_turns、日报草稿和文玩打卡素材，并覆盖空素材、混合素材、隐私脱敏单元测试。
 
 ---
 

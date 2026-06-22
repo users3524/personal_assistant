@@ -6,7 +6,7 @@
 
 ## P0：复盘生成闭环
 
-- [ ] 实现 `RawContextPackBuilder`，按目标本地日期组装待办、chat_turns、已有日报草稿和 patting_logs。
+- [x] 实现 `RawContextPackBuilder`，按目标本地日期组装待办、chat_turns、已有日报草稿和 patting_logs。
   - 验收：不包含 API Key、图片 base64、备份路径；日期使用半开区间；有单元测试覆盖空素材、混合素材和隐私字段。
 - [ ] 将 `RawContextClipper` 接入真实 raw pack，保留裁剪前后长度、保留项和丢弃原因。
   - 验收：超预算时不拆坏 JSON 语义；高优完成任务、云端 user turn、有备注文玩打卡优先。

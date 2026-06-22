@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/image_utils.dart';
 
 class ResolvedImage extends StatefulWidget {
@@ -87,7 +88,9 @@ class _ResolvedImageState extends State<ResolvedImage> {
     return SizedBox(
       width: widget.width,
       height: widget.height,
-      child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+      child: const Center(
+        child: Icon(Icons.broken_image, color: AppColors.muted),
+      ),
     );
   }
 }

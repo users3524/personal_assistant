@@ -669,20 +669,17 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
 
     final todoCount = ref.watch(todayTotalCountProvider).valueOrNull ?? 0;
 
-    return Card(
+    return AppSurfaceCard(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.purple.shade100, width: 1),
-      ),
+      padding: EdgeInsets.zero,
+      borderColor: AppColors.primaryLight,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.purple.shade50.withValues(alpha: 0.3),
-              Colors.white,
+              AppColors.primaryLight.withValues(alpha: 0.32),
+              AppColors.card,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -692,29 +689,26 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Text(
                   '🔮 文玩老道今日批注',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade800,
+                    color: AppColors.primaryDark,
                   ),
                 ),
-                const Spacer(),
+                Spacer(),
                 Text(
                   '📅 农历干支玄学',
-                  style: TextStyle(fontSize: 10, color: Colors.purple.shade300),
+                  style: TextStyle(fontSize: 10, color: AppColors.muted),
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Divider(
-                height: 1,
-                color: Colors.purple.withValues(alpha: 0.1),
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Divider(height: 1, color: AppColors.line),
             ),
             Row(
               children: [
@@ -751,7 +745,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 Container(
                   width: 1,
                   height: 40,
-                  color: Colors.grey.shade200,
+                  color: AppColors.line,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
                 ),
                 Expanded(
@@ -793,6 +787,9 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.blue.withValues(alpha: 0.18),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -1025,19 +1022,22 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     if (withSize.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
-                const SizedBox(width: 8),
-                Text(
+        child: AppSurfaceCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 16, color: AppColors.muted),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
                   '暂无核桃尺寸数据，请在藏品详情中添加尺寸信息',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted.withValues(alpha: 0.92),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -1107,19 +1107,22 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     if (withSize.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
-                const SizedBox(width: 8),
-                Text(
+        child: AppSurfaceCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 16, color: AppColors.muted),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
                   '暂无手串尺寸数据',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted.withValues(alpha: 0.92),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -1151,69 +1154,71 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final top = sorted.take(5).toList();
     if (top.isEmpty) return const SizedBox.shrink();
 
-    return Card(
+    return AppSurfaceCard(
       margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.people, size: 16, color: Colors.amber.shade700),
-                const SizedBox(width: 6),
-                Text(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.people, size: 16, color: AppColors.gold),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
                   '🤝 缘分榜',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade800,
+                    color: AppColors.primaryDark,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  '按来源聚类',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...top.asMap().entries.map((entry) {
-              final rank = entry.key + 1;
-              final source = entry.value.key;
-              final items = entry.value.value;
-              return ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: rank <= 3
-                      ? Colors.amber.shade100
-                      : Colors.grey.shade100,
-                  child: Text(
-                    '$rank',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: rank <= 3 ? Colors.amber.shade800 : Colors.grey,
-                    ),
+              ),
+              SizedBox(width: 8),
+              Text(
+                '按来源聚类',
+                style: TextStyle(fontSize: 11, color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...top.asMap().entries.map((entry) {
+            final rank = entry.key + 1;
+            final source = entry.value.key;
+            final items = entry.value.value;
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                radius: 14,
+                backgroundColor: rank <= 3
+                    ? AppColors.primaryLight
+                    : AppColors.surface,
+                child: Text(
+                  '$rank',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: rank <= 3 ? AppColors.primaryDark : AppColors.muted,
                   ),
                 ),
-                title: Text(
-                  source,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              title: Text(
+                source,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
-                trailing: Text(
-                  '${items.length}件',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              );
-            }),
-          ],
-        ),
+              ),
+              trailing: Text(
+                '${items.length}件',
+                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -1267,7 +1272,7 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
           label: (i) {
             final days = daysMap[i.id] ?? 0;
             if (days >= 365) return '${(days / 365).toStringAsFixed(1)}年';
-            return '${days}天';
+            return '$days天';
           },
           icon: Icons.ac_unit,
         );
@@ -1378,166 +1383,173 @@ class _AntiqueListPageState extends ConsumerState<AntiqueListPage> {
     final rest = items.length > 3 ? items.sublist(3) : <AntiqueEntity>[];
     final placeholderCount = items.isEmpty ? 10 : 10 - items.length;
 
-    return Card(
+    return AppSurfaceCard(
       margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: Colors.amber.shade700),
-                const SizedBox(width: 6),
-                Text(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: AppColors.gold),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
                   title,
-                  style: TextStyle(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade800,
+                    color: AppColors.primaryDark,
                   ),
                 ),
-                const Spacer(),
-                Text(
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
                   subtitle,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // 前三名阶梯展示
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 40,
+                      color: AppColors.muted.withValues(alpha: 0.35),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '虚位以待',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.muted.withValues(alpha: 0.62),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (top3.length >= 2)
+                  Expanded(child: _buildPodiumItem(top3[1], 2, 85, label)),
+                const SizedBox(width: 6),
+                Expanded(child: _buildPodiumItem(top3[0], 1, 105, label)),
+                const SizedBox(width: 6),
+                if (top3.length >= 3)
+                  Expanded(child: _buildPodiumItem(top3[2], 3, 75, label)),
+                if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
               ],
             ),
-            const SizedBox(height: 10),
-            // 前三名阶梯展示
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
+          ],
+          // 4-10名列表
+          if (rest.isNotEmpty || placeholderCount > 0) ...[
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: AppColors.line),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: SingleChildScrollView(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.inbox_outlined,
-                        size: 40,
-                        color: Colors.grey.shade300,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '虚位以待',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
+                      ...rest.asMap().entries.map((entry) {
+                        final rank = entry.key + 4;
+                        final item = entry.value;
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          leading: Text(
+                            '$rank.',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          subtitle: Text(
+                            item.subtype ?? item.category,
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                label(item),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                  color: AppColors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 14,
+                                color: AppColors.muted,
+                              ),
+                            ],
+                          ),
+                          onTap: () => context.push('/collection/${item.id}'),
+                        );
+                      }),
+                      // 虚位以待占位
+                      ...List.generate(placeholderCount, (i) {
+                        final rank = items.length + i + 1;
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          leading: Text(
+                            '$rank.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted.withValues(alpha: 0.32),
+                            ),
+                          ),
+                          title: Text(
+                            '—',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted.withValues(alpha: 0.32),
+                            ),
+                          ),
+                          subtitle: Text(
+                            '虚位以待',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.muted.withValues(alpha: 0.32),
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
-              )
-            else ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (top3.length >= 2)
-                    Expanded(child: _buildPodiumItem(top3[1], 2, 85, label)),
-                  const SizedBox(width: 6),
-                  Expanded(child: _buildPodiumItem(top3[0], 1, 105, label)),
-                  const SizedBox(width: 6),
-                  if (top3.length >= 3)
-                    Expanded(child: _buildPodiumItem(top3[2], 3, 75, label)),
-                  if (top3.length < 3) const Expanded(child: SizedBox.shrink()),
-                ],
               ),
-            ],
-            // 4-10名列表
-            if (rest.isNotEmpty || placeholderCount > 0) ...[
-              const SizedBox(height: 8),
-              const Divider(height: 1),
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 280),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ...rest.asMap().entries.map((entry) {
-                          final rank = entry.key + 4;
-                          final item = entry.value;
-                          return ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            leading: Text(
-                              '$rank.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                            title: Text(
-                              item.name,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            subtitle: Text(
-                              item.subtype ?? item.category,
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  label(item),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 11,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                              ],
-                            ),
-                            onTap: () => context.push('/collection/${item.id}'),
-                          );
-                        }),
-                        // 虚位以待占位
-                        ...List.generate(placeholderCount, (i) {
-                          final rank = items.length + i + 1;
-                          return ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            leading: Text(
-                              '$rank.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                            title: Text(
-                              '—',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '虚位以待',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

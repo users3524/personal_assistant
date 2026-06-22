@@ -4,6 +4,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../../../core/ai/ai_provider.dart';
 import '../../../../core/ai/llm_strategy_config.dart';
 import '../../../../core/database/backup_service.dart';
@@ -237,359 +239,432 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
-      body: ListView(
-        children: [
-          _sectionHeader('AI 配置'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: _isOffline
-                // 离线模式：简洁展示
-                ? Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.cloud),
-                        title: const Text('AI 平台'),
-                        subtitle: Text(_selectedProvider),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showProviderPicker(),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      const ListTile(
-                        leading: Icon(Icons.wifi_off, color: Colors.green),
-                        title: Text('离线模式已启用'),
-                        subtitle: Text(
-                          '无需网络，App 内置模板引擎即时生成日报/周报',
-                          style: TextStyle(fontSize: 12),
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 88),
+          children: [
+            const AppPageHeader(title: '设置', subtitle: 'AI、通知、备份与本地偏好'),
+            const SizedBox(height: 16),
+            _buildUserCard(),
+            const SizedBox(height: 18),
+
+            _sectionHeader('AI 配置'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: _isOffline
+                  ? Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.cloud_outlined),
+                          title: const Text('AI 平台'),
+                          subtitle: Text(_selectedProvider),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _showProviderPicker(),
                         ),
-                        trailing: Icon(Icons.check_circle, color: Colors.green),
-                      ),
-                    ],
-                  )
-                // 在线模式：完整配置
-                : Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.cloud),
-                        title: const Text('AI 平台'),
-                        subtitle: Text(_selectedProvider),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showProviderPicker(),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.dns),
-                        title: const Text('API 地址'),
-                        subtitle: Text(
-                          _savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl,
-                        ),
-                        trailing: const Icon(Icons.edit),
-                        onTap: () =>
-                            _showTextEditor('API 地址', _baseUrlCtrl, (v) {
-                              setState(() => _savedBaseUrl = v);
-                              _baseUrlCtrl.text = v;
-                            }),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.model_training),
-                        title: const Text('模型'),
-                        subtitle: Text(
-                          _savedModel.isEmpty ? '未设置' : _savedModel,
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showModelPicker(),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.key),
-                        title: const Text('API Key'),
-                        subtitle: Text(
-                          _savedApiKey.isEmpty
-                              ? '未配置'
-                              : _showApiKey
-                              ? _savedApiKey
-                              : _savedApiKey.length > 12
-                              ? '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}'
-                              : _savedApiKey.replaceRange(
-                                  1,
-                                  _savedApiKey.length - 1,
-                                  '****',
-                                ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        const ListTile(
+                          leading: Icon(Icons.wifi_off, color: AppColors.green),
+                          title: Text('离线模式已启用'),
+                          subtitle: Text(
+                            '无需网络，App 内置模板引擎即时生成日报/周报',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          trailing: Icon(
+                            Icons.check_circle,
+                            color: AppColors.green,
                           ),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                _showApiKey
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _showApiKey = !_showApiKey),
-                            ),
-                            const Icon(Icons.edit, size: 20),
-                          ],
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.cloud_outlined),
+                          title: const Text('AI 平台'),
+                          subtitle: Text(_selectedProvider),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _showProviderPicker(),
                         ),
-                        onTap: () => _showApiKeyEditor(),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.wifi_tethering),
-                        title: const Text('检测连接'),
-                        subtitle: const Text('测试服务器是否可达'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _testOllamaConnection(),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
-
-          _sectionHeader('通知'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('每日复盘提醒'),
-                  subtitle: Text('每日 ${_notificationTime.format(context)}'),
-                  value: _notificationEnabled,
-                  onChanged: (v) {
-                    setState(() => _notificationEnabled = v);
-                    _prefsDao?.setNotificationEnabled(v);
-                    _updateNotifications();
-                  },
-                ),
-                if (_notificationEnabled)
-                  ListTile(
-                    leading: const Icon(Icons.access_time),
-                    title: const Text('提醒时间'),
-                    subtitle: Text(_notificationTime.format(context)),
-                    trailing: const Icon(Icons.edit),
-                    onTap: () => _pickTime(context, true),
-                  ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                SwitchListTile(
-                  title: const Text('每周周报提醒'),
-                  subtitle: Text('每周日 ${_weeklyTime.format(context)}'),
-                  value: _weeklyReminder,
-                  onChanged: (v) {
-                    setState(() => _weeklyReminder = v);
-                    _updateNotifications();
-                  },
-                ),
-                if (_weeklyReminder)
-                  ListTile(
-                    leading: const Icon(Icons.access_time),
-                    title: const Text('提醒时间'),
-                    subtitle: Text(_weeklyTime.format(context)),
-                    trailing: const Icon(Icons.edit),
-                    onTap: () => _pickTime(context, false),
-                  ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-              ],
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        ListTile(
+                          leading: const Icon(Icons.dns_outlined),
+                          title: const Text('API 地址'),
+                          subtitle: Text(
+                            _savedBaseUrl.isEmpty ? '未设置' : _savedBaseUrl,
+                          ),
+                          trailing: const Icon(Icons.edit),
+                          onTap: () =>
+                              _showTextEditor('API 地址', _baseUrlCtrl, (v) {
+                                setState(() => _savedBaseUrl = v);
+                                _baseUrlCtrl.text = v;
+                              }),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        ListTile(
+                          leading: const Icon(Icons.model_training_outlined),
+                          title: const Text('模型'),
+                          subtitle: Text(
+                            _savedModel.isEmpty ? '未设置' : _savedModel,
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _showModelPicker(),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        ListTile(
+                          leading: const Icon(Icons.key_outlined),
+                          title: const Text('API Key'),
+                          subtitle: Text(
+                            _maskedApiKey(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _showApiKey
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _showApiKey = !_showApiKey),
+                              ),
+                              const Icon(Icons.edit, size: 20),
+                            ],
+                          ),
+                          onTap: () => _showApiKeyEditor(),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        ListTile(
+                          leading: const Icon(Icons.wifi_tethering_outlined),
+                          title: const Text('检测连接'),
+                          subtitle: const Text('测试服务器是否可达'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _testOllamaConnection(),
+                        ),
+                      ],
+                    ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-          _sectionHeader('系统'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.category),
-                  title: const Text('分类管理'),
-                  subtitle: const Text('管理文玩类别和待办分类'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CategoryManagementPage(),
+            _sectionHeader('通知'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('每日复盘提醒'),
+                    subtitle: Text('每日 ${_notificationTime.format(context)}'),
+                    value: _notificationEnabled,
+                    onChanged: (v) {
+                      setState(() => _notificationEnabled = v);
+                      _prefsDao?.setNotificationEnabled(v);
+                      _updateNotifications();
+                    },
+                  ),
+                  if (_notificationEnabled)
+                    ListTile(
+                      leading: const Icon(Icons.access_time),
+                      title: const Text('提醒时间'),
+                      subtitle: Text(_notificationTime.format(context)),
+                      trailing: const Icon(Icons.edit),
+                      onTap: () => _pickTime(context, true),
+                    ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  SwitchListTile(
+                    title: const Text('每周周报提醒'),
+                    subtitle: Text('每周日 ${_weeklyTime.format(context)}'),
+                    value: _weeklyReminder,
+                    onChanged: (v) {
+                      setState(() => _weeklyReminder = v);
+                      _updateNotifications();
+                    },
+                  ),
+                  if (_weeklyReminder)
+                    ListTile(
+                      leading: const Icon(Icons.access_time),
+                      title: const Text('提醒时间'),
+                      subtitle: Text(_weeklyTime.format(context)),
+                      trailing: const Icon(Icons.edit),
+                      onTap: () => _pickTime(context, false),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            _sectionHeader('偏好与分类'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.category_outlined),
+                    title: const Text('分类管理'),
+                    subtitle: const Text('管理文玩类别和待办分类'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryManagementPage(),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-          _sectionHeader('文玩'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Consumer(
-              builder: (context, ref, _) {
-                final config = ref.watch(dailyPickConfigProvider);
-                return Column(
-                  children: [
-                    const ListTile(
-                      leading: Icon(Icons.auto_awesome),
-                      title: Text('每日翻牌推荐'),
-                      subtitle: Text('配置每日推荐的种类和数量'),
-                    ),
-                    ...config.counts.entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 60,
-                              child: Text(
-                                entry.key,
-                                style: const TextStyle(fontSize: 14),
+            _sectionHeader('文玩'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final config = ref.watch(dailyPickConfigProvider);
+                  return Column(
+                    children: [
+                      const ListTile(
+                        leading: Icon(Icons.auto_awesome_outlined),
+                        title: Text('每日翻牌推荐'),
+                        subtitle: Text('配置每日推荐的种类和数量'),
+                      ),
+                      ...config.counts.entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 60,
+                                child: Text(
+                                  entry.key,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
                               ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.remove_circle_outline,
-                                size: 20,
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle_outline,
+                                  size: 20,
+                                ),
+                                onPressed: () async {
+                                  final notifier = ref.read(
+                                    dailyPickConfigProvider.notifier,
+                                  );
+                                  if (entry.value > 1) {
+                                    notifier.setCount(
+                                      entry.key,
+                                      entry.value - 1,
+                                    );
+                                    await _appSettings.setDailyPickCounts(
+                                      ref.read(dailyPickConfigProvider).counts,
+                                    );
+                                  }
+                                },
                               ),
-                              onPressed: () async {
-                                final notifier = ref.read(
-                                  dailyPickConfigProvider.notifier,
-                                );
-                                if (entry.value > 1) {
-                                  notifier.setCount(entry.key, entry.value - 1);
+                              SizedBox(
+                                width: 24,
+                                child: Text(
+                                  '${entry.value}',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 20,
+                                ),
+                                onPressed: () async {
+                                  ref
+                                      .read(dailyPickConfigProvider.notifier)
+                                      .setCount(entry.key, entry.value + 1);
                                   await _appSettings.setDailyPickCounts(
                                     ref.read(dailyPickConfigProvider).counts,
                                   );
-                                }
-                              },
-                            ),
-                            SizedBox(
-                              width: 24,
-                              child: Text(
-                                '${entry.value}',
-                                textAlign: TextAlign.center,
+                                },
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                size: 20,
-                              ),
-                              onPressed: () async {
-                                ref
-                                    .read(dailyPickConfigProvider.notifier)
-                                    .setCount(entry.key, entry.value + 1);
-                                await _appSettings.setDailyPickCounts(
-                                  ref.read(dailyPickConfigProvider).counts,
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 24),
-                          ],
+                              const SizedBox(width: 24),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    ListTile(
-                      leading: const Icon(Icons.grid_view),
-                      title: const Text('盘串网格列数'),
-                      subtitle: Text('当前 ${_gridColumns} 列'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [2, 3, 4]
-                            .map(
-                              (n) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ),
-                                child: ChoiceChip(
-                                  label: Text(
-                                    '$n',
-                                    style: const TextStyle(fontSize: 12),
+                      const SizedBox(height: 8),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.grid_view_outlined),
+                        title: const Text('盘串网格列数'),
+                        subtitle: Text('当前 $_gridColumns 列'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [2, 3, 4]
+                              .map(
+                                (n) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
                                   ),
-                                  selected: _gridColumns == n,
-                                  onSelected: (_) => _setGridColumns(n),
-                                  visualDensity: VisualDensity.compact,
+                                  child: ChoiceChip(
+                                    label: Text(
+                                      '$n',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    selected: _gridColumns == n,
+                                    onSelected: (_) => _setGridColumns(n),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            _sectionHeader('数据与安全'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.upload_file),
+                    title: const Text('导出备份'),
+                    subtitle: const Text('导出全部数据为 JSON 文件'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _exportBackup(),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.download),
+                    title: const Text('导入备份'),
+                    subtitle: const Text('从 JSON 备份文件恢复数据'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _importBackup(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            _sectionHeader('关于'),
+            AppSurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  const ListTile(
+                    leading: Icon(Icons.info_outline),
+                    title: Text('版本'),
+                    subtitle: Text('v1.1.0'),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.code),
+                    title: const Text('开源许可'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showLicenses(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Center(
+              child: Text(
+                '版本 1.1.0 · Local-First',
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserCard() {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.coffee_outlined,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '个人助手用户',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.green,
+                        shape: BoxShape.circle,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      '本地优先存储',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
                   ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          _sectionHeader('数据'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.upload_file),
-                  title: const Text('导出备份'),
-                  subtitle: const Text('导出全部数据为 JSON 文件'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _exportBackup(),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('导入备份'),
-                  subtitle: const Text('从 JSON 备份文件恢复数据'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _importBackup(),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          _sectionHeader('关于'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('版本'),
-                  subtitle: Text('v1.0.0'),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.code),
-                  title: const Text('开源许可'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showLicenses(),
-                ),
-              ],
-            ),
+          AppPill(
+            label: _selectedProvider,
+            color: _isOffline ? AppColors.green : AppColors.blue,
           ),
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
+  String _maskedApiKey() {
+    if (_savedApiKey.isEmpty) return '未配置';
+    if (_showApiKey) return _savedApiKey;
+    if (_savedApiKey.length > 12) {
+      return '${_savedApiKey.substring(0, 8)}****${_savedApiKey.substring(_savedApiKey.length - 4)}';
+    }
+    if (_savedApiKey.length <= 2) {
+      return List.filled(_savedApiKey.length, '*').join();
+    }
+    return _savedApiKey.replaceRange(1, _savedApiKey.length - 1, '****');
+  }
+
   Widget _sectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
+    return AppSectionTitle(
+      title: title,
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
     );
   }
 
@@ -1112,7 +1187,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showLicensePage(
       context: context,
       applicationName: '寸积',
-      applicationVersion: '1.0.0',
+      applicationVersion: '1.1.0',
       applicationLegalese: '© 2026 Cunji',
     );
   }

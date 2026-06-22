@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
 import '../providers/todo_categories_provider.dart';
@@ -17,10 +19,10 @@ const _categoryIcons = {
 };
 
 const _categoryColors = {
-  '生活': Colors.green,
-  '工作': Colors.blue,
-  '学习': Colors.purple,
-  '健康': Colors.red,
+  '生活': AppColors.green,
+  '工作': AppColors.blue,
+  '学习': AppColors.primary,
+  '健康': AppColors.red,
 };
 
 class TodoFormPage extends ConsumerStatefulWidget {
@@ -172,52 +174,57 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? '编辑待办' : '新建待办'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _save,
-            child: const Text('保存'),
-          ),
-        ],
-      ),
       body: _isLoading && _isEditing
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+          : SafeArea(
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                   children: [
-                    // 标题
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: '标题',
-                        hintText: '输入待办标题',
-                      ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? '标题不能为空' : null,
-                      autofocus: true,
-                      textInputAction: TextInputAction.next,
+                    _buildTopBar(),
+                    const SizedBox(height: 14),
+                    AppPageHeader(
+                      title: _isEditing ? '编辑待办' : '新建待办',
+                      subtitle: '把任务拆到可执行、可追踪',
                     ),
-                    const SizedBox(height: 16),
-
-                    // 描述
-                    TextFormField(
-                      controller: _descController,
-                      decoration: const InputDecoration(
-                        labelText: '描述（可选）',
-                        hintText: '输入详细描述',
+                    const SizedBox(height: 18),
+                    AppSurfaceCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _titleController,
+                            decoration: const InputDecoration(
+                              labelText: '标题',
+                              hintText: '输入待办标题',
+                              prefixIcon: Icon(Icons.task_alt_outlined),
+                            ),
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? '标题不能为空' : null,
+                            autofocus: true,
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _descController,
+                            decoration: const InputDecoration(
+                              labelText: '描述（可选）',
+                              hintText: '输入详细描述',
+                              prefixIcon: Icon(Icons.notes_outlined),
+                            ),
+                            maxLines: 3,
+                            textInputAction: TextInputAction.newline,
+                          ),
+                        ],
                       ),
-                      maxLines: 3,
-                      textInputAction: TextInputAction.newline,
                     ),
                     const SizedBox(height: 24),
 
-                    // 分类
-                    Text('分类', style: Theme.of(context).textTheme.titleMedium),
+                    const AppSectionTitle(
+                      title: '分类',
+                      padding: EdgeInsets.zero,
+                    ),
                     const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -236,7 +243,8 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                                       icon:
                                           _categoryIcons[cat] ?? Icons.category,
                                       color:
-                                          _categoryColors[cat] ?? Colors.teal,
+                                          _categoryColors[cat] ??
+                                          AppColors.primary,
                                       isSelected: _category == cat,
                                       onTap: () => setState(() {
                                         _category = cat;
@@ -256,9 +264,10 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                         .contains(_category))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Chip(
-                          label: Text(_category),
-                          avatar: const Icon(Icons.category, size: 16),
+                        child: AppPill(
+                          label: _category,
+                          color: AppColors.primary,
+                          icon: Icons.category,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -284,116 +293,122 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    Text('清单', style: Theme.of(context).textTheme.titleMedium),
+                    const AppSectionTitle(
+                      title: '清单',
+                      padding: EdgeInsets.zero,
+                    ),
                     const SizedBox(height: 8),
                     _buildTodoListSelector(),
                     const SizedBox(height: 24),
 
-                    // 优先级
-                    Text('优先级', style: Theme.of(context).textTheme.titleMedium),
+                    const AppSectionTitle(
+                      title: '优先级',
+                      padding: EdgeInsets.zero,
+                    ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: List.generate(5, (index) {
-                        final starLevel = index + 1;
-                        return IconButton(
-                          icon: Icon(
-                            starLevel <= _priority
-                                ? Icons.star
-                                : Icons.star_border,
-                            color: starLevel <= _priority
-                                ? _getPriorityColor(starLevel)
-                                : Colors.grey,
-                          ),
-                          onPressed: () =>
-                              setState(() => _priority = starLevel),
-                        );
-                      }),
+                    AppSurfaceCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: List.generate(5, (index) {
+                          final starLevel = index + 1;
+                          return Expanded(
+                            child: IconButton(
+                              icon: Icon(
+                                starLevel <= _priority
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: starLevel <= _priority
+                                    ? _getPriorityColor(starLevel)
+                                    : AppColors.line,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _priority = starLevel),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
                     const SizedBox(height: 24),
 
-                    // 开始时间（必填）
-                    Text(
-                      '开始时间 *',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    const AppSectionTitle(
+                      title: '时间',
+                      padding: EdgeInsets.zero,
                     ),
                     const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _pickStartedAt,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.play_circle_outline, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              '${_startedAt.year}-${_startedAt.month.toString().padLeft(2, '0')}-${_startedAt.day.toString().padLeft(2, '0')}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
+                    AppSurfaceCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          _DateRow(
+                            icon: Icons.play_circle_outline,
+                            label: '开始时间',
+                            value:
+                                '${_startedAt.year}-${_startedAt.month.toString().padLeft(2, '0')}-${_startedAt.day.toString().padLeft(2, '0')}',
+                            onTap: _pickStartedAt,
+                          ),
+                          const Divider(height: 1),
+                          _DateRow(
+                            icon: Icons.calendar_today,
+                            label: '截止日期',
+                            value: _dueDate != null
+                                ? '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}'
+                                : '点击选择日期',
+                            muted: _dueDate == null,
+                            onTap: _pickDate,
+                            trailing: _dueDate == null
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () =>
+                                        setState(() => _dueDate = null),
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // 截止日期
-                    Text(
-                      '截止日期',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              _dueDate != null
-                                  ? '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}'
-                                  : '点击选择日期',
-                              style: TextStyle(
-                                color: _dueDate != null ? null : Colors.grey,
+                    const SizedBox(height: 32),
+                    FilledButton.icon(
+                      onPressed: _isLoading ? null : _save,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
                               ),
-                            ),
-                            const Spacer(),
-                            if (_dueDate != null)
-                              IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () =>
-                                    setState(() => _dueDate = null),
-                              ),
-                          ],
-                        ),
-                      ),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(_isEditing ? '保存修改' : '创建待办'),
                     ),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            foregroundColor: AppColors.primary,
+          ),
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.chevron_left),
+          label: const Text('返回'),
+        ),
+        const Spacer(),
+        TextButton(
+          onPressed: _isLoading ? null : _save,
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 
@@ -408,53 +423,56 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
             ? _listId
             : null;
 
-        return Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<int>(
-                key: ValueKey(
-                  'todo_list_${selectedListId ?? unlistedTodoListFilter}_${visibleLists.length}',
-                ),
-                initialValue: selectedListId ?? unlistedTodoListFilter,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                  prefixIcon: Icon(Icons.folder_outlined),
-                ),
-                items: [
-                  const DropdownMenuItem<int>(
-                    value: unlistedTodoListFilter,
-                    child: Text('不放入清单'),
+        return AppSurfaceCard(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  key: ValueKey(
+                    'todo_list_${selectedListId ?? unlistedTodoListFilter}_${visibleLists.length}',
                   ),
-                  ...visibleLists.map(
-                    (list) => DropdownMenuItem<int>(
-                      value: list.id,
-                      child: Text(list.name),
+                  initialValue: selectedListId ?? unlistedTodoListFilter,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    prefixIcon: Icon(Icons.folder_outlined),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: unlistedTodoListFilter,
+                      child: Text('不放入清单'),
                     ),
-                  ),
-                ],
-                onChanged: (value) {
-                  final newListId = value == unlistedTodoListFilter
-                      ? null
-                      : value;
-                  final selected = _findTodoList(visibleLists, newListId);
-                  setState(() {
-                    _listId = newListId;
-                    if (selected != null) {
-                      _category = selected.category;
-                      _categoryController.clear();
-                    }
-                  });
-                },
+                    ...visibleLists.map(
+                      (list) => DropdownMenuItem<int>(
+                        value: list.id,
+                        child: Text(list.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    final newListId = value == unlistedTodoListFilter
+                        ? null
+                        : value;
+                    final selected = _findTodoList(visibleLists, newListId);
+                    setState(() {
+                      _listId = newListId;
+                      if (selected != null) {
+                        _category = selected.category;
+                        _categoryController.clear();
+                      }
+                    });
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              tooltip: '新建清单',
-              icon: const Icon(Icons.create_new_folder_outlined),
-              onPressed: () => _showListDialog(category: _category),
-            ),
-          ],
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: '新建清单',
+                icon: const Icon(Icons.create_new_folder_outlined),
+                onPressed: () => _showListDialog(category: _category),
+              ),
+            ],
+          ),
         );
       },
       loading: () => const LinearProgressIndicator(),
@@ -570,24 +588,22 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.15)
-              : Colors.grey.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? color : AppColors.card,
+          borderRadius: BorderRadius.circular(999),
           border: isSelected
-              ? Border.all(color: color, width: 2)
-              : Border.all(color: Colors.transparent),
+              ? Border.all(color: color, width: 1.5)
+              : Border.all(color: AppColors.line),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? color : Colors.grey),
+            Icon(icon, color: isSelected ? Colors.white : AppColors.muted),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? color : Colors.grey,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? Colors.white : AppColors.ink,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -599,17 +615,17 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
   Color _getPriorityColor(int level) {
     switch (level) {
       case 1:
-        return Colors.grey;
+        return AppColors.muted;
       case 2:
-        return Colors.green;
+        return AppColors.green;
       case 3:
-        return Colors.orange;
+        return AppColors.orange;
       case 4:
-        return Colors.red;
+        return AppColors.red;
       case 5:
-        return Colors.deepOrange;
+        return AppColors.red;
       default:
-        return Colors.grey;
+        return AppColors.muted;
     }
   }
 
@@ -633,5 +649,71 @@ class _TodoFormPageState extends ConsumerState<TodoFormPage> {
     if (date != null) {
       setState(() => _dueDate = date);
     }
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  const _DateRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.trailing,
+    this.muted = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final Widget? trailing;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 18, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: muted ? AppColors.muted : AppColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            trailing ?? const Icon(Icons.chevron_right, color: AppColors.muted),
+          ],
+        ),
+      ),
+    );
   }
 }

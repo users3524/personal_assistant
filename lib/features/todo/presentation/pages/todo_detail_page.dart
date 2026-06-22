@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/app_chrome.dart';
 import '../../domain/entities/todo_entity.dart';
 import '../providers/todo_providers.dart';
 
@@ -43,63 +45,77 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(todo.title),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  todo.isStarred ? Icons.star : Icons.star_border,
-                  color: todo.isStarred ? Colors.amber : null,
-                ),
-                onPressed: () async {
-                  await ref
-                      .read(todoListProvider.notifier)
-                      .toggleStar(todo.id!);
-                  setState(() {});
-                },
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) => _handleAction(context, todo, value),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('编辑')),
-                  if (todo.isParent)
-                    const PopupMenuItem(
-                      value: 'addSubtask',
-                      child: Text('添加子任务'),
-                    ),
-                  const PopupMenuItem(value: 'delete', child: Text('删除')),
-                ],
-              ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
               children: [
-                // 状态卡片 + 时间摘要
-                _buildStatusCard(todo),
-                const SizedBox(height: 16),
-
-                // 描述
-                if (todo.description != null &&
-                    todo.description!.isNotEmpty) ...[
-                  Text('描述', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    todo.description!,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                _buildTopBar(todo),
+                const SizedBox(height: 14),
+                Text(
+                  todo.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    height: 1.2,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.ink,
                   ),
-                  const SizedBox(height: 24),
-                ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AppPill(
+                      label: todo.category,
+                      color: todo.category == '生活'
+                          ? AppColors.green
+                          : AppColors.blue,
+                      icon: Icons.category_outlined,
+                    ),
+                    AppPill(
+                      label: _priorityLabel(todo.priority),
+                      color: todo.priority >= 4
+                          ? AppColors.orange
+                          : AppColors.primary,
+                      icon: Icons.flag_outlined,
+                    ),
+                    if (todo.isStarred)
+                      const AppPill(
+                        label: '重点',
+                        color: AppColors.gold,
+                        icon: Icons.star,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildStatusCard(todo),
+                const SizedBox(height: 18),
 
-                // 详细信息
                 _buildInfoSection(todo),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
-                // 子任务列表
                 if (todo.isParent) _buildSubtasksSection(todo),
-                // 操作按钮
+                if (todo.isParent) const SizedBox(height: 18),
+
+                const AppSectionTitle(title: '备注描述', padding: EdgeInsets.zero),
+                const SizedBox(height: 8),
+                AppSurfaceCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    todo.description == null || todo.description!.isEmpty
+                        ? '暂无备注'
+                        : todo.description!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color:
+                          todo.description == null || todo.description!.isEmpty
+                          ? AppColors.muted
+                          : AppColors.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 _buildActionButtons(todo),
               ],
             ),
@@ -109,73 +125,119 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
     );
   }
 
-  Widget _buildStatusCard(TodoEntity todo) {
-    final color = _getStatusColor(todo);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(_getStatusIcon(todo), color: color, size: 40),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        todo.statusLabel,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: color,
-                        ),
-                      ),
-                      if (todo.isOverdue)
-                        const Text(
-                          '已逾期',
-                          style: TextStyle(color: Colors.red, fontSize: 12),
-                        ),
-                    ],
-                  ),
-                ),
-                // 优先级星星
-                Row(
-                  children: List.generate(5, (index) {
-                    return Icon(
-                      index < todo.priority ? Icons.star : Icons.star_border,
-                      size: 16,
-                      color: index < todo.priority
-                          ? Colors.orange
-                          : Colors.grey,
-                    );
-                  }),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            // 时间信息
-            _buildTimeRow(Icons.play_circle_outline, '开始时间', todo.startedAt),
-            const SizedBox(height: 6),
-            _buildTimeRow(
-              Icons.event,
-              '截止时间',
-              todo.dueDate,
-              color: todo.isOverdue ? Colors.red : null,
-            ),
-            if (todo.completedAt != null) ...[
-              const SizedBox(height: 6),
-              _buildTimeRow(
-                Icons.check_circle,
-                '完成时间',
-                todo.completedAt,
-                color: Colors.green,
-              ),
-            ],
+  Widget _buildTopBar(TodoEntity todo) {
+    return Row(
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            foregroundColor: AppColors.primary,
+          ),
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.chevron_left),
+          label: const Text('返回'),
+        ),
+        const Spacer(),
+        IconButton(
+          tooltip: todo.isStarred ? '取消重点' : '标为重点',
+          icon: Icon(
+            todo.isStarred ? Icons.star : Icons.star_border,
+            color: todo.isStarred ? AppColors.gold : AppColors.muted,
+          ),
+          onPressed: () async {
+            await ref.read(todoListProvider.notifier).toggleStar(todo.id!);
+            setState(() {});
+          },
+        ),
+        PopupMenuButton<String>(
+          tooltip: '更多',
+          icon: const Icon(Icons.more_horiz),
+          onSelected: (value) => _handleAction(context, todo, value),
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'edit', child: Text('编辑')),
+            if (todo.isParent)
+              const PopupMenuItem(value: 'addSubtask', child: Text('添加子任务')),
+            const PopupMenuItem(value: 'delete', child: Text('删除')),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildStatusCard(TodoEntity todo) {
+    final color = _getStatusColor(todo);
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(_getStatusIcon(todo), color: color, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '状态',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      todo.isOverdue
+                          ? '${todo.statusLabel} · 已逾期'
+                          : todo.statusLabel,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < todo.priority ? Icons.star : Icons.star_border,
+                    size: 16,
+                    color: index < todo.priority
+                        ? AppColors.gold
+                        : AppColors.line,
+                  );
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _buildTimeRow(Icons.play_circle_outline, '开始时间', todo.startedAt),
+          const SizedBox(height: 10),
+          _buildTimeRow(
+            Icons.event,
+            '截止时间',
+            todo.dueDate,
+            color: todo.isOverdue ? AppColors.red : null,
+          ),
+          if (todo.completedAt != null) ...[
+            const SizedBox(height: 10),
+            _buildTimeRow(
+              Icons.check_circle,
+              '完成时间',
+              todo.completedAt,
+              color: AppColors.green,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -188,11 +250,13 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: color ?? Colors.grey),
+        Icon(icon, size: 16, color: color ?? AppColors.muted),
         const SizedBox(width: 8),
-        Text(
-          '$label：',
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
         ),
         Text(
           date != null
@@ -200,8 +264,8 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                     '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
               : '未设置',
           style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: color ?? (date == null ? Colors.grey : null),
+            fontWeight: FontWeight.w700,
+            color: color ?? (date == null ? AppColors.muted : AppColors.ink),
             fontSize: 13,
           ),
         ),
@@ -213,68 +277,66 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
     final todoLists = ref.watch(todoListsProvider).valueOrNull ?? const [];
     final listName = _listNameOf(todo.listId, todoLists);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow(
-              Icons.category,
-              '分类',
-              todo.category,
-              todo.category == '生活' ? Colors.green : Colors.blue,
-            ),
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildInfoRow(
+            Icons.category,
+            '分类',
+            todo.category,
+            todo.category == '生活' ? AppColors.green : AppColors.blue,
+          ),
+          const Divider(),
+          _buildInfoRow(
+            Icons.folder_outlined,
+            '清单',
+            listName ?? '未归清单',
+            listName == null ? AppColors.muted : AppColors.blue,
+          ),
+          const Divider(),
+          _buildInfoRow(
+            Icons.access_time,
+            '创建时间',
+            _formatDate(todo.createdAt),
+            null,
+          ),
+          if (todo.actualMinutes != null) ...[
             const Divider(),
             _buildInfoRow(
-              Icons.folder_outlined,
-              '清单',
-              listName ?? '未归清单',
-              listName == null ? Colors.grey : Colors.indigo,
-            ),
-            const Divider(),
-            _buildInfoRow(
-              Icons.access_time,
-              '创建时间',
-              _formatDate(todo.createdAt),
+              Icons.timer,
+              '实际耗时',
+              '${todo.actualMinutes} 分钟',
               null,
             ),
-            if (todo.actualMinutes != null) ...[
-              const Divider(),
-              _buildInfoRow(
-                Icons.timer,
-                '实际耗时',
-                '${todo.actualMinutes} 分钟',
-                null,
-              ),
-            ],
-            if (todo.delayCount > 0) ...[
-              const Divider(),
-              _buildInfoRow(
-                Icons.warning,
-                '延期次数',
-                '${todo.delayCount} 次',
-                Colors.orange,
-              ),
-            ],
-            if (todo.tags.isNotEmpty) ...[
-              const Divider(),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: todo.tags.map((tag) {
-                    return Chip(
-                      label: Text(tag, style: const TextStyle(fontSize: 12)),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
           ],
-        ),
+          if (todo.delayCount > 0) ...[
+            const Divider(),
+            _buildInfoRow(
+              Icons.warning,
+              '延期次数',
+              '${todo.delayCount} 次',
+              AppColors.orange,
+            ),
+          ],
+          if (todo.tags.isNotEmpty) ...[
+            const Divider(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: todo.tags.map((tag) {
+                  return AppPill(
+                    label: tag,
+                    color: AppColors.primary,
+                    icon: Icons.sell_outlined,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -297,14 +359,18 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color ?? Colors.grey),
+          Icon(icon, size: 18, color: color ?? AppColors.muted),
           const SizedBox(width: 12),
-          Text('$label：', style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: AppColors.muted)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.w500, color: color),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: color ?? AppColors.ink,
+              ),
             ),
           ),
         ],
@@ -341,7 +407,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
               },
               icon: const Icon(Icons.check),
               label: const Text('标记完成'),
-              style: FilledButton.styleFrom(backgroundColor: Colors.green),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.green),
             ),
           ),
           const SizedBox(width: 12),
@@ -355,7 +421,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
               },
               icon: const Icon(Icons.close),
               label: const Text('放弃'),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.red),
             ),
           ),
         ],
@@ -390,7 +456,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('删除'),
           ),
         ],
@@ -404,10 +470,10 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
   }
 
   Color _getStatusColor(TodoEntity todo) {
-    if (todo.isDone) return Colors.green;
-    if (todo.isOverdue) return Colors.red;
-    if (todo.isInProgress) return Colors.blue;
-    return Colors.grey;
+    if (todo.isDone) return AppColors.green;
+    if (todo.isOverdue) return AppColors.red;
+    if (todo.isInProgress) return AppColors.blue;
+    return AppColors.muted;
   }
 
   IconData _getStatusIcon(TodoEntity todo) {
@@ -422,47 +488,45 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
+  String _priorityLabel(int priority) {
+    if (priority >= 4) return '高优先级';
+    if (priority == 3) return '中优先级';
+    return '低优先级';
+  }
+
   // ===== 子任务 =====
 
   Widget _buildSubtasksSection(TodoEntity todo) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('子任务', style: Theme.of(context).textTheme.titleMedium),
-                if (todo.subtasks.isNotEmpty)
-                  Text(
-                    ' (${todo.subtasks.where((s) => s.isDone).length}/${todo.subtasks.length})',
-                    style: TextStyle(fontSize: 12, color: Colors.teal.shade600),
+    final doneCount = todo.subtasks.where((s) => s.isDone).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionTitle(
+          title: '子任务进度 ($doneCount/${todo.subtasks.length})',
+          padding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: 8),
+        AppSurfaceCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              if (todo.subtasks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '暂无子任务，点击下方添加',
+                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                    ),
                   ),
-                const Spacer(),
-                TextButton.icon(
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('添加'),
-                  onPressed: () => _showAddSubtaskDialog(context, todo),
-                ),
-              ],
-            ),
-            if (todo.subtasks.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  '暂无子任务，点击上方添加',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              )
-            else
-              ...todo.subtasks.map(
-                (s) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: GestureDetector(
-                    onTap: () {
+                )
+              else
+                ...todo.subtasks.map(
+                  (s) => _SubtaskTile(
+                    subtask: s,
+                    onToggle: () {
                       if (s.isDone) {
                         ref.read(todoListProvider.notifier).reopenTodo(s.id!);
                       } else {
@@ -470,41 +534,7 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                       }
                       setState(() {});
                     },
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: s.isDone ? Colors.teal : Colors.transparent,
-                        border: Border.all(
-                          color: s.isDone ? Colors.teal : Colors.grey,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: s.isDone
-                          ? const Icon(
-                              Icons.check,
-                              size: 12,
-                              color: Colors.white,
-                            )
-                          : null,
-                    ),
-                  ),
-                  title: Text(
-                    s.title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      decoration: s.isDone ? TextDecoration.lineThrough : null,
-                      color: s.isDone ? Colors.grey : null,
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 16,
-                      color: Colors.red,
-                    ),
-                    onPressed: () async {
+                    onDelete: () async {
                       await ref
                           .read(todoListProvider.notifier)
                           .deleteTodo(s.id!);
@@ -512,10 +542,25 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
                     },
                   ),
                 ),
+              InkWell(
+                onTap: () => _showAddSubtaskDialog(context, todo),
+                child: const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Center(
+                    child: Text(
+                      '+ 添加子任务',
+                      style: TextStyle(
+                        color: AppColors.blue,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -559,6 +604,57 @@ class _TodoDetailPageState extends ConsumerState<TodoDetailPage> {
             child: const Text('创建'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SubtaskTile extends StatelessWidget {
+  const _SubtaskTile({
+    required this.subtask,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  final TodoEntity subtask;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      leading: GestureDetector(
+        onTap: onToggle,
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: subtask.isDone ? AppColors.primary : Colors.transparent,
+            border: Border.all(
+              color: subtask.isDone ? AppColors.primary : AppColors.line,
+              width: 1.6,
+            ),
+          ),
+          child: subtask.isDone
+              ? const Icon(Icons.check, size: 13, color: Colors.white)
+              : null,
+        ),
+      ),
+      title: Text(
+        subtask.title,
+        style: TextStyle(
+          fontSize: 14,
+          decoration: subtask.isDone ? TextDecoration.lineThrough : null,
+          color: subtask.isDone ? AppColors.muted : AppColors.ink,
+          fontWeight: subtask.isDone ? FontWeight.w500 : FontWeight.w700,
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.red),
+        onPressed: onDelete,
       ),
     );
   }
